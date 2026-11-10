@@ -733,9 +733,41 @@
 
 /* 只显示标题（弹窗）：最多两行，超出省略，扫一眼就能看完 */
 
+/* 之前把紧凑 + 隐藏序号收成了单列，这里给回复数腾出行尾一列。 */
+.feed-list--compact.feed-list--no-rank.feed-list--title-only .feed-row__link {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+}
+
 .feed-list--title-only .feed-row__link {
   padding-top: 8px;
   padding-bottom: 8px;
+}
+
+/* 行尾只留回复数，样式跟完整页面的统计块一致，但更克制。 */
+.feed-list--title-only .feed-row__stats {
+  align-self: center;
+  padding-top: 0;
+}
+
+.feed-list--title-only .feed-row__stat {
+  min-width: 30px;
+  gap: 0;
+}
+
+.feed-list--title-only .feed-row__stat b {
+  font-size: 12.5px;
+  line-height: 1.25;
+  color: var(--ink-2);
+}
+
+.feed-list--title-only .feed-row__stat i {
+  font-size: 9px;
+  letter-spacing: 0.06em;
+}
+
+.feed-list--title-only .feed-row__link:hover .feed-row__stat b {
+  color: var(--leaf);
 }
 
 .feed-list--title-only .feed-row__body {
@@ -762,12 +794,25 @@
 }
 
 .feed-skeleton--title-only .feed-skeleton__row {
+  grid-template-columns: minmax(0, 1fr) 30px;
+  gap: 10px;
   padding-top: 11px;
   padding-bottom: 11px;
 }
 
+/* 弹窗三者叠加时保留行尾回复数骨架，别被 compact 的两列规则覆盖。 */
+.feed-skeleton--compact.feed-skeleton--no-rank.feed-skeleton--title-only .feed-skeleton__row {
+  grid-template-columns: minmax(0, 1fr) 30px;
+}
+
 .feed-skeleton--title-only .feed-skeleton__body {
   gap: 6px;
+}
+
+.feed-skeleton__reply {
+  align-self: center;
+  width: 22px;
+  margin-left: auto;
 }
 
 @keyframes t2-rise {

@@ -7,7 +7,7 @@ interface PostRowProps {
   index: number;
   compact?: boolean;
   showRank?: boolean;
-  /** 只显示标题，省略分区、作者、时间和回复数（弹窗用）。 */
+  /** 只显示标题，省略分区、作者和时间；回复数固定在行尾（弹窗用）。 */
   titleOnly?: boolean;
 }
 
@@ -79,19 +79,28 @@ export function PostRow({
           )}
         </span>
 
-        {!compact && !titleOnly && (
-          <span className="feed-row__stats" aria-hidden="true">
+        {titleOnly ? (
+          <span className="feed-row__stats">
             <span className="feed-row__stat">
               <b className="t2-mono">{comments}</b>
               <i>回复</i>
             </span>
-            {hot !== null && (
-              <span className="feed-row__stat feed-row__stat--hot">
-                <b className="t2-mono">{hot}</b>
-                <i>热度</i>
-              </span>
-            )}
           </span>
+        ) : (
+          !compact && (
+            <span className="feed-row__stats" aria-hidden="true">
+              <span className="feed-row__stat">
+                <b className="t2-mono">{comments}</b>
+                <i>回复</i>
+              </span>
+              {hot !== null && (
+                <span className="feed-row__stat feed-row__stat--hot">
+                  <b className="t2-mono">{hot}</b>
+                  <i>热度</i>
+                </span>
+              )}
+            </span>
+          )
         )}
       </a>
     </li>

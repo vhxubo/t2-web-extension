@@ -12,7 +12,7 @@ interface PostListProps {
   compact?: boolean;
   /** 是否显示行首序号；弹窗这类紧凑场景可以关掉。 */
   showRank?: boolean;
-  /** 只显示标题，省略分区、作者、时间和回复数（弹窗用）。 */
+  /** 只显示标题，回复数固定在行尾，省略分区、作者和时间（弹窗用）。 */
   titleOnly?: boolean;
   sectionFiltered: boolean;
   sectionName?: string;
@@ -50,6 +50,7 @@ export function FeedSkeleton({
               <span className="skeleton skeleton--line skeleton--short feed-skeleton__meta" />
             )}
           </div>
+          {titleOnly && <span className="skeleton skeleton--line feed-skeleton__reply" />}
         </div>
       ))}
     </div>
