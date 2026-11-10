@@ -1,0 +1,71 @@
+import { Avatar } from './Avatar';
+import { Icon } from './Icon';
+import { profileHref } from '../lib/nav';
+import type { Profile } from '../lib/types';
+
+interface AccountChipProps {
+  signedIn: boolean;
+  loading?: boolean;
+  profile: Profile | null;
+  onLogin: () => void;
+  onSignOut?: () => void;
+  compact?: boolean;
+}
+
+export function AccountChip({
+  signedIn,
+  loading = false,
+  profile,
+  onLogin,
+  onSignOut,
+  compact = false,
+}: AccountChipProps) {
+  if (loading) {
+    return <span className="account account--loading skeleton skeleton--line" aria-hidden="true" />;
+  }
+
+  if (!signedIn) {
+    return (
+      <button type="button" className="btn btn--ghost account__login" onClick={onLogin}>
+        <Icon name="user" size={15} />
+        <span>登录</span>
+      </button>
+    );
+  }
+
+  const name = profile?.username ?? '已登录';
+
+  return (
+    <span className="account">
+      <a
+        className="account__profile"
+        href={profileHref(profile?.username)}
+        target="_blank"
+        rel="noreferrer"
+        title={profile?.username ? `打开 @${profile.username} 的主页` : '打开 2Libra'}
+      >
+        <Avatar src={profile?.avatar_url} name={name} />
+        <span className="account__meta">
+          <span className="account__name">{name}</span>
+          {!compact && (
+            <span className="account__level t2-mono">
+              {typeof profile?.level === 'number' ? `Lv.${profile.level}` : '2Libra'}
+              {profile?.is_pro ? ' · PRO' : ''}
+            </span>
+          )}
+        </span>
+      </a>
+      {onSignOut && (
+        <button
+          type="button"
+          className="btn btn--icon account__out"
+          onClick={onSignOut}
+          title="退出登录"
+          aria-label="退出登录"
+        >
+          <Icon name="logout" size={15} />
+        </button>
+      )}
+    </span>
+  );
+}
