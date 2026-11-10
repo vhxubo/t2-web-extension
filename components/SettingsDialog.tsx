@@ -2,7 +2,7 @@ import { browser } from '#imports';
 import { useEffect, useRef, useState } from 'react';
 import { startLogin } from '../lib/auth';
 import { BOARDS, isBoardId } from '../lib/boards';
-import { LINKS, OAUTH_CONFIGURED } from '../lib/config';
+import { AUTHOR, LINKS, OAUTH_CONFIGURED } from '../lib/config';
 import { describeError } from '../lib/errors';
 import type { Settings, ThemePreference } from '../lib/storage';
 import type { Profile } from '../lib/types';
@@ -267,6 +267,15 @@ export function SettingsDialog({
             <div>
               <dt>数据来源</dt>
               <dd>开放 API v1</dd>
+            </div>
+            <div>
+              <dt>作者</dt>
+              <dd>
+                {AUTHOR.name} ·{' '}
+                <a className="settings-meta__mail" href={`mailto:${AUTHOR.email}`}>
+                  {AUTHOR.email}
+                </a>
+              </dd>
             </div>
           </dl>
 

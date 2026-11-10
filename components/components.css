@@ -797,6 +797,15 @@
   color: var(--ink-2);
 }
 
+.settings-meta__mail {
+  color: var(--leaf);
+}
+
+.settings-meta__mail:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
 .settings-link {
   display: inline-flex;
   align-items: center;

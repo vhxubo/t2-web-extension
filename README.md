@@ -1,5 +1,7 @@
 # T2 Web Extension
 
+> 作者：vhxubo · [vhxubo@gmail.com](mailto:vhxubo@gmail.com)
+
 T2 Web Extension 让你在工具栏弹窗里快速扫一眼帖子，或者在新标签页里把五个榜单铺成四列看板。
 完整页面同屏展示全部榜单，并且可以设置「弹窗默认进入的榜单」。
 
@@ -23,9 +25,30 @@ T2 Web Extension 让你在工具栏弹窗里快速扫一眼帖子，或者在新
 ```bash
 bun install        # 或 npm install
 bun run dev        # 开发模式，产物在 .output/chrome-mv3-dev
-bun run build      # 生产构建，产物在 .output/chrome-mv3
+bun run build      # 生产构建（Chrome），产物在 .output/chrome-mv3
 bun run compile    # tsc 类型检查
 ```
+
+## 多浏览器构建
+
+三个目标都从同一份源码构建，区别只在 manifest 的浏览器适配（MV3 / MV2、署名格式、action 字段）：
+
+| 浏览器 | 构建命令 | 产物目录 | 打包命令 | 安装方式 |
+| --- | --- | --- | --- | --- |
+| Chrome / Chromium 系（Edge、Brave、360、QQ） | `bun run build:chrome` | `.output/chrome-mv3` | `bun run zip:chrome` | `chrome://extensions` → 开发者模式 → 加载已解压的扩展程序 |
+| Edge | `bun run build:edge` | `.output/edge-mv3` | `bun run zip:edge` | `edge://extensions` → 开发人员模式 → 加载解压缩的扩展 |
+| Firefox | `bun run build:firefox` | `.output/firefox-mv2` | `bun run zip:firefox` | `about:debugging#/runtime/this-firefox` → 临时载入附加组件；正式安装需签名 |
+
+一次构建 / 打包全部目标：
+
+```bash
+bun run build:all   # chrome + edge + firefox
+bun run zip:all     # 三个浏览器各一份 zip，输出在 .output/
+```
+
+Firefox 的 `zip` 会额外生成源码包（AMO 审核需要）。Firefox 需在 `wxt.config.ts` 里配置
+`browser_specific_settings.gecko.id` 才能获得稳定 ID 并正式签名安装；临时载入不受影响。
+Safari 需要 macOS 上的 Safari 转换工具，当前不提供构建。
 
 加载未打包扩展：Chrome 打开 `chrome://extensions` → 打开「开发者模式」→「加载已解压的扩展程序」→ 选择 `.output/chrome-mv3` 目录。
 Firefox 可用 `bun run dev:firefox`。

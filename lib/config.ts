@@ -25,6 +25,12 @@ export const REQUESTED_SCOPE = 'read profile read:me';
 
 export const DASHBOARD_PAGE = '/dashboard.html';
 
+/** 作者署名：manifest、package.json 与「关于」面板共用同一份信息。 */
+export const AUTHOR = {
+  name: 'vhxubo',
+  email: 'vhxubo@gmail.com',
+} as const;
+
 export const LINKS = {
   docs: 'https://r2.2libra.com/openapi/v1/index.md',
   oauth: 'https://r2.2libra.com/openapi/v1/oauth.md',
