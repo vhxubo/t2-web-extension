@@ -1,6 +1,6 @@
 /* ------------------------------------------------------------------
    T2 Web Extension — 设计令牌与公共组件
-   清新素净：暖白纸面、莫兰迪森林绿、极淡分割线。
+   清新素净：冷浅灰纸面、莫兰迪森林绿、细腻冷灰分割线。
    字体只用现代无衬线；数字与回复数一律等宽。
 ------------------------------------------------------------------ */
 
@@ -8,20 +8,20 @@
   color-scheme: light;
 
   /* ---------- 主题核心令牌 ---------- */
-  --bg-base: #fafaf7;
+  --bg-base: #f8fafc;
   --bg-card: #ffffff;
-  --bg-hover: #f2f3ee;
-  --text-main: #222222;
-  --text-sub: #888888;
-  --border-color: #f0f0f0;
+  --bg-hover: #f1f5f9;
+  --text-main: #0f172a;
+  --text-sub: #64748b;
+  --border-color: #e2e8f0;
   --primary: #4a7c59;
 
   /* ---------- 由核心令牌派生的层级色 ---------- */
-  --bg-subtle: #f2f3ee;
-  --text-body: #4c4f4b;
-  --text-faint: #c4cbc2;
-  --border-strong: #e4e6e1;
-  --border-soft: #f4f6f1;
+  --bg-subtle: #f1f5f9;
+  --text-body: #475569;
+  --text-faint: #cbd5e1;
+  --border-strong: #cbd5e1;
+  --border-soft: #f1f5f9;
 
   --primary-strong: #3f6c4d;
   --primary-muted: #8fb397;
@@ -57,15 +57,15 @@
   --focus: var(--primary);
 
   /* ---------- 遮罩、阴影 ---------- */
-  --overlay: rgba(18, 26, 20, 0.46);
-  --toast-bg: #222222;
-  --toast-text: #fafaf7;
-  --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.03);
-  --shadow-card-hover: 0 4px 16px rgba(31, 41, 55, 0.05);
-  --shadow-dock: 0 -10px 24px -22px rgba(34, 34, 34, 0.28);
-  --shadow-sm: 0 1px 2px rgba(34, 34, 34, 0.04);
-  --shadow-md: 0 10px 30px -18px rgba(34, 34, 34, 0.18), 0 2px 6px rgba(34, 34, 34, 0.04);
-  --shadow-lg: 0 30px 80px -30px rgba(34, 34, 34, 0.28), 0 4px 14px rgba(34, 34, 34, 0.06);
+  --overlay: rgba(15, 23, 42, 0.46);
+  --toast-bg: #0f172a;
+  --toast-text: #f8fafc;
+  --shadow-card: 0 2px 8px rgba(15, 23, 42, 0.03);
+  --shadow-card-hover: 0 4px 16px rgba(15, 23, 42, 0.05);
+  --shadow-dock: 0 -10px 24px -22px rgba(15, 23, 42, 0.28);
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.04);
+  --shadow-md: 0 10px 30px -18px rgba(15, 23, 42, 0.18), 0 2px 6px rgba(15, 23, 42, 0.04);
+  --shadow-lg: 0 30px 80px -30px rgba(15, 23, 42, 0.28), 0 4px 14px rgba(15, 23, 42, 0.06);
 
   --radius-sm: 10px;
   --radius: 14px;
