@@ -15,7 +15,8 @@ T2 Web Extension 让你在工具栏弹窗里快速扫一眼帖子，或者在新
 - **默认进入**：弹窗打开时先显示哪个榜单，只能在完整页面的设置弹窗里修改；在弹窗里切换 Tab 只影响当次浏览，不会改写默认值，也不会影响下次打开。列表固定每页 20 条，设置里不再提供条数选项。
 - **未读通知**：登录后读取 `GET /v1/me/notifications/unread-count`，在工具栏扩展图标、弹窗 Dock 的「数据仪表盘」和仪表盘顶栏铃铛三处显示同一状态；通知中心展示最近 30 条。扩展图标角标由后台 `alarms` 每分钟抓取一次，弹窗关闭也会更新；页面可见时另外每 60 秒刷新一次。
 - **登录**：OAuth 授权码 + PKCE（公开客户端，无 `client_secret`），令牌过期自动刷新（单飞），401 自动重试一次。登录成功后立即解析当前用户资料：`GET /v1/me/summary` 只用来取身份，**缺头像时**再用公开的 `GET /v1/users/:username` 补齐（不需要额外 scope），结果写入 `storage.local`，退出登录一并清除。
-- **视觉**：弹窗固定为清新素净的暖白纸面（不随系统深色模式变化）；完整页面跟随系统浅色 / 深色。无衬线字体、等宽数字、键盘可操作、`prefers-reduced-motion` 生效。
+- **外观**：设置弹窗的「外观」支持 `☀️ 浅色 / 🌙 深色 / 💻 跟随系统`，选择保存在 `chrome.storage.local` 的 `t2:settings`，弹窗、完整页和设置弹窗共用同一份偏好。弹窗 Header 另外提供 `☀️ / 🌙` 按钮一键切换浅色 / 深色；当前为「跟随系统」时会提示实际主题，想恢复跟随系统回到设置弹窗即可。选「跟随系统」时会监听 `prefers-color-scheme`，系统切换后所有已打开页面实时跟着变。
+- **视觉**：所有页面共用同一套 CSS 变量主题（`--bg-base` / `--bg-card` / `--text-main` / `--primary` 等），由 `<html class="dark">` 切换深色令牌。无衬线字体、等宽数字、键盘可操作、`prefers-reduced-motion` 生效。
 
 ## 开发
 
@@ -129,6 +130,7 @@ lib/
   api.ts          信封解析、401 刷新重试、错误类型
   auth.ts         PKCE、授权、刷新（单飞）、退出
   storage.ts      令牌 / 设置 / 节点缓存的 storage 定义
+  theme.ts        主题偏好解析、<html> 类名切换、系统深浅色监听
   feed.ts         五个榜单的取数与归一化、去重
   notifications.ts 未读通知数 / 通知列表（只读）
   search.ts       全站搜索的类型、结果归一化与站点链接
@@ -137,7 +139,7 @@ lib/
   section.ts      分区的 key、标签、接口参数
   errors.ts       错误 → 用户可读文案
 components/       共用组件（搜索弹窗、榜单卡片、列表行、通知中心、设置弹窗…）
-hooks/            useFeed / useNodes / useSearch / useSession / useSettings / useUnreadNotifications
+hooks/            useFeed / useNodes / useSearch / useSession / useSettings / useTheme / useUnreadNotifications
 styles/           设计令牌与基础样式
 ```
 

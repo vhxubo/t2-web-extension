@@ -10,10 +10,11 @@ import { Toast } from '@/components/Toast';
 import { useSearchHotkey } from '@/hooks/useSearch';
 import { useSession } from '@/hooks/useSession';
 import { useSettings } from '@/hooks/useSettings';
+import { useTheme } from '@/hooks/useTheme';
 import { useUnreadNotifications } from '@/hooks/useUnreadNotifications';
 import { BOARDS } from '@/lib/boards';
 import { LINKS } from '@/lib/config';
-import { storageAvailable } from '@/lib/storage';
+import { DEFAULT_SETTINGS, storageAvailable } from '@/lib/storage';
 
 const SHORTCUT_LABEL =
   typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.platform)
@@ -22,6 +23,7 @@ const SHORTCUT_LABEL =
 
 export default function Dashboard() {
   const { settings, update } = useSettings();
+  useTheme(settings?.theme);
   const {
     profile,
     signedIn,
@@ -270,7 +272,7 @@ export default function Dashboard() {
       <SettingsDialog
         open={settingsOpen}
         onClose={closeSettings}
-        settings={settings ?? { board: 'latest', section: 'all' }}
+        settings={settings ?? DEFAULT_SETTINGS}
         signedIn={signedIn}
         profile={profile}
         onUpdateSettings={update}

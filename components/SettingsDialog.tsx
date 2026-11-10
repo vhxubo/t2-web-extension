@@ -4,10 +4,21 @@ import { startLogin } from '../lib/auth';
 import { BOARDS, isBoardId } from '../lib/boards';
 import { LINKS, OAUTH_CONFIGURED } from '../lib/config';
 import { describeError } from '../lib/errors';
-import type { Settings } from '../lib/storage';
+import type { Settings, ThemePreference } from '../lib/storage';
 import type { Profile } from '../lib/types';
 import { Avatar } from './Avatar';
 import { Icon } from './Icon';
+
+const THEME_OPTIONS: ReadonlyArray<{
+  value: ThemePreference;
+  emoji: string;
+  label: string;
+  hint: string;
+}> = [
+  { value: 'light', emoji: '☀️', label: '浅色', hint: '始终使用浅色界面' },
+  { value: 'dark', emoji: '🌙', label: '深色', hint: '始终使用深色界面' },
+  { value: 'system', emoji: '💻', label: '跟随系统', hint: '跟随操作系统的深浅色外观' },
+];
 
 interface SettingsDialogProps {
   open: boolean;
@@ -189,6 +200,54 @@ export function SettingsDialog({
 
           <p className="settings-note settings-defaults__hint">
             只决定之后打开弹窗时先显示哪个榜单；在弹窗里切换 Tab 只影响当次浏览，不会改动这里。
+          </p>
+        </section>
+
+        {/* ---------------- 外观 ---------------- */}
+        <section className="settings-card" aria-labelledby="settings-appearance">
+          <h3 className="settings-card__title" id="settings-appearance">
+            外观
+          </h3>
+
+          <div className="settings-row settings-row--theme">
+            <div className="settings-row__intro">
+              <span className="settings-row__label" id="theme-label">
+                主题模式
+              </span>
+              <p className="settings-row__hint">夜间使用深色界面可减少眩光。</p>
+            </div>
+
+            <div className="theme-choice" role="radiogroup" aria-labelledby="theme-label">
+              {THEME_OPTIONS.map((option) => {
+                const active = settings.theme === option.value;
+                return (
+                  <label
+                    key={option.value}
+                    className={`theme-choice__option${
+                      active ? ' theme-choice__option--active' : ''
+                    }`}
+                    title={option.hint}
+                  >
+                    <input
+                      className="sr-only"
+                      type="radio"
+                      name="theme-preference"
+                      value={option.value}
+                      checked={active}
+                      onChange={() => void onUpdateSettings({ theme: option.value })}
+                    />
+                    <span className="theme-choice__emoji" aria-hidden="true">
+                      {option.emoji}
+                    </span>
+                    <span>{option.label}</span>
+                  </label>
+                );
+              })}
+            </div>
+          </div>
+
+          <p className="settings-note settings-defaults__hint">
+            「跟随系统」会随操作系统的浅色 / 深色外观自动切换；选择只保存在本地设备。
           </p>
         </section>
 

@@ -7,24 +7,27 @@
 :root {
   color-scheme: light;
 
-  --paper: #fafaf7;
-  --paper-2: #f2f3ee;
-  --surface: #ffffff;
-  --surface-2: #f4f6f1;
+  /* ---------- 主题核心令牌 ---------- */
+  --bg-base: #fafaf7;
+  --bg-card: #ffffff;
+  --bg-hover: #f2f3ee;
+  --text-main: #222222;
+  --text-sub: #888888;
+  --border-color: #f0f0f0;
+  --primary: #4a7c59;
 
-  --ink: #222222;
-  --ink-2: #4c4f4b;
-  --ink-3: #888888;
+  /* ---------- 由核心令牌派生的层级色 ---------- */
+  --bg-subtle: #f2f3ee;
+  --text-body: #4c4f4b;
+  --text-faint: #c4cbc2;
+  --border-strong: #e4e6e1;
+  --border-soft: #f4f6f1;
 
-  --line: #f0f0f0;
-  --line-strong: #e4e6e1;
-
-  --leaf: #4a7c59;
-  --leaf-2: #3f6c4d;
-  --leaf-3: #8fb397;
-  --leaf-wash: #eef4ee;
-  --leaf-soft: #dce9dd;
-  --on-leaf: #ffffff;
+  --primary-strong: #3f6c4d;
+  --primary-muted: #8fb397;
+  --primary-wash: #eef4ee;
+  --primary-soft: #dce9dd;
+  --on-primary: #ffffff;
 
   --gold: #8a6a33;
   --gold-wash: #f5efe3;
@@ -35,8 +38,31 @@
   /* 未读提醒：克制的陶土红，避免高饱和刺眼。 */
   --notice: #c4554b;
 
-  --focus: #4a7c59;
+  /* ---------- 兼容旧组件命名（都指向核心令牌） ---------- */
+  --paper: var(--bg-base);
+  --paper-2: var(--bg-subtle);
+  --surface: var(--bg-card);
+  --surface-2: var(--bg-hover);
+  --ink: var(--text-main);
+  --ink-2: var(--text-body);
+  --ink-3: var(--text-sub);
+  --line: var(--border-color);
+  --line-strong: var(--border-strong);
+  --leaf: var(--primary);
+  --leaf-2: var(--primary-strong);
+  --leaf-3: var(--primary-muted);
+  --leaf-wash: var(--primary-wash);
+  --leaf-soft: var(--primary-soft);
+  --on-leaf: var(--on-primary);
+  --focus: var(--primary);
 
+  /* ---------- 遮罩、阴影 ---------- */
+  --overlay: rgba(18, 26, 20, 0.46);
+  --toast-bg: #222222;
+  --toast-text: #fafaf7;
+  --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.03);
+  --shadow-card-hover: 0 4px 16px rgba(31, 41, 55, 0.05);
+  --shadow-dock: 0 -10px 24px -22px rgba(34, 34, 34, 0.28);
   --shadow-sm: 0 1px 2px rgba(34, 34, 34, 0.04);
   --shadow-md: 0 10px 30px -18px rgba(34, 34, 34, 0.18), 0 2px 6px rgba(34, 34, 34, 0.04);
   --shadow-lg: 0 30px 80px -30px rgba(34, 34, 34, 0.28), 0 4px 14px rgba(34, 34, 34, 0.06);
@@ -55,43 +81,65 @@
   --ease: cubic-bezier(0.2, 0.7, 0.3, 1);
 }
 
+/* .dark 由 lib/theme.ts 写在 <html> 上；深浅色只在这里切换变量。 */
+html.dark {
+  color-scheme: dark;
+
+  --bg-base: #121412;
+  --bg-card: #1a1d1a;
+  --bg-hover: #252825;
+  --text-main: #e5e7eb;
+  --text-sub: #9ca3af;
+  --border-color: #2a2f2a;
+  --primary: #4caf50;
+
+  --bg-subtle: #1d201d;
+  --text-body: #b6bcb4;
+  --text-faint: #5e665d;
+  --border-strong: #3a423a;
+  --border-soft: #202420;
+
+  --primary-strong: #66bb6a;
+  --primary-muted: #6f9a76;
+  --primary-wash: #1b2a1d;
+  --primary-soft: #243528;
+  --on-primary: #0b140c;
+
+  --gold: #d5b47c;
+  --gold-wash: #2e2719;
+
+  --danger: #e09a8f;
+  --danger-wash: #32211e;
+
+  --notice: #e08a80;
+
+  --overlay: rgba(0, 0, 0, 0.66);
+  --toast-bg: #2f342f;
+  --toast-text: #e5e7eb;
+  --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.24);
+  --shadow-card-hover: 0 4px 16px rgba(0, 0, 0, 0.42);
+  --shadow-dock: 0 -10px 24px -22px rgba(0, 0, 0, 0.7);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 12px 30px -18px rgba(0, 0, 0, 0.8), 0 2px 6px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 30px 80px -30px rgba(0, 0, 0, 0.9), 0 4px 14px rgba(0, 0, 0, 0.4);
+}
+
+/*
+ * 脚本执行前（React 尚未挂载）先按系统主题铺一层底色，避免深色用户看到白闪。
+ * 一旦 lib/theme.ts 写入 .dark / .light，后续颜色全部交给上面的令牌。
+ */
 @media (prefers-color-scheme: dark) {
-  :root {
-    color-scheme: dark;
-
-    --paper: #121613;
-    --paper-2: #181d19;
-    --surface: #1b211c;
-    --surface-2: #202721;
-
-    --ink: #eceee9;
-    --ink-2: #b6bcb4;
-    --ink-3: #8b938c;
-
-    --line: #272e28;
-    --line-strong: #39423b;
-
-    --leaf: #9ac7a2;
-    --leaf-2: #aed6b5;
-    --leaf-3: #6d9a76;
-    --leaf-wash: #1e2a21;
-    --leaf-soft: #26352a;
-    --on-leaf: #101512;
-
-    --gold: #d5b47c;
-    --gold-wash: #2e2719;
-
-    --danger: #e09a8f;
-    --danger-wash: #32211e;
-
-    --notice: #e08a80;
-
-    --focus: #9ac7a2;
-
-    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
-    --shadow-md: 0 12px 30px -18px rgba(0, 0, 0, 0.8), 0 2px 6px rgba(0, 0, 0, 0.3);
-    --shadow-lg: 0 30px 80px -30px rgba(0, 0, 0, 0.9), 0 4px 14px rgba(0, 0, 0, 0.4);
+  html:not(.light) {
+    background-color: #121412;
   }
+
+  html:not(.light) body {
+    background-color: #121412;
+  }
+}
+
+html {
+  background: var(--bg-base);
 }
 
 *,
@@ -148,8 +196,8 @@ ul {
 }
 
 ::selection {
-  background: var(--leaf-soft);
-  color: var(--ink);
+  background: var(--primary-soft);
+  color: var(--text-main);
 }
 
 :focus-visible {
@@ -555,7 +603,7 @@ ul {
 }
 
 .t2-dialog::backdrop {
-  background: rgba(18, 26, 20, 0.46);
+  background: var(--overlay);
   backdrop-filter: blur(3px);
 }
 
@@ -658,8 +706,8 @@ ul {
   gap: 8px;
   padding: 9px 15px;
   border-radius: 999px;
-  background: var(--ink);
-  color: var(--paper);
+  background: var(--toast-bg);
+  color: var(--toast-text);
   font-size: 12.5px;
   box-shadow: var(--shadow-md);
   animation: t2-toast-in 0.22s var(--ease) both;

@@ -14,46 +14,29 @@ body {
 }
 
 body {
-  /* 设计令牌：先在 body 上覆盖主题色，仪表盘内的公共组件也会跟着变。 */
-  --dash-bg: #f7f8f3;
-  --dash-card: #ffffff;
-  --dash-line: #eaefe9;
-  --dash-line-soft: #f1f4f0;
-  --dash-ink: #1f2937;
-  --dash-ink-2: #4b5563;
-  --dash-muted: #9ca3af;
-  --dash-faint: #c4cbc2;
-  --dash-accent: #2e7d32;
-  --dash-accent-soft: #eaf3ea;
-  --dash-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+  /* 看板令牌全部映射到 styles/theme.css 的核心令牌，深浅色由 <html class="dark"> 切换。 */
+  --dash-bg: var(--bg-base);
+  --dash-card: var(--bg-card);
+  --dash-line: var(--border-color);
+  --dash-line-soft: var(--border-soft);
+  --dash-ink: var(--text-main);
+  --dash-ink-2: var(--text-body);
+  --dash-muted: var(--text-sub);
+  --dash-faint: var(--text-faint);
+  --dash-accent: var(--primary);
+  --dash-accent-soft: var(--primary-wash);
+  --dash-shadow: var(--shadow-card);
+  --dash-shadow-hover: var(--shadow-card-hover);
 
-  /* 顶栏独立取色：纯白纸面、发丝线、极淡的悬停底色。 */
-  --masthead-bg: #ffffff;
-  --masthead-line: #efefef;
-  --masthead-ink: #1f2937;
-  --masthead-icon: #6b7280;
-  --masthead-hover: #f3f4f6;
-  --masthead-btn-bg: #ffffff;
-  --masthead-btn-border: #efefef;
-  --masthead-btn-border-hover: #e5e7eb;
-
-  --paper: #f7f8f3;
-  --paper-2: #edf1ea;
-  --surface: #ffffff;
-  --surface-2: #f6f9f5;
-  --ink: #1f2937;
-  --ink-2: #4b5563;
-  --ink-3: #9ca3af;
-  --line: #eaefe9;
-  --line-strong: #dfe6dc;
-  --leaf: #2e7d32;
-  --leaf-2: #388e3c;
-  --leaf-3: #a3c9a5;
-  --leaf-wash: #eaf3ea;
-  --leaf-soft: #d9e9d9;
-  --on-leaf: #ffffff;
-  --focus: #2e7d32;
-  --shadow-sm: var(--dash-shadow);
+  /* 顶栏独立取色：卡片纸面、发丝线、极淡的悬停底色。 */
+  --masthead-bg: var(--bg-card);
+  --masthead-line: var(--border-color);
+  --masthead-ink: var(--text-main);
+  --masthead-icon: var(--text-sub);
+  --masthead-hover: var(--bg-hover);
+  --masthead-btn-bg: var(--bg-card);
+  --masthead-btn-border: var(--border-color);
+  --masthead-btn-border-hover: var(--border-strong);
 
   --font-ui: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC",
     "Microsoft YaHei", sans-serif;
@@ -66,48 +49,6 @@ body {
   background: var(--dash-bg);
   color: var(--dash-ink);
   font-family: var(--font-ui);
-}
-
-@media (prefers-color-scheme: dark) {
-  body {
-    --dash-bg: #12160f;
-    --dash-card: #1a1f18;
-    --dash-line: #2a3227;
-    --dash-line-soft: #232a20;
-    --dash-ink: #e8ece5;
-    --dash-ink-2: #b9c1b6;
-    --dash-muted: #8b948a;
-    --dash-faint: #5e665d;
-    --dash-accent: #8bc98f;
-    --dash-accent-soft: #223022;
-    --dash-shadow: 0 2px 8px rgba(0, 0, 0, 0.24);
-
-    --masthead-bg: #171b16;
-    --masthead-line: #262d24;
-    --masthead-ink: #e8ece5;
-    --masthead-icon: #9ba497;
-    --masthead-hover: #232a20;
-    --masthead-btn-bg: #1b211a;
-    --masthead-btn-border: #2a3227;
-    --masthead-btn-border-hover: #3a4536;
-
-    --paper: #12160f;
-    --paper-2: #1d241c;
-    --surface: #1a1f18;
-    --surface-2: #232a20;
-    --ink: #e8ece5;
-    --ink-2: #b9c1b6;
-    --ink-3: #8b948a;
-    --line: #2a3227;
-    --line-strong: #3a4536;
-    --leaf: #8bc98f;
-    --leaf-2: #a5d8a8;
-    --leaf-3: #5f8f63;
-    --leaf-wash: #223022;
-    --leaf-soft: #2b3b2c;
-    --on-leaf: #0f130e;
-    --focus: #8bc98f;
-  }
 }
 
 body,
@@ -394,7 +335,7 @@ textarea {
 
 .board-card:hover {
   border-color: color-mix(in srgb, var(--dash-accent) 16%, var(--dash-line));
-  box-shadow: 0 4px 16px rgba(31, 41, 55, 0.05);
+  box-shadow: var(--dash-shadow-hover);
 }
 
 .board-card:nth-child(2) {

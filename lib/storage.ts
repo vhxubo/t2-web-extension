@@ -11,6 +11,9 @@ export interface TokenSet {
   tokenType: string;
 }
 
+/** 外观偏好：显式浅色 / 显式深色 / 跟随操作系统。 */
+export type ThemePreference = 'light' | 'dark' | 'system';
+
 export interface Settings {
   /**
    * 弹窗默认进入的榜单。只有完整页面的设置弹窗能改；
@@ -19,6 +22,12 @@ export interface Settings {
   board: BoardId;
   /** 默认展示的分区，见 lib/section.ts 的 key 规则。 */
   section: string;
+  /** 外观偏好，保存在 local:t2:settings，所有页面共用。 */
+  theme: ThemePreference;
+}
+
+export function isThemePreference(value: unknown): value is ThemePreference {
+  return value === 'light' || value === 'dark' || value === 'system';
 }
 
 export interface PendingAuth {
@@ -47,6 +56,7 @@ export interface ProfileCache {
 export const DEFAULT_SETTINGS: Settings = {
   board: 'latest',
   section: 'all',
+  theme: 'system',
 };
 
 const PREFIX = 't2';
@@ -150,6 +160,7 @@ export function normalizeSettings(stored: Partial<Settings> | null | undefined):
         ? stored.board
         : DEFAULT_SETTINGS.board,
     section: typeof stored?.section === 'string' ? stored.section : DEFAULT_SETTINGS.section,
+    theme: isThemePreference(stored?.theme) ? stored.theme : DEFAULT_SETTINGS.theme,
   };
 }
 

@@ -18,6 +18,8 @@ export type IconName =
   | 'chart'
   | 'bell'
   | 'search'
+  | 'sun'
+  | 'moon'
   | 'folder'
   | 'bookmark';
 
@@ -124,6 +126,20 @@ const PATHS: Record<IconName, ReactNode> = {
       <path d="m16 16 4.4 4.4" />
     </>
   ),
+  sun: (
+    <>
+      <circle cx="12" cy="12" r="4" />
+      <path d="M12 2.8v2" />
+      <path d="M12 19.2v2" />
+      <path d="M2.8 12h2" />
+      <path d="M19.2 12h2" />
+      <path d="m5.5 5.5 1.4 1.4" />
+      <path d="m17.1 17.1 1.4 1.4" />
+      <path d="m18.5 5.5-1.4 1.4" />
+      <path d="m6.9 17.1-1.4 1.4" />
+    </>
+  ),
+  moon: <path d="M20.4 14.2A8.4 8.4 0 0 1 9.8 3.6 8.4 8.4 0 1 0 20.4 14.2Z" />,
   folder: (
     <>
       <path d="M4 7.6A1.6 1.6 0 0 1 5.6 6h3.6l2 2h7.2A1.6 1.6 0 0 1 20 9.6v8A1.6 1.6 0 0 1 18.4 19H5.6A1.6 1.6 0 0 1 4 17.4V7.6Z" />

@@ -3,16 +3,12 @@
    暖白纸面 / 莫兰迪森林绿 / 极淡分离线 / 无衬线 + 等宽数字。
 ------------------------------------------------------------------ */
 
-:root {
-  color-scheme: light;
-}
-
 html,
 body {
   width: 392px;
   height: 480px;
   overflow: hidden;
-  background: #fafaf7;
+  background: var(--bg-base);
 }
 
 #root {
@@ -21,30 +17,6 @@ body {
 }
 
 .popup {
-  /* 弹窗固定浅色：即使系统是深色模式，也保持素净的暖白纸面。 */
-  color-scheme: light;
-  --paper: #fafaf7;
-  --paper-2: #f2f3ee;
-  --surface: #ffffff;
-  --surface-2: #f2f5f0;
-  --ink: #222222;
-  --ink-2: #4c4f4b;
-  --ink-3: #888888;
-  --line: #f0f0f0;
-  --line-strong: #e4e6e1;
-  --leaf: #4a7c59;
-  --leaf-2: #3f6c4d;
-  --leaf-3: #8fb397;
-  --leaf-wash: #eef4ee;
-  --leaf-soft: #dce9dd;
-  --on-leaf: #ffffff;
-  --gold: #8a6a33;
-  --gold-wash: #f5efe3;
-  --danger: #b4544a;
-  --danger-wash: #f8ece9;
-  --notice: #c4554b;
-  --focus: #4a7c59;
-
   display: flex;
   flex-direction: column;
   width: 392px;
@@ -56,8 +28,8 @@ body {
 }
 
 .popup ::selection {
-  background: #dce9dd;
-  color: #222222;
+  background: var(--primary-soft);
+  color: var(--text-main);
 }
 
 /* ---------- Header ---------- */
@@ -394,7 +366,7 @@ body {
   padding: 7px 8px 9px;
   border-top: 1px solid var(--line);
   background: var(--surface);
-  box-shadow: 0 -10px 24px -22px rgba(34, 34, 34, 0.28);
+  box-shadow: var(--shadow-dock);
 }
 
 .popup__dock-item {

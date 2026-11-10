@@ -9,6 +9,7 @@ import { useFeed } from '@/hooks/useFeed';
 import { useSearchHotkey } from '@/hooks/useSearch';
 import { useSession } from '@/hooks/useSession';
 import { useSettings } from '@/hooks/useSettings';
+import { useTheme } from '@/hooks/useTheme';
 import { useUnreadNotifications } from '@/hooks/useUnreadNotifications';
 import { BOARD_MAP, BOARDS, isBoardId } from '@/lib/boards';
 import { FEED_PAGE_SIZE } from '@/lib/feed';
@@ -26,7 +27,8 @@ const NO_NODES: ApiNode[] = [];
  * 仪表盘入口上的小红点来自未读通知数。
  */
 export default function Popup() {
-  const { settings } = useSettings();
+  const { settings, update } = useSettings();
+  const resolvedTheme = useTheme(settings?.theme);
   const { profile, signedIn, loading: sessionLoading, profileLoading } = useSession();
   const unread = useUnreadNotifications(signedIn);
 
@@ -61,6 +63,11 @@ export default function Popup() {
     setBoard(next);
   }, []);
 
+  // Header 快捷键：在浅色 / 深色之间直接切换（想恢复跟随系统仍可到设置弹窗里选）。
+  const toggleTheme = useCallback(() => {
+    void update({ theme: resolvedTheme === 'dark' ? 'light' : 'dark' });
+  }, [resolvedTheme, update]);
+
   // 弹窗只留一个账号入口：登录、退出、默认值都在完整页面的设置弹窗里。
   const goDashboard = useCallback((hash?: string) => {
     void openDashboard(hash).finally(() => window.close());
@@ -78,6 +85,13 @@ export default function Popup() {
   const boardMeta = BOARD_MAP[board];
   const unreadLabel = unread.count > 0 ? `，${unread.count} 条未读通知` : '';
   const accountLoading = sessionLoading || (signedIn && !profile && profileLoading);
+  const themePreference = settings?.theme ?? 'system';
+  const currentThemeLabel = resolvedTheme === 'dark' ? '深色' : '浅色';
+  const nextThemeLabel = resolvedTheme === 'dark' ? '浅色' : '深色';
+  const themeTitle =
+    themePreference === 'system'
+      ? `外观：跟随系统（当前${currentThemeLabel}），点击改为${nextThemeLabel}`
+      : `外观：当前${currentThemeLabel}，点击切换为${nextThemeLabel}`;
 
   return (
     <div className="popup">
@@ -106,6 +120,16 @@ export default function Popup() {
             data-spinning={feed.status === 'loading'}
           >
             <Icon name="refresh" size={15} />
+          </button>
+          <button
+            type="button"
+            className="popup__icon-btn"
+            onClick={toggleTheme}
+            title={themeTitle}
+            aria-label={themeTitle}
+            aria-pressed={resolvedTheme === 'dark'}
+          >
+            <Icon name={resolvedTheme === 'dark' ? 'moon' : 'sun'} size={16} />
           </button>
           <button
             type="button"
