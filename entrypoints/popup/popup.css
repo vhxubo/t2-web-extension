@@ -16,6 +16,7 @@ body {
   display: flex;
   flex-direction: column;
   width: 392px;
+  min-height: 420px;
   background: var(--paper);
 }
 
@@ -36,35 +37,72 @@ body {
 .popup__head-actions {
   display: flex;
   align-items: center;
-  gap: 0;
+  gap: 2px;
   margin-left: auto;
 }
 
-.popup__head-actions .btn--icon {
-  width: 28px;
-  height: 28px;
+.popup__full {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 8px;
+  border: none;
+  border-radius: 7px;
+  background: none;
+  color: var(--ink-3);
+  font-size: 11.5px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.16s var(--ease), color 0.16s var(--ease);
 }
 
-.popup__head .avatar {
+.popup__full:hover {
+  background: var(--surface-2);
+  color: var(--ink);
+}
+
+/* 唯一的账号入口：点开完整页面的设置弹窗，登录 / 退出都在里面。 */
+.popup__account {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 150px;
+  padding: 3px 8px 3px 5px;
+  border: none;
+  border-radius: 999px;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.16s var(--ease);
+}
+
+.popup__account:hover:not(:disabled) {
+  background: var(--surface-2);
+}
+
+.popup__account:disabled {
+  cursor: default;
+}
+
+.popup__account .avatar {
   width: 24px;
   height: 24px;
   font-size: 10.5px;
 }
 
-.popup__head .account__profile {
-  padding: 2px 6px 2px 2px;
-  gap: 6px;
-}
-
-.popup__head .account__name {
-  max-width: 104px;
+.popup__account .account__name {
+  max-width: 96px;
   font-size: 12px;
 }
 
-.popup__head .account__login {
-  gap: 5px;
-  padding: 5px 9px;
-  font-size: 12px;
+.popup__account-skeleton {
+  display: inline-block;
+  width: 56px;
+  height: 12px;
 }
 
 .popup__warn {
@@ -77,14 +115,16 @@ body {
   line-height: 1.5;
 }
 
-/* ---------- 榜单标签 ---------- */
+/* ---------- 榜单标签（底部） ---------- */
 
-.popup__defaults {
+.popup__bottom {
   display: flex;
-  padding: 0 8px 8px;
+  padding: 4px 6px 6px;
+  border-top: 1px solid var(--line);
+  background: var(--paper);
 }
 
-.popup .board-tabs {
+.popup__bottom .board-tabs {
   flex: 1;
   min-width: 0;
   flex-wrap: nowrap;
@@ -92,25 +132,30 @@ body {
   gap: 0;
 }
 
-.popup .board-tab {
+.popup__bottom .board-tab {
   flex: 1 1 auto;
   justify-content: center;
-  padding: 6px 4px;
+  padding: 7px 4px;
   border-radius: 6px;
   font-size: 13px;
   white-space: nowrap;
 }
 
-.popup .board-tab--active::after {
+/* 标签在底部，选中线挪到上沿，贴着分隔线。 */
+.popup__bottom .board-tab--active::after {
   left: 4px;
   right: 4px;
-  bottom: 1px;
-  height: 1.5px;
+  top: 0;
+  bottom: auto;
+  height: 2px;
 }
 
 /* ---------- 列表 ---------- */
 
 .popup__feed {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
   border-top: 1px solid var(--line);
   background: var(--surface);
 }
@@ -131,31 +176,10 @@ body {
   font-weight: 600;
 }
 
-.popup__open {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  margin-left: auto;
-  padding: 4px 7px;
-  border: none;
-  border-radius: 7px;
-  background: none;
-  color: var(--leaf);
-  font-size: 11px;
-  font-weight: 500;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: background 0.16s var(--ease), color 0.16s var(--ease);
-}
-
-.popup__open:hover {
-  background: var(--leaf-wash);
-  color: var(--leaf-2);
-}
-
 .popup__refresh {
   width: 28px;
   height: 28px;
+  margin-left: auto;
   color: var(--ink-3);
 }
 
@@ -164,6 +188,8 @@ body {
 }
 
 .popup__feed-body {
+  flex: 1;
+  min-height: 0;
   max-height: 400px;
   overflow-y: auto;
   overscroll-behavior: contain;

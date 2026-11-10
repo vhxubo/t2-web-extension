@@ -1,10 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
-import { AccountChip } from '@/components/AccountChip';
+import { Avatar } from '@/components/Avatar';
 import { BoardTabs } from '@/components/BoardTabs';
 import { Brand } from '@/components/Brand';
 import { Icon } from '@/components/Icon';
 import { PostList } from '@/components/PostList';
-import { Toast } from '@/components/Toast';
 import { useFeed } from '@/hooks/useFeed';
 import { useSession } from '@/hooks/useSession';
 import { useSettings } from '@/hooks/useSettings';
@@ -21,11 +20,10 @@ const POPUP_LIMIT = 20;
 
 export default function Popup() {
   const { settings, update } = useSettings();
-  const { profile, signedIn, loading: sessionLoading, signOut } = useSession();
+  const { profile, signedIn, loading: sessionLoading } = useSession();
 
   const [board, setBoard] = useState<BoardId>('latest');
   const [initialized, setInitialized] = useState(false);
-  const [toast, setToast] = useState<string | null>(null);
 
   const feed = useFeed({
     board,
@@ -43,12 +41,6 @@ export default function Popup() {
     setInitialized(true);
   }, [settings, initialized]);
 
-  useEffect(() => {
-    if (!toast) return;
-    const timer = window.setTimeout(() => setToast(null), 2600);
-    return () => window.clearTimeout(timer);
-  }, [toast]);
-
   const persist = useCallback(
     async (patch: Partial<Settings>) => {
       await update(patch);
@@ -61,14 +53,9 @@ export default function Popup() {
     await persist({ board: next });
   };
 
+  // 弹窗只留一个账号入口：登录、退出、默认值都在完整页面的设置弹窗里。
   const goDashboard = (hash?: string) => {
     void openDashboard(hash).finally(() => window.close());
-  };
-
-  const handleSignOut = async () => {
-    await signOut();
-    setToast('已退出登录');
-    void feed.reload();
   };
 
   const boardMeta = BOARD_MAP[board];
@@ -78,22 +65,37 @@ export default function Popup() {
       <header className="popup__head">
         <Brand compact markOnly />
         <div className="popup__head-actions">
-          <AccountChip
-            signedIn={signedIn}
-            loading={sessionLoading}
-            profile={profile}
-            compact
-            onLogin={() => goDashboard('login')}
-            onSignOut={() => void handleSignOut()}
-          />
           <button
             type="button"
-            className="btn btn--icon"
-            onClick={() => goDashboard('settings')}
-            title="打开设置"
-            aria-label="打开设置"
+            className="popup__full"
+            onClick={() => goDashboard()}
+            title="在新标签页打开完整列表"
+            aria-label="在新标签页打开完整列表"
           >
-            <Icon name="settings" size={17} />
+            <span>完整列表</span>
+            <Icon name="external" size={12} />
+          </button>
+          <button
+            type="button"
+            className="popup__account"
+            onClick={() => goDashboard('settings')}
+            disabled={sessionLoading}
+            title={signedIn ? '账号与设置' : '登录与设置'}
+            aria-label={signedIn ? '账号与设置' : '登录与设置'}
+          >
+            {sessionLoading ? (
+              <span className="skeleton skeleton--line popup__account-skeleton" aria-hidden="true" />
+            ) : signedIn ? (
+              <>
+                <Avatar src={profile?.avatar_url} name={profile?.username ?? '已登录'} />
+                <span className="account__name">{profile?.username ?? '已登录'}</span>
+              </>
+            ) : (
+              <>
+                <Icon name="user" size={15} />
+                <span>登录</span>
+              </>
+            )}
           </button>
         </div>
       </header>
@@ -104,15 +106,6 @@ export default function Popup() {
         </p>
       )}
 
-      <div className="popup__defaults">
-        <BoardTabs
-          boards={POPUP_BOARDS}
-          value={board}
-          onChange={(next) => void handleBoard(next)}
-          sectionFiltered={false}
-        />
-      </div>
-
       <section
         className="popup__feed"
         id="feed-panel"
@@ -121,16 +114,6 @@ export default function Popup() {
       >
         <div className="popup__feed-head">
           <span className="popup__feed-title t2-serif">{boardMeta.label}</span>
-          <button
-            type="button"
-            className="popup__open"
-            onClick={() => goDashboard()}
-            title="在新标签页打开完整列表"
-            aria-label="在新标签页打开完整列表"
-          >
-            <span>完整列表</span>
-            <Icon name="external" size={13} />
-          </button>
           <button
             type="button"
             className="btn btn--icon popup__refresh"
@@ -153,12 +136,19 @@ export default function Popup() {
             titleOnly
             sectionFiltered={false}
             onRetry={() => void feed.reload()}
-            onLogin={() => goDashboard('login')}
+            onLogin={() => goDashboard('settings')}
           />
         </div>
       </section>
 
-      <Toast message={toast} />
+      <div className="popup__bottom">
+        <BoardTabs
+          boards={POPUP_BOARDS}
+          value={board}
+          onChange={(next) => void handleBoard(next)}
+          sectionFiltered={false}
+        />
+      </div>
     </div>
   );
 }
