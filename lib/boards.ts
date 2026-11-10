@@ -16,6 +16,13 @@ export const BOARDS: BoardMeta[] = [
   { id: 'scores', label: '评分榜', hint: '社区评分', supportsSection: false },
 ];
 
+/** 弹窗只展示有标题的榜单；评分榜条目没有标题，留给完整页面。 */
+export const POPUP_BOARDS: BoardMeta[] = BOARDS.filter((board) => board.id !== 'scores');
+
+export function isPopupBoardId(value: string): value is BoardId {
+  return POPUP_BOARDS.some((board) => board.id === value);
+}
+
 export const BOARD_MAP: Record<BoardId, BoardMeta> = BOARDS.reduce(
   (map, board) => {
     map[board.id] = board;

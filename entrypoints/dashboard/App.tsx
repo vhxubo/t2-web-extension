@@ -1,47 +1,34 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { AccountChip } from '@/components/AccountChip';
-import { BoardTabs } from '@/components/BoardTabs';
+import { BoardCard } from '@/components/BoardCard';
 import { Brand } from '@/components/Brand';
 import { Icon } from '@/components/Icon';
-import { PostList } from '@/components/PostList';
 import { SectionRail } from '@/components/SectionRail';
 import { SettingsDialog } from '@/components/SettingsDialog';
 import { Toast } from '@/components/Toast';
-import { useFeed } from '@/hooks/useFeed';
 import { useNodes } from '@/hooks/useNodes';
 import { useSession } from '@/hooks/useSession';
 import { useSettings } from '@/hooks/useSettings';
-import { BOARD_MAP, isBoardId } from '@/lib/boards';
+import { BOARDS } from '@/lib/boards';
 import { LINKS } from '@/lib/config';
-import { describeError } from '@/lib/errors';
-import { clockLabel, compactNumber, todayLabel } from '@/lib/format';
-import { sectionKey, sectionOptions, parseSectionKey, sectionPath } from '@/lib/section';
-import { nodesCacheItem, storageAvailable, type Settings } from '@/lib/storage';
-import type { BoardId, Section } from '@/lib/types';
+import { todayLabel } from '@/lib/format';
+import { parseSectionKey, sectionPath } from '@/lib/section';
+import { nodesCacheItem, storageAvailable } from '@/lib/storage';
+import type { Section } from '@/lib/types';
 
 export default function Dashboard() {
   const { settings, update } = useSettings();
   const { nodes, status: nodesStatus, reload: reloadNodes } = useNodes();
   const { tokens, profile, signedIn, loading: sessionLoading, signOut } = useSession();
 
-  const [board, setBoard] = useState<BoardId>('latest');
   const [section, setSection] = useState<Section>({ kind: 'all' });
   const [applied, setApplied] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
-  const sentinelRef = useRef<HTMLDivElement | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const limit = settings?.pageSize ?? 20;
   const nodesReady = nodesStatus !== 'loading';
-
-  const feed = useFeed({
-    board,
-    section,
-    nodes,
-    nodesReady,
-    limit,
-    enabled: applied,
-  });
 
   const showToast = useCallback((message: string) => {
     setToast(message);
@@ -53,17 +40,10 @@ export default function Dashboard() {
     return () => window.clearTimeout(timer);
   }, [toast]);
 
-  // 打开时套用一次默认视图；之后视图切换不再写回默认值。
+  // 打开时套用一次默认分区；之后页面上切换分区不再写回默认值。
   useEffect(() => {
     if (!settings || applied) return;
-    const nextBoard = isBoardId(settings.board) ? settings.board : 'latest';
-    const nextSection = parseSectionKey(settings.section);
-    setBoard(nextBoard);
-    setSection(
-      !BOARD_MAP[nextBoard].supportsSection && nextSection.kind !== 'all'
-        ? { kind: 'all' }
-        : nextSection,
-    );
+    setSection(parseSectionKey(settings.section));
     setApplied(true);
   }, [settings, applied]);
 
@@ -81,62 +61,27 @@ export default function Dashboard() {
   const sectionName = sectionPath(section, nodes);
 
   useEffect(() => {
-    document.title = `${sectionName} · ${BOARD_MAP[board].label} — 2Libra 帖子浏览`;
-  }, [sectionName, board]);
+    document.title = `${sectionName} · 全部榜单 — 2Libra 帖子浏览`;
+  }, [sectionName]);
 
-  const handleBoard = useCallback(
-    (next: BoardId) => {
-      const meta = BOARD_MAP[next];
-      if (!meta.supportsSection && section.kind !== 'all') {
-        setSection({ kind: 'all' });
-        showToast(`「${meta.label}」只支持全站，已切回全站`);
-      }
-      setBoard(next);
-    },
-    [section.kind, showToast],
-  );
+  const handleSection = useCallback((next: Section) => {
+    setSection(next);
+  }, []);
 
-  const handleSection = useCallback(
-    (next: Section) => {
-      setSection(next);
-      if (next.kind !== 'all' && !BOARD_MAP[board].supportsSection) {
-        setBoard('latest');
-        showToast(`「${BOARD_MAP[board].label}」不分区，已切换到「新发表」`);
-      }
-    },
-    [board, showToast],
-  );
-
-  // 默认值里保存了「热议榜 + 具体分区」这种组合时，自动收敛为全站。
-  const handleUpdateSettings = useCallback(
-    async (patch: Partial<Settings>) => {
-      const next: Partial<Settings> = { ...patch };
-      const targetSection = next.section ?? settings?.section ?? 'all';
-      if (next.board && !BOARD_MAP[next.board].supportsSection && targetSection !== 'all') {
-        next.section = 'all';
-      }
-      if (
-        next.section &&
-        next.section !== 'all' &&
-        !(BOARD_MAP[settings?.board ?? 'latest'] ?? BOARD_MAP.latest).supportsSection
-      ) {
-        next.board = 'latest';
-      }
-      await update(next);
-    },
-    [update, settings],
-  );
+  const refreshAll = useCallback(() => {
+    setRefreshKey((current) => current + 1);
+  }, []);
 
   const handleSignedIn = useCallback(() => {
-    // 令牌变化会让 useSession 自动刷新资料，这里只需要重新拉一次列表拿个性化字段。
-    void feed.reload();
-  }, [feed]);
+    // 令牌变化会让 useSession 自动刷新资料；这里把带个性化字段的榜单全部重新拉一遍。
+    refreshAll();
+  }, [refreshAll]);
 
   const handleSignOut = useCallback(async () => {
     await signOut();
     showToast('已退出登录');
-    void feed.reload();
-  }, [signOut, showToast, feed]);
+    refreshAll();
+  }, [signOut, showToast, refreshAll]);
 
   const handleClearCache = useCallback(async () => {
     await nodesCacheItem.setValue(null);
@@ -149,28 +94,6 @@ export default function Dashboard() {
       window.history.replaceState(null, '', window.location.pathname + window.location.search);
     }
   }, []);
-
-  // 触底自动加载；出错后停下来，等用户点重试。
-  useEffect(() => {
-    const element = sentinelRef.current;
-    if (!element || !feed.hasMore || feed.moreError) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries.some((entry) => entry.isIntersecting)) void feed.loadMore();
-      },
-      { rootMargin: '320px 0px' },
-    );
-    observer.observe(element);
-    return () => observer.disconnect();
-  }, [feed.hasMore, feed.moreError, feed.loadMore]);
-
-  const moreError = feed.moreError ? describeError(feed.moreError) : null;
-  const options = sectionOptions(nodes);
-  const currentKey = sectionKey(section);
-  const optionsWithFallback = options.some((option) => option.value === currentKey)
-    ? options
-    : [{ value: currentKey, label: sectionName, group: null, depth: 0 }, ...options];
 
   return (
     <>
@@ -219,126 +142,52 @@ export default function Dashboard() {
       )}
 
       <div className="shell">
-        <div className="rail-wrap">
-          <SectionRail
-            nodes={nodes}
-            value={section}
-            onChange={handleSection}
-            loading={nodesStatus === 'loading'}
-            failed={nodesStatus === 'error'}
-            onRetry={() => void reloadNodes(true)}
-          />
-        </div>
-
-        <main className="feed-wrap">
-          <div className="feed-tabs">
-            <BoardTabs
-              value={board}
-              onChange={handleBoard}
-              sectionFiltered={section.kind !== 'all'}
+        <aside className="side">
+          <div className="section-card">
+            <SectionRail
+              nodes={nodes}
+              value={section}
+              onChange={handleSection}
+              loading={nodesStatus === 'loading'}
+              failed={nodesStatus === 'error'}
+              onRetry={() => void reloadNodes(true)}
             />
+          </div>
+        </aside>
+
+        <main className="main">
+          <header className="page-head">
+            <div className="page-head__copy">
+              <span className="t2-eyebrow page-head__eyebrow">全部榜单</span>
+              <h1 className="page-head__title t2-serif">{sectionName}</h1>
+              <p className="page-head__sub">并排展示，不用切换 · 分区筛选同步到支持的榜单</p>
+            </div>
             <button
               type="button"
-              className="btn btn--icon feed-tabs__refresh"
-              onClick={() => void feed.reload()}
-              title="刷新列表"
-              aria-label="刷新列表"
-              data-spinning={feed.status === 'loading'}
+              className="btn page-head__refresh"
+              onClick={refreshAll}
+              title="刷新全部榜单"
             >
               <Icon name="refresh" size={16} />
+              全部刷新
             </button>
-          </div>
-
-          <div className="mobile-sections">
-            <span className="mobile-sections__label">分区</span>
-            <select
-              className="select select--sm mobile-sections__select"
-              aria-label="切换分区"
-              value={currentKey}
-              onChange={(event) => {
-                const next = parseSectionKey(event.target.value);
-                handleSection(next);
-              }}
-            >
-              {optionsWithFallback.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.group ? `${option.group} · ${option.label}` : option.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <header className="feed-head">
-            <div>
-              <span className="t2-eyebrow feed-head__eyebrow">
-                榜单 · {BOARD_MAP[board].label}
-              </span>
-              <h1 className="feed-head__title t2-serif">{sectionName}</h1>
-              <p className="feed-head__sub">
-                {BOARD_MAP[board].hint}
-                {section.kind === 'all' ? ' · 全站' : ' · 已按分区筛选'}
-              </p>
-            </div>
-            <div className="feed-head__meta">
-              <span>
-                共 <b>{feed.status === 'ready' ? compactNumber(feed.total) : '—'}</b> 条
-              </span>
-              <span>{feed.updatedAt ? `${clockLabel(new Date(feed.updatedAt))} 更新` : '等待加载'}</span>
-            </div>
           </header>
 
-          <div role="tabpanel" id="feed-panel" aria-labelledby={`board-tab-${board}`}>
-            <PostList
-              items={feed.items}
-              status={feed.status}
-              error={feed.error}
-              sectionFiltered={section.kind !== 'all'}
-              sectionName={sectionName}
-              onRetry={() => void feed.reload()}
-              onLogin={() => setSettingsOpen(true)}
-              onResetSection={() => handleSection({ kind: 'all' })}
-            />
-
-            {feed.status === 'ready' && feed.items.length > 0 && (
-              <div className="feed-foot">
-                {moreError && (
-                  <div className="banner banner--error feed-foot__error" role="alert">
-                    <Icon name="alert" size={16} className="banner__icon" />
-                    <div className="banner__body">
-                      <strong className="banner__title">{moreError.title}</strong>
-                      {moreError.detail && <span>{moreError.detail}</span>}
-                      <div className="banner__actions">
-                        <button
-                          type="button"
-                          className="btn btn--sm"
-                          onClick={() => void feed.loadMore()}
-                        >
-                          继续加载
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {feed.hasMore ? (
-                  <>
-                    <button
-                      type="button"
-                      className="btn load-more"
-                      onClick={() => void feed.loadMore()}
-                      disabled={feed.loadingMore}
-                    >
-                      {feed.loadingMore ? '加载中…' : '加载更多'}
-                    </button>
-                    <div ref={sentinelRef} className="feed-sentinel" aria-hidden="true" />
-                  </>
-                ) : (
-                  <span className="feed-foot__end">
-                    — 到底了 · 共 {compactNumber(feed.total)} 条 —
-                  </span>
-                )}
-              </div>
-            )}
+          <div className="board-grid">
+            {BOARDS.map((meta) => (
+              <BoardCard
+                key={`${meta.id}:${refreshKey}`}
+                meta={meta}
+                section={section}
+                sectionName={sectionName}
+                nodes={nodes}
+                nodesReady={nodesReady}
+                limit={limit}
+                enabled={applied}
+                onLogin={() => setSettingsOpen(true)}
+                onResetSection={() => handleSection({ kind: 'all' })}
+              />
+            ))}
           </div>
         </main>
       </div>
@@ -346,12 +195,12 @@ export default function Dashboard() {
       <SettingsDialog
         open={settingsOpen}
         onClose={closeSettings}
-        settings={settings ?? { board: 'latest', section: 'all', pageSize: 20, clientId: '' }}
+        settings={settings ?? { board: 'latest', section: 'all', pageSize: 20 }}
         nodes={nodes}
         signedIn={signedIn}
         tokens={tokens ?? null}
         profile={profile}
-        onUpdateSettings={handleUpdateSettings}
+        onUpdateSettings={update}
         onSignedIn={handleSignedIn}
         onSignOut={() => void handleSignOut()}
         onToast={showToast}

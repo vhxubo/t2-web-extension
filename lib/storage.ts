@@ -9,7 +9,6 @@ export interface TokenSet {
   expiresAt: number;
   scope: string | null;
   tokenType: string;
-  source: 'oauth' | 'manual';
 }
 
 export interface Settings {
@@ -18,15 +17,12 @@ export interface Settings {
   /** 默认展示的分区，见 lib/section.ts 的 key 规则。 */
   section: string;
   pageSize: number;
-  /** 2Libra OAuth 应用的 client_id（公开客户端，无 secret）。 */
-  clientId: string;
 }
 
 export interface PendingAuth {
   state: string;
   verifier: string;
   redirectUri: string;
-  clientId: string;
   createdAt: number;
 }
 
@@ -39,7 +35,6 @@ export const DEFAULT_SETTINGS: Settings = {
   board: 'latest',
   section: 'all',
   pageSize: 20,
-  clientId: '',
 };
 
 export const PAGE_SIZES = [20, 30, 50] as const;
@@ -134,14 +129,12 @@ export const nodesCacheItem = definePersistentItem<NodesCache | null>(`local:${P
 
 /** 读出设置并与默认值合并；顺手收敛掉旧版本或手工改坏的字段。 */
 export async function readSettings(): Promise<Settings> {
-  const stored = await settingsItem.getValue();
-  const merged = { ...DEFAULT_SETTINGS, ...(stored ?? {}) };
+  const stored = (await settingsItem.getValue()) ?? DEFAULT_SETTINGS;
   return {
-    ...merged,
-    board: isBoardId(merged.board) ? merged.board : DEFAULT_SETTINGS.board,
-    pageSize: (PAGE_SIZES as readonly number[]).includes(merged.pageSize)
-      ? merged.pageSize
+    board: isBoardId(stored.board) ? stored.board : DEFAULT_SETTINGS.board,
+    pageSize: (PAGE_SIZES as readonly number[]).includes(stored.pageSize)
+      ? stored.pageSize
       : DEFAULT_SETTINGS.pageSize,
-    section: typeof merged.section === 'string' ? merged.section : 'all',
+    section: typeof stored.section === 'string' ? stored.section : 'all',
   };
 }

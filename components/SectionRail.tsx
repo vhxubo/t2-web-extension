@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { groupNodes } from '../lib/nodes';
-import { sectionKey } from '../lib/section';
+import { sectionKey, sectionPath } from '../lib/section';
 import type { ApiNode, Section } from '../lib/types';
 import { Icon } from './Icon';
 
@@ -20,6 +20,8 @@ function matches(text: string | undefined, query: string): boolean {
 export function SectionRail({ nodes, value, onChange, loading, failed, onRetry }: SectionRailProps) {
   const [search, setSearch] = useState('');
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set());
+  // 窄屏里分区收成一张小卡片，默认折叠，只露出当前分区。
+  const [panelOpen, setPanelOpen] = useState(false);
 
   const groups = useMemo(() => groupNodes(nodes), [nodes]);
   const query = search.trim().toLowerCase();
@@ -71,10 +73,26 @@ export function SectionRail({ nodes, value, onChange, loading, failed, onRetry }
   const total = nodes.length;
 
   return (
-    <nav className="rail" aria-label="分区">
+    <nav className="rail" aria-label="分区" data-open={panelOpen}>
       <div className="rail__head">
         <span className="rail__title">分区</span>
-        {total > 0 && <span className="rail__total t2-mono">{total}</span>}
+        <span className="rail__current" title={sectionPath(value, nodes)}>
+          {sectionPath(value, nodes)}
+        </span>
+        <button
+          type="button"
+          className="rail__collapse"
+          aria-expanded={panelOpen}
+          aria-controls="section-scroll"
+          title={panelOpen ? '收起分区' : '展开分区'}
+          onClick={() => setPanelOpen((open) => !open)}
+        >
+          <Icon
+            name="chevron"
+            size={14}
+            className={`rail__chevron${panelOpen ? ' rail__chevron--open' : ''}`}
+          />
+        </button>
       </div>
 
       {total > 0 && (
@@ -91,7 +109,7 @@ export function SectionRail({ nodes, value, onChange, loading, failed, onRetry }
         </div>
       )}
 
-      <div className="rail__scroll">
+      <div className="rail__scroll" id="section-scroll">
         <button
           type="button"
           className={`rail__item rail__item--all${current === 'all' ? ' rail__item--active' : ''}`}

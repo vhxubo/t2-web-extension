@@ -1,12 +1,6 @@
 import { browser } from '#imports';
-import { AUTHORIZE_URL, REQUESTED_SCOPE, TOKEN_URL } from './config';
-import {
-  pendingAuthItem,
-  settingsItem,
-  tokensItem,
-  type PendingAuth,
-  type TokenSet,
-} from './storage';
+import { AUTHORIZE_URL, OAUTH_CLIENT_ID, REQUESTED_SCOPE, TOKEN_URL } from './config';
+import { pendingAuthItem, tokensItem, type PendingAuth, type TokenSet } from './storage';
 
 export type AuthErrorCode =
   | 'config'
@@ -92,7 +86,7 @@ async function tokenRequest(body: Record<string, string>): Promise<TokenResponse
   return payload.d;
 }
 
-function toTokenSet(payload: TokenResponse, source: TokenSet['source']): TokenSet {
+function toTokenSet(payload: TokenResponse): TokenSet {
   if (!payload.access_token) {
     throw new AuthError('授权响应里缺少 access_token', 'token');
   }
@@ -103,34 +97,33 @@ function toTokenSet(payload: TokenResponse, source: TokenSet['source']): TokenSe
     expiresAt: Date.now() + Math.max(expiresIn - 10, 60) * 1000,
     scope: payload.scope ?? null,
     tokenType: payload.token_type ?? 'Bearer',
-    source,
   };
 }
 
 async function exchangeCode(params: {
   code: string;
   verifier: string;
-  clientId: string;
   redirectUri: string;
 }): Promise<TokenSet> {
   const payload = await tokenRequest({
     grant_type: 'authorization_code',
     code: params.code,
     redirect_uri: params.redirectUri,
-    client_id: params.clientId,
+    client_id: OAUTH_CLIENT_ID.trim(),
     code_verifier: params.verifier,
   });
-  return toTokenSet(payload, 'oauth');
+  return toTokenSet(payload);
 }
 
 /**
  * 走一遍 2Libra 的授权码 + PKCE 流程（公开客户端，不带 client_secret）。
+ * client_id 由开发者在 lib/config.ts 中配置，不经过用户。
  * 必须在常驻的扩展页里调用：授权窗口会让弹窗失焦关闭。
  */
-export async function startLogin(clientIdInput: string): Promise<TokenSet> {
-  const clientId = clientIdInput.trim();
+export async function startLogin(): Promise<TokenSet> {
+  const clientId = OAUTH_CLIENT_ID.trim();
   if (!clientId) {
-    throw new AuthError('请先填写 2Libra 应用的 client_id', 'config');
+    throw new AuthError('此版本未配置 2Libra 授权应用，请联系应用开发者', 'config');
   }
   const redirectUri = getRedirectUri();
   if (!redirectUri) {
@@ -144,7 +137,6 @@ export async function startLogin(clientIdInput: string): Promise<TokenSet> {
     state,
     verifier,
     redirectUri,
-    clientId,
     createdAt: Date.now(),
   };
   await pendingAuthItem.setValue(pending);
@@ -197,7 +189,7 @@ export async function startLogin(clientIdInput: string): Promise<TokenSet> {
     const code = returned.searchParams.get('code');
     if (!code) throw new AuthError('授权回调里没有拿到授权码', 'token');
 
-    const tokens = await exchangeCode({ code, verifier, clientId, redirectUri });
+    const tokens = await exchangeCode({ code, verifier, redirectUri });
     await tokensItem.setValue(tokens);
     return tokens;
   } finally {
@@ -219,16 +211,16 @@ async function doRefresh(): Promise<TokenSet | null> {
   const current = await tokensItem.getValue();
   if (!current?.refreshToken) return null;
 
-  const { clientId } = await settingsItem.getValue();
-  if (!clientId?.trim()) return null;
+  const clientId = OAUTH_CLIENT_ID.trim();
+  if (!clientId) return null;
 
   try {
     const payload = await tokenRequest({
       grant_type: 'refresh_token',
       refresh_token: current.refreshToken,
-      client_id: clientId.trim(),
+      client_id: clientId,
     });
-    const next = toTokenSet(payload, 'oauth');
+    const next = toTokenSet(payload);
     await tokensItem.setValue(next);
     return next;
   } catch (error) {
@@ -248,8 +240,7 @@ export async function getAccessToken(): Promise<string | null> {
   const tokens = await tokensItem.getValue();
   if (!tokens) return null;
 
-  const skew = tokens.source === 'manual' ? 0 : 60_000;
-  if (Date.now() + skew >= tokens.expiresAt) {
+  if (Date.now() + 60_000 >= tokens.expiresAt) {
     if (tokens.refreshToken) {
       const next = await refreshTokens();
       if (next) return next.accessToken;
@@ -258,20 +249,6 @@ export async function getAccessToken(): Promise<string | null> {
     throw new AuthError('登录已过期，请重新授权', 'expired');
   }
   return tokens.accessToken;
-}
-
-export async function setManualToken(rawToken: string): Promise<void> {
-  const accessToken = rawToken.trim().replace(/^Bearer\s+/i, '');
-  if (!accessToken) throw new AuthError('请输入 access token', 'config');
-  await tokensItem.setValue({
-    accessToken,
-    refreshToken: null,
-    // 手动令牌不知道真实有效期，交给 401 判断。
-    expiresAt: Date.now() + 365 * 24 * 3600 * 1000,
-    scope: null,
-    tokenType: 'Bearer',
-    source: 'manual',
-  });
 }
 
 export async function logout(): Promise<void> {

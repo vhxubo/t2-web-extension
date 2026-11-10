@@ -1,5 +1,6 @@
 import { useRef } from 'react';
 import { BOARDS } from '../lib/boards';
+import type { BoardMeta } from '../lib/boards';
 import type { BoardId } from '../lib/types';
 
 interface BoardTabsProps {
@@ -7,22 +8,29 @@ interface BoardTabsProps {
   onChange: (board: BoardId) => void;
   /** 当前是否选了具体分区（非全站）。 */
   sectionFiltered: boolean;
+  /** 只展示这些榜单；默认展示全部。 */
+  boards?: BoardMeta[];
 }
 
-export function BoardTabs({ value, onChange, sectionFiltered }: BoardTabsProps) {
+export function BoardTabs({
+  value,
+  onChange,
+  sectionFiltered,
+  boards = BOARDS,
+}: BoardTabsProps) {
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
 
   const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
-    const index = BOARDS.findIndex((board) => board.id === value);
+    const index = boards.findIndex((board) => board.id === value);
     let next = index;
-    if (event.key === 'ArrowRight') next = (index + 1) % BOARDS.length;
-    else if (event.key === 'ArrowLeft') next = (index - 1 + BOARDS.length) % BOARDS.length;
+    if (event.key === 'ArrowRight') next = (index + 1) % boards.length;
+    else if (event.key === 'ArrowLeft') next = (index - 1 + boards.length) % boards.length;
     else if (event.key === 'Home') next = 0;
-    else if (event.key === 'End') next = BOARDS.length - 1;
+    else if (event.key === 'End') next = boards.length - 1;
     else return;
 
     event.preventDefault();
-    const target = BOARDS[next];
+    const target = boards[next];
     if (!target) return;
     onChange(target.id);
     tabRefs.current[next]?.focus();
@@ -35,7 +43,7 @@ export function BoardTabs({ value, onChange, sectionFiltered }: BoardTabsProps) 
       aria-label="榜单"
       onKeyDown={handleKeyDown}
     >
-      {BOARDS.map((board, index) => {
+      {boards.map((board, index) => {
         const active = board.id === value;
         const needsAllSite = sectionFiltered && !board.supportsSection;
         return (

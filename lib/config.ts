@@ -4,6 +4,19 @@ export const API_BASE = `${APP_ORIGIN}/api`;
 export const AUTHORIZE_URL = `${APP_ORIGIN}/oauth/authorize`;
 export const TOKEN_URL = `${APP_ORIGIN}/api/oauth/token`;
 
+/**
+ * 2Libra OAuth 公开客户端的 client_id。
+ *
+ * 由应用开发者在打包前直接填写，扩展不向用户提供任何授权配置入口。
+ * 回调地址需要用 `browser.identity.getRedirectURL('cb')` 的值，并在 2Libra
+ * 应用里登记为 `https://<扩展 ID>.chromiumapp.org/cb`。
+ * 留空时扩展仍可匿名使用，只是登录会被禁用。
+ */
+export const OAUTH_CLIENT_ID = '';
+
+/** client_id 是否已由开发者配置。 */
+export const OAUTH_CONFIGURED = OAUTH_CLIENT_ID.trim().length > 0;
+
 /** 只读浏览所需的最小 scope。 */
 export const REQUESTED_SCOPE = 'read profile';
 
