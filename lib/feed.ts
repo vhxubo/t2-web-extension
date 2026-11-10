@@ -1,5 +1,6 @@
 /** 排行榜 / 列表接口的读取与归一化。 */
 import { apiGet } from './api';
+import { BOARD_MAP } from './boards';
 import { sectionQuery, sectionResolved } from './section';
 import type { BoardId, Section, Topic, TopicPage, ApiNode } from './types';
 
@@ -7,6 +8,9 @@ export interface FeedItem {
   key: string;
   topic: Topic;
 }
+
+/** 列表固定每页 20 条；设置里不再提供条数选项。 */
+export const FEED_PAGE_SIZE = 20;
 
 export interface FeedPage {
   items: FeedItem[];
@@ -49,12 +53,14 @@ export async function loadFeed(options: LoadFeedOptions): Promise<FeedPage> {
       signal,
     });
   } else {
+    const dimension = BOARD_MAP[board].dimension;
     data = await apiGet<TopicPage>('/v1/topics', {
       auth: true,
       query: {
         page,
         limit: pageSize,
-        sort: board === 'value' ? 'value' : 'latest',
+        sort: 'latest',
+        ...(dimension ? { dimensions: dimension } : {}),
         ...filter,
       },
       signal,

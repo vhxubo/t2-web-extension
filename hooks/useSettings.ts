@@ -1,5 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
-import { settingsItem, readSettings, DEFAULT_SETTINGS, type Settings } from '../lib/storage';
+import {
+  settingsItem,
+  readSettings,
+  normalizeSettings,
+  type Settings,
+} from '../lib/storage';
 
 export function useSettings() {
   const [settings, setSettings] = useState<Settings | null>(null);
@@ -10,7 +15,7 @@ export function useSettings() {
       if (alive) setSettings(value);
     });
     const unwatch = settingsItem.watch((value) => {
-      setSettings({ ...DEFAULT_SETTINGS, ...(value ?? {}) });
+      setSettings(normalizeSettings(value));
     });
     return () => {
       alive = false;

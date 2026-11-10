@@ -1,8 +1,26 @@
+import { APP_ORIGIN } from './config';
+
 const MINUTE = 60_000;
 const HOUR = 60 * MINUTE;
 const DAY = 24 * HOUR;
 
 const WEEKDAYS = ['日', '一', '二', '三', '四', '五', '六'];
+
+/**
+ * 把服务端返回的头像地址收敛成浏览器能直接用的绝对地址。
+ * 媒体地址本应已经是绝对地址（见开放 API 4.10），这里只做兜底：
+ * 协议相对（//）、站点相对（/avatars/…）以及漏了协议的情况都能显示。
+ */
+export function normalizeAvatarUrl(raw: unknown): string | null {
+  if (typeof raw !== 'string') return null;
+  const value = raw.trim();
+  if (!value) return null;
+  if (/^data:image\//i.test(value)) return value;
+  if (value.startsWith('//')) return `https:${value}`;
+  if (/^https?:\/\//i.test(value)) return value;
+  if (value.startsWith('/')) return `${APP_ORIGIN}${value}`;
+  return `${APP_ORIGIN}/${value.replace(/^\.?\//, '')}`;
+}
 
 /** 中文相对时间：刚刚 / N 分钟前 / N 小时前 / 昨天 / N 天前 / 月日。 */
 export function relativeTime(iso?: string | null, now = Date.now()): string {

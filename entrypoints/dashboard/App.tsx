@@ -4,8 +4,10 @@ import { BoardCard } from '@/components/BoardCard';
 import { Brand } from '@/components/Brand';
 import { Icon } from '@/components/Icon';
 import { NotificationsDialog } from '@/components/NotificationsDialog';
+import { SearchDialog } from '@/components/SearchDialog';
 import { SettingsDialog } from '@/components/SettingsDialog';
 import { Toast } from '@/components/Toast';
+import { useSearchHotkey } from '@/hooks/useSearch';
 import { useSession } from '@/hooks/useSession';
 import { useSettings } from '@/hooks/useSettings';
 import { useUnreadNotifications } from '@/hooks/useUnreadNotifications';
@@ -13,17 +15,29 @@ import { BOARDS } from '@/lib/boards';
 import { LINKS } from '@/lib/config';
 import { storageAvailable } from '@/lib/storage';
 
+const SHORTCUT_LABEL =
+  typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.platform)
+    ? '⌘ K'
+    : 'Ctrl K';
+
 export default function Dashboard() {
   const { settings, update } = useSettings();
-  const { profile, signedIn, loading: sessionLoading, signOut } = useSession();
+  const {
+    profile,
+    signedIn,
+    loading: sessionLoading,
+    profileLoading,
+    signOut,
+    reloadProfile,
+  } = useSession();
   const unread = useUnreadNotifications(signedIn);
 
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
 
-  const limit = settings?.pageSize ?? 20;
   const ready = settings !== null;
 
   const showToast = useCallback((message: string) => {
@@ -36,18 +50,26 @@ export default function Dashboard() {
     return () => window.clearTimeout(timer);
   }, [toast]);
 
-  // #settings / #login / #notifications 用于从弹窗 Dock 直接跳到对应面板。
+  // #settings / #login / #notifications / #search 用于从弹窗 Dock 直接跳到对应面板。
   useEffect(() => {
     const openFromHash = () => {
       const hash = window.location.hash.replace('#', '');
+      if (hash === 'search') {
+        setSearchOpen(true);
+        setNotificationsOpen(false);
+        setSettingsOpen(false);
+        return;
+      }
       if (hash === 'notifications') {
         setNotificationsOpen(true);
         setSettingsOpen(false);
+        setSearchOpen(false);
         return;
       }
       if (hash === 'settings' || hash === 'login') {
         setSettingsOpen(true);
         setNotificationsOpen(false);
+        setSearchOpen(false);
       }
     };
     openFromHash();
@@ -64,10 +86,11 @@ export default function Dashboard() {
     showToast('已刷新全部榜单');
   }, [refreshAll, showToast]);
 
-  const handleSignedIn = useCallback(() => {
-    // 令牌变化会让 useSession 自动刷新资料；这里把带个性化字段的榜单全部重新拉一遍。
+  const handleSignedIn = useCallback(async () => {
+    // 拿到头像 / 昵称，再把带个性化字段的榜单重新拉一遍。
+    await reloadProfile();
     refreshAll();
-  }, [refreshAll]);
+  }, [reloadProfile, refreshAll]);
 
   const handleSignOut = useCallback(async () => {
     await signOut();
@@ -92,9 +115,26 @@ export default function Dashboard() {
     clearHash();
   }, [clearHash]);
 
+  const openSearch = useCallback(() => {
+    setSearchOpen(true);
+    setSettingsOpen(false);
+    setNotificationsOpen(false);
+    if (window.location.hash !== '#search') {
+      window.history.replaceState(null, '', '#search');
+    }
+  }, []);
+
+  const closeSearch = useCallback(() => {
+    setSearchOpen(false);
+    clearHash();
+  }, [clearHash]);
+
+  useSearchHotkey(openSearch);
+
   const openNotifications = useCallback(() => {
     setNotificationsOpen(true);
     setSettingsOpen(false);
+    setSearchOpen(false);
     if (window.location.hash !== '#notifications') {
       window.history.replaceState(null, '', '#notifications');
     }
@@ -104,6 +144,7 @@ export default function Dashboard() {
   const goLoginFromNotifications = useCallback(() => {
     setNotificationsOpen(false);
     setSettingsOpen(true);
+    setSearchOpen(false);
     if (window.location.hash !== '#settings') {
       window.history.replaceState(null, '', '#settings');
     }
@@ -122,47 +163,59 @@ export default function Dashboard() {
             rel="noreferrer"
             title="打开站点"
           >
-            <Brand sub={null} />
-            <span className="masthead__page">Dashboard</span>
+            <Brand compact sub={null} />
           </a>
 
-          <div className="masthead__actions">
+          <div className="masthead__actions" role="group" aria-label="页面操作">
             <button
               type="button"
-              className="btn masthead__refresh"
-              onClick={handleRefreshAll}
-              title="刷新全部榜单"
+              className="masthead__action masthead__search"
+              onClick={openSearch}
+              title="搜索（Ctrl / ⌘ K）"
+              aria-label="搜索"
+              aria-haspopup="dialog"
+              aria-keyshortcuts="Control+K Meta+K"
             >
-              <Icon name="refresh" size={15} />
-              <span>全部刷新</span>
+              <Icon name="search" size={16} />
+              <span className="masthead__search-label">搜索</span>
+              <kbd className="masthead__search-kbd">{SHORTCUT_LABEL}</kbd>
             </button>
             <button
               type="button"
-              className="btn btn--icon masthead__bell"
+              className="masthead__action"
+              onClick={handleRefreshAll}
+              title="刷新全部榜单"
+              aria-label="刷新全部榜单"
+            >
+              <Icon name="refresh" size={16} />
+            </button>
+            <button
+              type="button"
+              className="masthead__action masthead__bell"
               onClick={openNotifications}
               title={
                 unread.count > 0 ? `通知（${unread.count} 条未读）` : '通知'
               }
               aria-label={unread.count > 0 ? `通知，${unread.count} 条未读` : '通知'}
             >
-              <Icon name="bell" size={17} />
+              <Icon name="bell" size={16} />
               {unread.count > 0 && <span className="masthead__bell-dot" aria-hidden="true" />}
             </button>
             <AccountChip
               signedIn={signedIn}
-              loading={sessionLoading}
+              loading={sessionLoading || (signedIn && !profile && profileLoading)}
               profile={profile}
               onLogin={() => setSettingsOpen(true)}
               onSignOut={() => void handleSignOut()}
             />
             <button
               type="button"
-              className="btn btn--icon"
+              className="masthead__action"
               onClick={() => setSettingsOpen(true)}
               title="设置"
               aria-label="打开设置"
             >
-              <Icon name="settings" size={17} />
+              <Icon name="settings" size={16} />
             </button>
           </div>
         </div>
@@ -184,7 +237,6 @@ export default function Dashboard() {
             <BoardCard
               key={`${meta.id}:${refreshKey}`}
               meta={meta}
-              limit={limit}
               enabled={ready}
               onLogin={() => setSettingsOpen(true)}
             />
@@ -202,10 +254,23 @@ export default function Dashboard() {
         onRefreshUnread={unread.refresh}
       />
 
+      <SearchDialog
+        open={searchOpen}
+        onClose={closeSearch}
+        signedIn={signedIn}
+        onLogin={() => {
+          setSearchOpen(false);
+          setSettingsOpen(true);
+          if (window.location.hash !== '#settings') {
+            window.history.replaceState(null, '', '#settings');
+          }
+        }}
+      />
+
       <SettingsDialog
         open={settingsOpen}
         onClose={closeSettings}
-        settings={settings ?? { board: 'latest', section: 'all', pageSize: 20 }}
+        settings={settings ?? { board: 'latest', section: 'all' }}
         signedIn={signedIn}
         profile={profile}
         onUpdateSettings={update}

@@ -1,6 +1,12 @@
 import { browser } from '#imports';
 import { AUTHORIZE_URL, OAUTH_CLIENT_ID, REQUESTED_SCOPE, TOKEN_URL } from './config';
-import { pendingAuthItem, tokensItem, type PendingAuth, type TokenSet } from './storage';
+import {
+  pendingAuthItem,
+  profileCacheItem,
+  tokensItem,
+  type PendingAuth,
+  type TokenSet,
+} from './storage';
 
 export type AuthErrorCode =
   | 'config'
@@ -254,4 +260,6 @@ export async function getAccessToken(): Promise<string | null> {
 export async function logout(): Promise<void> {
   await tokensItem.setValue(null);
   await pendingAuthItem.setValue(null);
+  // 顺带清掉缓存的用户资料，避免换账号后还显示上一个人的头像。
+  await profileCacheItem.setValue(null);
 }

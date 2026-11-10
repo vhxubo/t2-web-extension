@@ -1,4 +1,4 @@
-import type { BoardId } from './types';
+import type { BoardId, TopicDimension } from './types';
 
 export interface BoardMeta {
   id: BoardId;
@@ -10,6 +10,8 @@ export interface BoardMeta {
   icon: string;
   /** 该榜单的接口是否支持按分区筛选。 */
   supportsSection: boolean;
+  /** 该榜单对应 `GET /v1/topics?dimensions=...` 的维度。 */
+  dimension?: TopicDimension;
 }
 
 export const BOARDS: BoardMeta[] = [
@@ -38,12 +40,22 @@ export const BOARDS: BoardMeta[] = [
     supportsSection: false,
   },
   {
-    id: 'value',
-    label: '价值榜',
-    shortLabel: '价值榜',
-    hint: '按帖子价值排序',
-    icon: '💎',
+    id: 'work',
+    label: '工作',
+    shortLabel: '工作',
+    hint: '工作维度的最新话题',
+    icon: '💼',
     supportsSection: true,
+    dimension: 'work',
+  },
+  {
+    id: 'life',
+    label: '生活',
+    shortLabel: '生活',
+    hint: '生活维度的最新话题',
+    icon: '🌿',
+    supportsSection: true,
+    dimension: 'life',
   },
 ];
 

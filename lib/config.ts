@@ -12,7 +12,7 @@ export const TOKEN_URL = `${APP_ORIGIN}/api/oauth/token`;
  * 应用里登记为 `https://<扩展 ID>.chromiumapp.org/cb`。
  * 留空时扩展仍可匿名使用，只是登录会被禁用。
  */
-export const OAUTH_CLIENT_ID = '';
+export const OAUTH_CLIENT_ID = 'e471281af4d84ecfae77c39f94bcf372';
 
 /** client_id 是否已由开发者配置。 */
 export const OAUTH_CONFIGURED = OAUTH_CLIENT_ID.trim().length > 0;

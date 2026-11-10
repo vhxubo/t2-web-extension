@@ -88,10 +88,20 @@ export async function apiGet<T>(path: string, options: RequestOptions = {}): Pro
   return payload.d;
 }
 
-export async function getMe(): Promise<Profile> {
+/** 精简身份快照：启动时校验登录态用它，比 `/v1/me` 便宜。 */
+export async function getMeSummary(): Promise<Profile> {
   return apiGet<Profile>('/v1/me/summary');
 }
 
+/** 当前用户完整资料，结构同 `GET /v1/users/:username`（含头像）。 */
 export async function getFullMe(): Promise<Profile> {
   return apiGet<Profile>('/v1/me');
+}
+
+/**
+ * 公开用户资料，带头像 / 等级 / PRO 标记。
+ * 匿名可读，所以显式 `auth: false`：不占用登录配额，也避免令牌异常时连带失败。
+ */
+export async function getUserProfile(username: string): Promise<Profile> {
+  return apiGet<Profile>(`/v1/users/${encodeURIComponent(username)}`, { auth: false });
 }

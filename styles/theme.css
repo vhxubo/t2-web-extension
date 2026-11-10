@@ -397,6 +397,11 @@ ul {
   flex: none;
 }
 
+/* 首字母和头像叠在同一个格子里：图片没加载完时显示首字母，加载完由图片盖住。 */
+.avatar > * {
+  grid-area: 1 / 1;
+}
+
 .avatar img {
   width: 100%;
   height: 100%;

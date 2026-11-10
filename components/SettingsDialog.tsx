@@ -4,7 +4,7 @@ import { startLogin } from '../lib/auth';
 import { BOARDS, isBoardId } from '../lib/boards';
 import { LINKS, OAUTH_CONFIGURED } from '../lib/config';
 import { describeError } from '../lib/errors';
-import { PAGE_SIZES, type Settings } from '../lib/storage';
+import type { Settings } from '../lib/storage';
 import type { Profile } from '../lib/types';
 import { Avatar } from './Avatar';
 import { Icon } from './Icon';
@@ -16,7 +16,7 @@ interface SettingsDialogProps {
   signedIn: boolean;
   profile: Profile | null;
   onUpdateSettings: (patch: Partial<Settings>) => Promise<void> | void;
-  onSignedIn: () => void;
+  onSignedIn: () => void | Promise<void>;
   onSignOut: () => void;
   onToast: (message: string) => void;
 }
@@ -60,7 +60,9 @@ export function SettingsDialog({
     setLoginBusy(true);
     try {
       await startLogin();
-      onSignedIn();
+      // 登录成功后立刻触发一次资料刷新：头像不依赖 useSession 的 storage 监听是否触发。
+      // 不阻塞「已登录」提示，资料拿到后界面会自己更新。
+      void onSignedIn();
       onToast('已登录');
       setLoginError(null);
     } catch (error) {
@@ -107,11 +109,11 @@ export function SettingsDialog({
               <Avatar
                 className="avatar--lg"
                 src={profile?.avatar_url}
-                name={profile?.username}
+                name={profile?.display_name || profile?.username}
               />
               <div className="settings-account__body">
                 <div className="settings-account__name">
-                  <span>{profile?.username ?? '已登录'}</span>
+                  <span>{profile?.display_name || profile?.username || '已登录'}</span>
                   {profile?.is_pro && <span className="chip chip--gold">PRO</span>}
                   {typeof profile?.level === 'number' && (
                     <span className="chip">Lv.{profile.level}</span>
@@ -156,10 +158,10 @@ export function SettingsDialog({
           )}
         </section>
 
-        {/* ---------------- 默认视图 ---------------- */}
+        {/* ---------------- 默认进入 ---------------- */}
         <section className="settings-card" aria-labelledby="settings-defaults">
           <h3 className="settings-card__title" id="settings-defaults">
-            默认视图
+            默认进入
           </h3>
 
           <div className="settings-rows">
@@ -183,27 +185,11 @@ export function SettingsDialog({
                 ))}
               </select>
             </div>
-
-            <div className="settings-row">
-              <label className="settings-row__label" htmlFor="default-size">
-                每页条数
-              </label>
-              <select
-                id="default-size"
-                className="select"
-                value={String(settings.pageSize)}
-                onChange={(event) => {
-                  void onUpdateSettings({ pageSize: Number(event.target.value) });
-                }}
-              >
-                {PAGE_SIZES.map((size) => (
-                  <option key={size} value={String(size)}>
-                    {size} 条
-                  </option>
-                ))}
-              </select>
-            </div>
           </div>
+
+          <p className="settings-note settings-defaults__hint">
+            只决定之后打开弹窗时先显示哪个榜单；在弹窗里切换 Tab 只影响当次浏览，不会改动这里。
+          </p>
         </section>
 
         {/* ---------------- 关于 ---------------- */}

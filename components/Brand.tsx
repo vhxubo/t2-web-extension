@@ -4,7 +4,7 @@ interface BrandProps {
   sub?: string | null;
   /** 只显示叶片标记，不显示字标（用于空间紧张的弹窗）。 */
   markOnly?: boolean;
-  /** 字标文案；默认全称，弹窗传入「社区热榜」。 */
+  /** 字标文案；默认全称，弹窗等空间紧张处直接复用默认值。 */
   name?: string;
 }
 

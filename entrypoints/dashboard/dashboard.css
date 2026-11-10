@@ -1,10 +1,10 @@
 /* ------------------------------------------------------------------
-   Dashboard — 4 列清爽看板
+   Dashboard — 四列看板（生活 / 工作同列上下分割）
    暖白纸面 + 纯白卡片 + 莫兰迪绿强调色，信息层级只留给标题。
 ------------------------------------------------------------------- */
 
 :root {
-  --masthead-height: 64px;
+  --masthead-height: 56px;
   --card-radius: 12px;
 }
 
@@ -26,6 +26,16 @@ body {
   --dash-accent: #2e7d32;
   --dash-accent-soft: #eaf3ea;
   --dash-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+
+  /* 顶栏独立取色：纯白纸面、发丝线、极淡的悬停底色。 */
+  --masthead-bg: #ffffff;
+  --masthead-line: #efefef;
+  --masthead-ink: #1f2937;
+  --masthead-icon: #6b7280;
+  --masthead-hover: #f3f4f6;
+  --masthead-btn-bg: #ffffff;
+  --masthead-btn-border: #efefef;
+  --masthead-btn-border-hover: #e5e7eb;
 
   --paper: #f7f8f3;
   --paper-2: #edf1ea;
@@ -72,6 +82,15 @@ body {
     --dash-accent-soft: #223022;
     --dash-shadow: 0 2px 8px rgba(0, 0, 0, 0.24);
 
+    --masthead-bg: #171b16;
+    --masthead-line: #262d24;
+    --masthead-ink: #e8ece5;
+    --masthead-icon: #9ba497;
+    --masthead-hover: #232a20;
+    --masthead-btn-bg: #1b211a;
+    --masthead-btn-border: #2a3227;
+    --masthead-btn-border-hover: #3a4536;
+
     --paper: #12160f;
     --paper-2: #1d241c;
     --surface: #1a1f18;
@@ -116,23 +135,23 @@ textarea {
   top: 0;
   z-index: 30;
   flex: none;
-  border-bottom: 1px solid var(--dash-line);
-  background: color-mix(in srgb, var(--dash-bg) 86%, transparent);
-  backdrop-filter: blur(16px) saturate(1.2);
-  -webkit-backdrop-filter: blur(16px) saturate(1.2);
+  height: var(--masthead-height);
+  border-bottom: 1px solid var(--masthead-line);
+  background: var(--masthead-bg);
 }
 
 .masthead__inner {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
+  display: flex;
   align-items: center;
-  gap: 20px;
-  max-width: 1520px;
-  min-height: var(--masthead-height);
+  justify-content: space-between;
+  gap: 24px;
+  height: 100%;
+  max-width: 1680px;
   margin: 0 auto;
-  padding: 8px 24px;
+  padding: 0 24px;
 }
 
+/* 左：一枚 Logo + 品牌名。没有竖线，也没有重复的页面标题。 */
 .masthead__brand {
   display: inline-flex;
   align-items: center;
@@ -140,21 +159,23 @@ textarea {
   border-radius: 8px;
 }
 
-.masthead .brand__name {
-  font-size: 17px;
-  font-weight: 600;
-  letter-spacing: -0.01em;
+.masthead .brand {
+  gap: 9px;
 }
 
-.masthead__page {
-  margin-left: 11px;
-  padding-left: 11px;
-  border-left: 1px solid var(--dash-line);
-  font-size: 12.5px;
-  font-weight: 500;
-  letter-spacing: 0.01em;
-  color: var(--dash-muted);
+.masthead .brand__mark {
+  width: 22px;
+  height: 22px;
+}
+
+.masthead .brand__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
+  color: var(--masthead-ink);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
 }
 
 /* ---------- 页头操作 ---------- */
@@ -162,81 +183,136 @@ textarea {
 .masthead__actions {
   display: flex;
   align-items: center;
-  justify-self: end;
-  gap: 4px;
+  justify-content: flex-end;
+  gap: 8px;
   min-width: 0;
 }
 
-.masthead__actions .btn--icon {
-  width: 32px;
-  height: 32px;
-  color: var(--dash-muted);
-}
-
-.masthead__actions .btn--icon:hover {
-  background: var(--surface-2);
-  color: var(--dash-ink);
-}
-
-.masthead__refresh {
-  height: 36px;
-  padding: 0 12px;
+/* 所有入口共用一套圆角、尺寸、边框与悬停反馈。 */
+.masthead__action,
+.masthead .account__login,
+.masthead .account__profile,
+.masthead .account__out {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
   gap: 6px;
-  border-color: var(--dash-line);
-  border-radius: 9px;
-  background: var(--dash-card);
-  color: var(--dash-ink-2);
+  height: 32px;
+  border: 1px solid var(--masthead-btn-border);
+  border-radius: 8px;
+  background: var(--masthead-btn-bg);
+  color: var(--masthead-icon);
   font-size: 12.5px;
   font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all 0.2s var(--ease);
 }
 
-.masthead__refresh:hover {
-  border-color: color-mix(in srgb, var(--dash-accent) 28%, var(--dash-line));
-  background: var(--dash-accent-soft);
-  color: var(--dash-accent);
+.masthead__action {
+  width: 32px;
+  padding: 0;
 }
 
-.masthead__refresh svg {
-  color: var(--dash-muted);
+/* 搜索是主要入口：比纯图标按钮宽一点，带文字与快捷键提示。 */
+.masthead__search {
+  width: auto;
+  gap: 7px;
+  padding: 0 9px 0 10px;
 }
 
-.masthead__refresh:hover svg {
-  color: var(--dash-accent);
+.masthead__search-label {
+  font-size: 12.5px;
+}
+
+.masthead__search-kbd {
+  padding: 1px 5px;
+  border: 1px solid var(--masthead-btn-border);
+  border-radius: 5px;
+  background: var(--surface-2);
+  color: var(--masthead-icon);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  line-height: 1.4;
+}
+
+.masthead__search:hover .masthead__search-kbd {
+  border-color: var(--masthead-btn-border-hover);
+  color: var(--masthead-ink);
 }
 
 .masthead .account__login {
-  height: 36px;
-  padding: 0 12px;
-  border: 1px solid var(--dash-line);
-  border-radius: 9px;
-  background: var(--dash-card);
-  color: var(--dash-ink-2);
+  padding: 0 10px;
+}
+
+.masthead__action:hover,
+.masthead .account__login:hover,
+.masthead .account__profile:hover,
+.masthead .account__out:hover {
+  border-color: var(--masthead-btn-border-hover);
+  background: var(--masthead-hover);
+  color: var(--masthead-ink);
+}
+
+.masthead .account {
+  gap: 8px;
+}
+
+.masthead .account__profile {
+  padding: 0 8px 0 4px;
+}
+
+.masthead .account .avatar {
+  width: 22px;
+  height: 22px;
+  font-size: 9.5px;
+}
+
+/* 名字与等级并排，避免在 32px 高的胶囊里堆两行。 */
+.masthead .account__meta {
+  flex-direction: row;
+  align-items: baseline;
+  gap: 5px;
+}
+
+.masthead .account__name {
+  max-width: 120px;
   font-size: 12.5px;
   font-weight: 500;
 }
 
-.masthead .account__login:hover {
-  border-color: color-mix(in srgb, var(--dash-accent) 28%, var(--dash-line));
-  background: var(--dash-accent-soft);
-  color: var(--dash-accent);
-}
-
-.masthead .account__profile {
-  padding: 3px 6px 3px 3px;
-}
-
-.masthead .account__name {
-  font-size: 12.5px;
-}
-
 .masthead .account__level {
-  font-size: 9.5px;
-  color: var(--dash-muted);
+  font-size: 10px;
+  color: var(--masthead-icon);
 }
 
 .masthead .account__out {
-  width: 30px;
-  height: 30px;
+  width: 32px;
+  padding: 0;
+}
+
+/* 未读小红点 */
+.masthead__bell {
+  position: relative;
+}
+
+.masthead__bell-dot {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--notice);
+  box-shadow: 0 0 0 2px var(--masthead-btn-bg);
+  pointer-events: none;
+  transition: box-shadow 0.2s var(--ease);
+}
+
+.masthead__bell:hover .masthead__bell-dot {
+  box-shadow: 0 0 0 2px var(--masthead-hover);
 }
 
 /* ---------- 权限提示 ---------- */
@@ -246,7 +322,7 @@ textarea {
   align-items: center;
   gap: 8px;
   flex: none;
-  max-width: 1520px;
+  max-width: 1680px;
   margin: 12px auto 0;
   padding: 9px 14px;
   border: 1px solid color-mix(in srgb, var(--gold) 22%, var(--dash-line));
@@ -269,7 +345,7 @@ textarea {
   flex-direction: column;
   height: 0;
   width: 100%;
-  max-width: 1520px;
+  max-width: 1680px;
   min-height: 0;
   margin: 0 auto;
   padding: 16px 24px 20px;
@@ -278,8 +354,9 @@ textarea {
 .board-grid {
   display: grid;
   flex: 1 1 auto;
+  /* 四列：前三列各一张整高看板，第四列由「生活 / 工作」上下分割。 */
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  grid-auto-rows: minmax(0, 1fr);
+  grid-template-rows: repeat(2, minmax(0, 1fr));
   gap: 16px;
   height: 0;
   min-height: 0;
@@ -289,6 +366,8 @@ textarea {
 
 .board-card {
   display: grid;
+  /* 默认纵向占满两行栅格；第四列的生活 / 工作只占其中一行。 */
+  grid-row: span 2;
   grid-template-rows: auto minmax(0, 1fr) auto;
   height: 100%;
   min-width: 0;
@@ -300,6 +379,17 @@ textarea {
   overflow: hidden;
   animation: t2-card-in 0.32s var(--ease) both;
   transition: border-color 0.18s var(--ease), box-shadow 0.18s var(--ease);
+}
+
+/* 第四列：生活在上、工作在下，各占半高。 */
+.board-card[data-board='life'] {
+  grid-column: 4;
+  grid-row: 1;
+}
+
+.board-card[data-board='work'] {
+  grid-column: 4;
+  grid-row: 2;
 }
 
 .board-card:hover {
@@ -317,6 +407,10 @@ textarea {
 
 .board-card:nth-child(4) {
   animation-delay: 0.12s;
+}
+
+.board-card:nth-child(5) {
+  animation-delay: 0.16s;
 }
 
 @keyframes t2-card-in {
@@ -688,8 +782,17 @@ textarea {
   .board-grid {
     flex: none;
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: none;
     grid-auto-rows: auto;
     height: auto;
+  }
+
+  /* 窄屏回到普通卡片流：生活 / 工作不再固定在第四列。 */
+  .board-card,
+  .board-card[data-board='work'],
+  .board-card[data-board='life'] {
+    grid-column: auto;
+    grid-row: auto;
   }
 
   .board-card {
@@ -699,17 +802,12 @@ textarea {
 
 @media (max-width: 1020px) {
   .masthead__inner {
-    grid-template-columns: minmax(0, 1fr) auto;
-    gap: 8px 12px;
-    padding: 10px 18px;
+    gap: 16px;
+    padding: 0 20px;
   }
 
-  .masthead__brand {
-    grid-area: 1 / 1 / 2 / 2;
-  }
-
-  .masthead__actions {
-    grid-area: 1 / 2 / 2 / 3;
+  .masthead__search-kbd {
+    display: none;
   }
 }
 
@@ -731,19 +829,16 @@ textarea {
 
 @media (max-width: 620px) {
   .masthead__inner {
-    padding: 10px 14px;
+    padding: 0 16px;
   }
 
-  .masthead__page {
-    display: none;
-  }
-
-  .masthead__refresh {
-    width: 36px;
+  /* 极窄屏把宽度让给榜单操作，只留一个放大镜。 */
+  .masthead__search {
+    width: 32px;
     padding: 0;
   }
 
-  .masthead__refresh span {
+  .masthead__search-label {
     display: none;
   }
 
@@ -754,12 +849,8 @@ textarea {
 
 /* 极窄屏只保留头像，把宽度让给榜单操作。 */
 @media (max-width: 520px) {
-  .masthead__actions {
-    gap: 2px;
-  }
-
   .masthead .account__profile {
-    padding: 3px;
+    padding: 0 4px;
   }
 
   .masthead .account__name,

@@ -27,13 +27,13 @@ export function AccountChip({
   if (!signedIn) {
     return (
       <button type="button" className="btn btn--ghost account__login" onClick={onLogin}>
-        <Icon name="user" size={15} />
+        <Icon name="user" size={16} />
         <span>登录</span>
       </button>
     );
   }
 
-  const name = profile?.username ?? '已登录';
+  const name = profile?.display_name || profile?.username || '已登录';
 
   return (
     <span className="account">
@@ -63,7 +63,7 @@ export function AccountChip({
           title="退出登录"
           aria-label="退出登录"
         >
-          <Icon name="logout" size={15} />
+          <Icon name="logout" size={16} />
         </button>
       )}
     </span>

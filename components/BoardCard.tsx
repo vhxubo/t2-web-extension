@@ -1,5 +1,6 @@
 import type { BoardMeta } from '../lib/boards';
 import { describeError } from '../lib/errors';
+import { FEED_PAGE_SIZE } from '../lib/feed';
 import { useFeed } from '../hooks/useFeed';
 import type { ApiNode, Section } from '../lib/types';
 import { Icon } from './Icon';
@@ -11,25 +12,28 @@ const NO_NODES: ApiNode[] = [];
 
 interface BoardCardProps {
   meta: BoardMeta;
-  limit: number;
   enabled: boolean;
   onLogin: () => void;
 }
 
-export function BoardCard({ meta, limit, enabled, onLogin }: BoardCardProps) {
+export function BoardCard({ meta, enabled, onLogin }: BoardCardProps) {
   const feed = useFeed({
     board: meta.id,
     section: ALL_SITES,
     nodes: NO_NODES,
     nodesReady: true,
-    limit,
+    limit: FEED_PAGE_SIZE,
     enabled,
   });
 
   const moreError = feed.moreError ? describeError(feed.moreError) : null;
 
   return (
-    <section className="board-card" aria-labelledby={`board-title-${meta.id}`}>
+    <section
+      className="board-card"
+      data-board={meta.id}
+      aria-labelledby={`board-title-${meta.id}`}
+    >
       <header className="board-card__head">
         <span className="board-card__icon" aria-hidden="true">
           {meta.icon}

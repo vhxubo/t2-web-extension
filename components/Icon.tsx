@@ -16,7 +16,10 @@ export type IconName =
   | 'hash'
   | 'flame'
   | 'chart'
-  | 'bell';
+  | 'bell'
+  | 'search'
+  | 'folder'
+  | 'bookmark';
 
 const PATHS: Record<IconName, ReactNode> = {
   refresh: (
@@ -113,6 +116,22 @@ const PATHS: Record<IconName, ReactNode> = {
     <>
       <path d="M18 9.2a6 6 0 1 0-12 0c0 4.7-2 5.8-2 5.8h16s-2-1.1-2-5.8Z" />
       <path d="M10.4 19.4a1.9 1.9 0 0 0 3.2 0" />
+    </>
+  ),
+  search: (
+    <>
+      <circle cx="11" cy="11" r="6.4" />
+      <path d="m16 16 4.4 4.4" />
+    </>
+  ),
+  folder: (
+    <>
+      <path d="M4 7.6A1.6 1.6 0 0 1 5.6 6h3.6l2 2h7.2A1.6 1.6 0 0 1 20 9.6v8A1.6 1.6 0 0 1 18.4 19H5.6A1.6 1.6 0 0 1 4 17.4V7.6Z" />
+    </>
+  ),
+  bookmark: (
+    <>
+      <path d="M7 4.5h10a1 1 0 0 1 1 1V20l-6-4-6 4V5.5a1 1 0 0 1 1-1Z" />
     </>
   ),
 };

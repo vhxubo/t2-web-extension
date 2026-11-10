@@ -26,7 +26,7 @@ interface UnreadCountPayload {
   unread_count?: number;
 }
 
-/** 拉取未读通知数，用于弹窗 Dock 上的小红点。 */
+/** 拉取未读通知数，用于弹窗 Dock 小红点与后台的工具栏角标。 */
 export async function getUnreadNotificationCount(signal?: AbortSignal): Promise<number> {
   const data = await apiGet<UnreadCountPayload>('/v1/me/notifications/unread-count', { signal });
   const count = Math.floor(Number(data?.unread_count ?? 0));

@@ -1,6 +1,6 @@
 import { browser, storage } from '#imports';
 import { isBoardId } from './boards';
-import type { ApiNode, BoardId } from './types';
+import type { ApiNode, BoardId, Profile } from './types';
 
 export interface TokenSet {
   accessToken: string;
@@ -12,11 +12,13 @@ export interface TokenSet {
 }
 
 export interface Settings {
-  /** 默认查看的榜单。 */
+  /**
+   * 弹窗默认进入的榜单。只有完整页面的设置弹窗能改；
+   * 在弹窗里切换榜单只影响当次浏览，不会写回这里。
+   */
   board: BoardId;
   /** 默认展示的分区，见 lib/section.ts 的 key 规则。 */
   section: string;
-  pageSize: number;
 }
 
 export interface PendingAuth {
@@ -31,13 +33,21 @@ export interface NodesCache {
   nodes: ApiNode[];
 }
 
+/**
+ * 上一次解析成功的用户资料。本地缓存只用于两件事：
+ * 1. 精简快照没带头像时，直接复用上次的头像，省掉一次公开资料请求；
+ * 2. 刷新资料失败时仍能显示头像和昵称，而不是退回「已登录」。
+ * 退出登录时会一并清掉。
+ */
+export interface ProfileCache {
+  profile: Profile;
+  fetchedAt: number;
+}
+
 export const DEFAULT_SETTINGS: Settings = {
   board: 'latest',
   section: 'all',
-  pageSize: 20,
 };
-
-export const PAGE_SIZES = [20, 30, 50] as const;
 
 const PREFIX = 't2';
 
@@ -127,14 +137,23 @@ export const pendingAuthItem = definePersistentItem<PendingAuth | null>(
 
 export const nodesCacheItem = definePersistentItem<NodesCache | null>(`local:${PREFIX}:nodes`, null);
 
+export const profileCacheItem = definePersistentItem<ProfileCache | null>(
+  `local:${PREFIX}:profile`,
+  null,
+);
+
+/** 把存储里的值收敛成可用的设置：旧版本字段、已下线榜单都回落到默认值。 */
+export function normalizeSettings(stored: Partial<Settings> | null | undefined): Settings {
+  return {
+    board:
+      typeof stored?.board === 'string' && isBoardId(stored.board)
+        ? stored.board
+        : DEFAULT_SETTINGS.board,
+    section: typeof stored?.section === 'string' ? stored.section : DEFAULT_SETTINGS.section,
+  };
+}
+
 /** 读出设置并与默认值合并；顺手收敛掉旧版本或手工改坏的字段。 */
 export async function readSettings(): Promise<Settings> {
-  const stored = (await settingsItem.getValue()) ?? DEFAULT_SETTINGS;
-  return {
-    board: isBoardId(stored.board) ? stored.board : DEFAULT_SETTINGS.board,
-    pageSize: (PAGE_SIZES as readonly number[]).includes(stored.pageSize)
-      ? stored.pageSize
-      : DEFAULT_SETTINGS.pageSize,
-    section: typeof stored.section === 'string' ? stored.section : 'all',
-  };
+  return normalizeSettings((await settingsItem.getValue()) ?? DEFAULT_SETTINGS);
 }
