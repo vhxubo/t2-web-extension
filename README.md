@@ -9,12 +9,12 @@ T2 Web Extension 让你在工具栏弹窗里快速扫一眼帖子，或者在新
 
 ## 功能
 
-- **弹窗（方案 C）**：🍃「T2 Web Extension」Header + 榜单 Tab + 单行标题列表 + 底部固定 Dock。Tab 依次是最新 / 今日热议 / 近期热议 / 工作 / 生活，展示当前榜单前 20 条（只看全站）；标题单行截断，回复数用等宽数字固定在右侧，点帖子在新标签页打开原帖。
+- **弹窗（方案 C）**：🍃「T2 Web Extension」Header + 榜单 Tab + 单行标题列表 + 底部固定 Dock。Tab 依次是最新 / 今日热议 / 近期热议 / 工作 / 生活，展示当前榜单的首屏（最新与今日/近期热议 50 条，工作/生活 20 条；只看全站）；标题单行截断，回复数用等宽数字固定在右侧，点帖子在新标签页打开原帖。
 - **底部 Dock**：`🔥 快捷热榜`（回到当前列表顶部）、`📊 数据仪表盘`（打开完整页面；登录后有未读通知时显示小红点）、`⚙️ 设置`（打开完整页面的设置弹窗）。
 - **完整页面**：五个看板四列展示——「新发表 / 今日热议 / 近期热议」各占一列，「生活」与「工作」在第四列上下分割（生活在上），不用切标签、一屏看全；每张卡片独立滚动、独立刷新，也可以一次刷新全部。顶栏铃铛打开通知中心。
 - **搜索**：弹窗 Header 与完整页面顶栏都提供搜索入口（`Ctrl / ⌘ K`），打开搜索弹窗后可切换帖子 / 用户 / 节点 / 标签，登录后还可搜索自己的收藏。关键词至少 2 个字符，输入停顿 350ms 才发请求，结果在页面内缓存 5 分钟；搜索接口单独限流（匿名 5 次/分、登录 20 次/分），所以只展示第一页，额度用完时会显示等待时间。
 - **5 个榜单**：新发表（弹窗里显示为「最新」）、今日热议（24h）、近期热议（7d）、工作维度、生活维度。
-- **默认进入**：弹窗打开时先显示哪个榜单，只能在完整页面的设置弹窗里修改；在弹窗里切换 Tab 只影响当次浏览，不会改写默认值，也不会影响下次打开。列表固定每页 20 条，设置里不再提供条数选项。
+- **默认进入**：弹窗打开时先显示哪个榜单，只能在完整页面的设置弹窗里修改；在弹窗里切换 Tab 只影响当次浏览，不会改写默认值，也不会影响下次打开。列表每页条数固定，设置里不再提供条数选项：最新、今日热议、近期热议 50 条（接口默认值），工作/生活 20 条（该端点的 `limit` 必填）。
 - **未读通知**：登录后读取 `GET /v1/me/notifications/unread-count`，在工具栏扩展图标、弹窗 Dock 的「数据仪表盘」和仪表盘顶栏铃铛三处显示同一状态；通知中心展示最近 30 条。扩展图标角标由后台 `alarms` 每分钟抓取一次，弹窗关闭也会更新；页面可见时另外每 60 秒刷新一次。
 - **登录**：OAuth 授权码 + PKCE（公开客户端，无 `client_secret`），令牌过期自动刷新（单飞），401 自动重试一次。登录成功后立即解析当前用户资料：`GET /v1/me/summary` 只用来取身份，**缺头像时**再用公开的 `GET /v1/users/:username` 补齐（不需要额外 scope），结果写入 `storage.local`，退出登录一并清除。
 - **外观**：设置弹窗的「外观」支持 `☀️ 浅色 / 🌙 深色 / 💻 跟随系统`，选择保存在 `chrome.storage.local` 的 `t2:settings`，弹窗、完整页和设置弹窗共用同一份偏好。弹窗 Header 另外提供 `☀️ / 🌙` 按钮一键切换浅色 / 深色；当前为「跟随系统」时会提示实际主题，想恢复跟随系统回到设置弹窗即可。选「跟随系统」时会监听 `prefers-color-scheme`，系统切换后所有已打开页面实时跟着变。
@@ -52,6 +52,18 @@ Safari 需要 macOS 上的 Safari 转换工具，当前不提供构建。
 加载未打包扩展：Chrome 打开 `chrome://extensions` → 打开「开发者模式」→「加载已解压的扩展程序」→ 选择 `.output/chrome-mv3` 目录。
 Firefox 可用 `bun run dev:firefox`。
 
+### 本地加载（不发布）
+
+扩展 ID 已经用 manifest 的 `key` 固定住（见「登录配置 → 扩展 ID」），所以**解压到哪个目录、版本号改不改都不影响**，
+不用再守着某个固定路径。
+
+```bash
+bun run build     # 产物在 .output/chrome-mv3
+```
+
+然后到 `chrome://extensions` 点该扩展的「重新加载」即可。以后发版、换目录、换机器，都只重复这一步，
+2libra 的设置一次登记、长期有效。
+
 ## 登录配置（OAuth）
 
 扩展是「无服务端」形态，所以必须申请**公开客户端**，扩展里不会、也不应该出现 `client_secret`。
@@ -60,11 +72,34 @@ Firefox 可用 `bun run dev:firefox`。
 
 1. 打开站点 → 设置 → OAuth 应用，新建应用。
 2. 客户端形态选「无服务端（公开客户端）」。
-3. 回调地址填 `https://<扩展 ID>.chromiumapp.org/cb`（即 `browser.identity.getRedirectURL('cb')` 的返回值；扩展 ID 可在 `chrome://extensions` 查看），**必须完全一致**。
+3. 回调地址填 **`https://lbjdmldgngjjdpgadblpgneglbmgblfd.chromiumapp.org/cb`**，**必须完全一致**（逐字符，区分大小写，结尾没有斜杠）。
+   这个 ID 由 manifest 里的 `key` 钉死，见下面的「扩展 ID」。
 4. 权限勾选 `read`、`profile` 与 `read:me`（`read:me` 只用于未读通知角标与通知列表）。
 5. 审核通过后，把 `client_id` 填到 [`lib/config.ts`](lib/config.ts) 的 `OAUTH_CLIENT_ID`，再重新构建。
 
-> 开发模式下扩展 ID 可能随安装方式变化，回调地址也会跟着变。换机器或重装后记得同步站点里的回调地址。
+### 扩展 ID 已固定为 `lbjdmldgngjjdpgadblpgneglbmgblfd`
+
+Chromium 的 manifest 里写了 `key`（**公钥**，可公开，不是 `client_secret`），ID 由它推导：
+`sha256(公钥 DER)` 取前 16 字节，每个十六进制位映射成 `a`–`p` 的一个字母。因此：
+
+| 操作 | ID |
+| --- | --- |
+| 换解压目录、换机器、改版本号 | 不变 |
+| `bun run build` / `bun run zip` / 重新加载 | 不变 |
+| 用 `.keys/t2-dev.pem` 打 .crx | 不变（同一把钥匙） |
+| 更换 `wxt.config.ts` 里的 `PINNED_KEY` | 变 —— 此时必须同步改站点回调 |
+
+- 站点里的回调只需填一次：`https://lbjdmldgngjjdpgadblpgneglbmgblfd.chromiumapp.org/cb`。
+- [`wxt.config.ts`](wxt.config.ts) 在构建期会校验「公钥算出来的 ID == `PINNED_EXTENSION_ID`」，不一致就直接报错，
+  避免换错钥匙后要等到登录才发现回调地址对不上。
+- 私钥 `.keys/t2-dev.pem` 建议备份：只做解压加载用不到它，但打 .crx（或上传自带 key 的包）必须用它，
+  否则产出的 ID 会和这里不一致；丢了只能重新生成密钥对，ID 与回调地址要跟着换一次。
+- Firefox 不用 `key`，靠 `browser_specific_settings.gecko.id`（`t2-web-extension@vhxubo.dev`）。它的
+  `identity.getRedirectURL('cb')` 是 `https://<uuid>.extensions.allizom.org/cb`，与 Chrome 不是同一个地址，
+  要在 Firefox 里调登录得单独登记一条。
+- 核对（5 秒）：打开扩展的完整页面 → 右键「检查」→ 控制台运行 `chrome.identity.getRedirectURL('cb')`，
+  必须正好等于上面那条回调地址。
+
 > `OAUTH_CLIENT_ID` 留空时扩展仍可匿名使用，登录按钮会被禁用。
 
 授权流程在**完整页面**里执行：`browser.identity.launchWebAuthFlow` 打开的授权窗口会让弹窗失焦关闭，所以弹窗里的「登录」会先打开新标签页，再在那一页完成授权。
@@ -91,11 +126,11 @@ Firefox 可用 `bun run dev:firefox`。
 
 | 榜单 | 接口 |
 | --- | --- |
-| 新发表 | 全站 `GET /v1/topics/latest` |
-| 今日热议 | `GET /v1/topics/hot?period=24h` |
-| 近期热议 | `GET /v1/topics/hot?period=7d` |
-| 工作 | `GET /v1/topics?dimensions=work&sort=latest` |
-| 生活 | `GET /v1/topics?dimensions=life&sort=latest` |
+| 新发表 | 全站 `GET /v1/topics/latest`（page / limit 都用默认值：第 1 页、50 条/页） |
+| 今日热议 | `GET /v1/topics/hot`（全部用默认值：page 1、limit 50、period 24h） |
+| 近期热议 | `GET /v1/topics/hot?period=7d`（只传非默认的 period；limit 用默认 50） |
+| 工作 | `GET /v1/topics?dimensions=work`（page / limit 必填；sort 默认 latest，不再传） |
+| 生活 | `GET /v1/topics?dimensions=life`（page / limit 必填；sort 默认 latest，不再传） |
 
 完整页面不再提供分区切换，所有卡片都按全站展示。
 
@@ -136,7 +171,8 @@ Firefox 可用 `bun run dev:firefox`。
 
 ## 数据、缓存与限流
 
-- 列表按页加载（每页固定 20 条）；完整页面每张榜单卡片底部有「加载更多」，翻页结果按 `short_id` 去重（接口不承诺不重不漏）。
+- 列表按页加载（最新与热议每页 50 条，工作/生活每页 20 条）；完整页面每张榜单卡片底部有「加载更多」，翻页结果按 `short_id` 去重（接口不承诺不重不漏）。
+- 请求参数优先用文档默认值：有默认值的参数不传（最新/热议的 `page`、`limit`，24h 的 `period`，`/v1/topics` 的 `sort`，搜索的 `page`、`limit`）；`/v1/topics` 的 `page`、`limit` 是必填，照传。
 - 当前用户资料（含头像）缓存在 `local:t2:profile`：精简快照没带头像时直接复用缓存里的头像，省掉一次公开资料请求；刷新失败时也还能显示上次的头像与昵称。退出登录会清掉缓存。
 - 遇到 `429 rate_limited` 会展示 `retry_after`；`401` 先刷新令牌再重试一次；`403 insufficient_scope` 会引导重新授权。
 - 只读：服务端的跨域策略不允许浏览器应用直接写数据，发帖/评论必须经自己的服务端，所以本扩展没有写操作。

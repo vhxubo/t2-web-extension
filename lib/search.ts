@@ -12,6 +12,7 @@ import type { Topic } from './types';
 export const SEARCH_MIN_LENGTH = 2;
 export const SEARCH_MAX_LENGTH = 100;
 export const SEARCH_DEBOUNCE_MS = 350;
+/** 搜索接口 limit 的默认值，本地按同样条数截断。 */
 export const SEARCH_PAGE_SIZE = 20;
 export const SEARCH_LIST_LIMIT = 20;
 
@@ -134,12 +135,8 @@ export async function runSearch(
 ): Promise<SearchResults> {
   const q = query.trim();
   const data = await apiGet<unknown>('/v1/search', {
-    query: {
-      q,
-      type,
-      page: 1,
-      limit: SEARCH_PAGE_SIZE,
-    },
+    // page 默认 1、limit 默认 20；搜索只取第一页，两个都用默认值。
+    query: { q, type },
     signal,
   });
 
