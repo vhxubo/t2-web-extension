@@ -100,7 +100,7 @@ function definePersistentItem<T>(key: StorageKey, fallback: T): StorageItem<T> {
     if (!storageWarned) {
       storageWarned = true;
       console.warn(
-        '[2Libra] 没有可用的 chrome.storage：设置与登录不会保存。请在 chrome://extensions 重新加载扩展后刷新页面。',
+        '[T2] 没有可用的 chrome.storage：设置与登录不会保存。请在 chrome://extensions 重新加载扩展后刷新页面。',
       );
     }
     return createMemoryItem(key, fallback);

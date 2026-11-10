@@ -42,14 +42,14 @@ export function AccountChip({
         href={profileHref(profile?.username)}
         target="_blank"
         rel="noreferrer"
-        title={profile?.username ? `打开 @${profile.username} 的主页` : '打开 2Libra'}
+        title={profile?.username ? `打开 @${profile.username} 的主页` : '打开站点'}
       >
         <Avatar src={profile?.avatar_url} name={name} />
         <span className="account__meta">
           <span className="account__name">{name}</span>
           {!compact && (
             <span className="account__level t2-mono">
-              {typeof profile?.level === 'number' ? `Lv.${profile.level}` : '2Libra'}
+              {typeof profile?.level === 'number' ? `Lv.${profile.level}` : '成员'}
               {profile?.is_pro ? ' · PRO' : ''}
             </span>
           )}

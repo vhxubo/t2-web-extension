@@ -7,14 +7,16 @@ export type IconName =
   | 'logout'
   | 'external'
   | 'chevron'
-  | 'search'
   | 'close'
   | 'check'
   | 'copy'
   | 'alert'
   | 'arrow'
   | 'pin'
-  | 'hash';
+  | 'hash'
+  | 'flame'
+  | 'chart'
+  | 'bell';
 
 const PATHS: Record<IconName, ReactNode> = {
   refresh: (
@@ -54,12 +56,6 @@ const PATHS: Record<IconName, ReactNode> = {
     </>
   ),
   chevron: <path d="m9 6 6 6-6 6" />,
-  search: (
-    <>
-      <circle cx="11" cy="11" r="6" />
-      <path d="m20 20-4.1-4.1" />
-    </>
-  ),
   close: (
     <>
       <path d="M6 6l12 12" />
@@ -98,6 +94,25 @@ const PATHS: Record<IconName, ReactNode> = {
       <path d="M5 14.5h14" />
       <path d="M10 4 8.5 20" />
       <path d="M15.5 4 14 20" />
+    </>
+  ),
+  flame: (
+    <>
+      <path d="M12 3.4c.7 3.5-1.3 4.9-2.8 6.6a6.7 6.7 0 0 0-2 4.8 4.8 4.8 0 0 0 9.6 0c0-2.4-1.4-3.9-2.6-5.3-.4 1.3-1 2.1-1.8 2.7.6-3 0-5.9-.4-8.8Z" />
+    </>
+  ),
+  chart: (
+    <>
+      <path d="M4.5 19.5h15" />
+      <path d="M7.5 16.5v-3.6" />
+      <path d="M12 16.5V7" />
+      <path d="M16.5 16.5v-5.4" />
+    </>
+  ),
+  bell: (
+    <>
+      <path d="M18 9.2a6 6 0 1 0-12 0c0 4.7-2 5.8-2 5.8h16s-2-1.1-2-5.8Z" />
+      <path d="M10.4 19.4a1.9 1.9 0 0 0 3.2 0" />
     </>
   ),
 };

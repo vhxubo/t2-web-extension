@@ -30,7 +30,7 @@ interface TokenResponse {
   scope?: string;
 }
 
-/** 扩展自己的回调地址，需要与 2Libra 应用里注册的完全一致。 */
+/** 扩展自己的回调地址，需要与授权应用里注册的完全一致。 */
 export function getRedirectUri(): string {
   try {
     return browser.identity?.getRedirectURL?.('cb') ?? '';
@@ -66,7 +66,7 @@ async function tokenRequest(body: Record<string, string>): Promise<TokenResponse
       credentials: 'omit',
     });
   } catch {
-    throw new AuthError('无法连接 2Libra 授权服务，请检查网络后重试', 'network');
+    throw new AuthError('无法连接授权服务，请检查网络后重试', 'network');
   }
 
   let payload: { c?: number; m?: string; d?: TokenResponse } | null = null;
@@ -116,14 +116,14 @@ async function exchangeCode(params: {
 }
 
 /**
- * 走一遍 2Libra 的授权码 + PKCE 流程（公开客户端，不带 client_secret）。
+ * 走一遍授权码 + PKCE 流程（公开客户端，不带 client_secret）。
  * client_id 由开发者在 lib/config.ts 中配置，不经过用户。
  * 必须在常驻的扩展页里调用：授权窗口会让弹窗失焦关闭。
  */
 export async function startLogin(): Promise<TokenSet> {
   const clientId = OAUTH_CLIENT_ID.trim();
   if (!clientId) {
-    throw new AuthError('此版本未配置 2Libra 授权应用，请联系应用开发者', 'config');
+    throw new AuthError('此版本未配置授权应用，请联系应用开发者', 'config');
   }
   const redirectUri = getRedirectUri();
   if (!redirectUri) {

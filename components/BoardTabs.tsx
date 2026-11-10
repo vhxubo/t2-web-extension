@@ -10,6 +10,8 @@ interface BoardTabsProps {
   sectionFiltered: boolean;
   /** 只展示这些榜单；默认展示全部。 */
   boards?: BoardMeta[];
+  /** 使用短标签（弹窗里「新发表」显示为「最新」，把宽度留给列表）。 */
+  shortLabels?: boolean;
 }
 
 export function BoardTabs({
@@ -17,6 +19,7 @@ export function BoardTabs({
   onChange,
   sectionFiltered,
   boards = BOARDS,
+  shortLabels = false,
 }: BoardTabsProps) {
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
 
@@ -46,6 +49,7 @@ export function BoardTabs({
       {boards.map((board, index) => {
         const active = board.id === value;
         const needsAllSite = sectionFiltered && !board.supportsSection;
+        const label = shortLabels ? (board.shortLabel ?? board.label) : board.label;
         return (
           <button
             key={board.id}
@@ -66,7 +70,7 @@ export function BoardTabs({
             }
             onClick={() => onChange(board.id)}
           >
-            <span className="board-tab__label">{board.label}</span>
+            <span className="board-tab__label">{label}</span>
             {needsAllSite && <span className="board-tab__tag">全站</span>}
           </button>
         );

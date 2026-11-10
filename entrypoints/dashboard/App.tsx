@@ -3,32 +3,28 @@ import { AccountChip } from '@/components/AccountChip';
 import { BoardCard } from '@/components/BoardCard';
 import { Brand } from '@/components/Brand';
 import { Icon } from '@/components/Icon';
-import { SectionRail } from '@/components/SectionRail';
+import { NotificationsDialog } from '@/components/NotificationsDialog';
 import { SettingsDialog } from '@/components/SettingsDialog';
 import { Toast } from '@/components/Toast';
-import { useNodes } from '@/hooks/useNodes';
 import { useSession } from '@/hooks/useSession';
 import { useSettings } from '@/hooks/useSettings';
+import { useUnreadNotifications } from '@/hooks/useUnreadNotifications';
 import { BOARDS } from '@/lib/boards';
 import { LINKS } from '@/lib/config';
-import { todayLabel } from '@/lib/format';
-import { parseSectionKey, sectionPath } from '@/lib/section';
-import { nodesCacheItem, storageAvailable } from '@/lib/storage';
-import type { Section } from '@/lib/types';
+import { storageAvailable } from '@/lib/storage';
 
 export default function Dashboard() {
   const { settings, update } = useSettings();
-  const { nodes, status: nodesStatus, reload: reloadNodes } = useNodes();
-  const { tokens, profile, signedIn, loading: sessionLoading, signOut } = useSession();
+  const { profile, signedIn, loading: sessionLoading, signOut } = useSession();
+  const unread = useUnreadNotifications(signedIn);
 
-  const [section, setSection] = useState<Section>({ kind: 'all' });
-  const [applied, setApplied] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
 
   const limit = settings?.pageSize ?? 20;
-  const nodesReady = nodesStatus !== 'loading';
+  const ready = settings !== null;
 
   const showToast = useCallback((message: string) => {
     setToast(message);
@@ -40,37 +36,33 @@ export default function Dashboard() {
     return () => window.clearTimeout(timer);
   }, [toast]);
 
-  // 打开时套用一次默认分区；之后页面上切换分区不再写回默认值。
-  useEffect(() => {
-    if (!settings || applied) return;
-    setSection(parseSectionKey(settings.section));
-    setApplied(true);
-  }, [settings, applied]);
-
-  // #settings / #login 用于从弹窗跳到对应面板。
+  // #settings / #login / #notifications 用于从弹窗 Dock 直接跳到对应面板。
   useEffect(() => {
     const openFromHash = () => {
       const hash = window.location.hash.replace('#', '');
-      if (hash === 'settings' || hash === 'login') setSettingsOpen(true);
+      if (hash === 'notifications') {
+        setNotificationsOpen(true);
+        setSettingsOpen(false);
+        return;
+      }
+      if (hash === 'settings' || hash === 'login') {
+        setSettingsOpen(true);
+        setNotificationsOpen(false);
+      }
     };
     openFromHash();
     window.addEventListener('hashchange', openFromHash);
     return () => window.removeEventListener('hashchange', openFromHash);
   }, []);
 
-  const sectionName = sectionPath(section, nodes);
-
-  useEffect(() => {
-    document.title = `${sectionName} · 全部榜单 — 2Libra 帖子浏览`;
-  }, [sectionName]);
-
-  const handleSection = useCallback((next: Section) => {
-    setSection(next);
-  }, []);
-
   const refreshAll = useCallback(() => {
     setRefreshKey((current) => current + 1);
   }, []);
+
+  const handleRefreshAll = useCallback(() => {
+    refreshAll();
+    showToast('已刷新全部榜单');
+  }, [refreshAll, showToast]);
 
   const handleSignedIn = useCallback(() => {
     // 令牌变化会让 useSession 自动刷新资料；这里把带个性化字段的榜单全部重新拉一遍。
@@ -79,24 +71,48 @@ export default function Dashboard() {
 
   const handleSignOut = useCallback(async () => {
     await signOut();
+    setNotificationsOpen(false);
     showToast('已退出登录');
     refreshAll();
   }, [signOut, showToast, refreshAll]);
 
-  const handleClearCache = useCallback(async () => {
-    await nodesCacheItem.setValue(null);
-    await reloadNodes(true);
-  }, [reloadNodes]);
-
-  const closeSettings = useCallback(() => {
-    setSettingsOpen(false);
+  const clearHash = useCallback(() => {
     if (window.location.hash) {
       window.history.replaceState(null, '', window.location.pathname + window.location.search);
     }
   }, []);
 
+  const closeSettings = useCallback(() => {
+    setSettingsOpen(false);
+    clearHash();
+  }, [clearHash]);
+
+  const closeNotifications = useCallback(() => {
+    setNotificationsOpen(false);
+    clearHash();
+  }, [clearHash]);
+
+  const openNotifications = useCallback(() => {
+    setNotificationsOpen(true);
+    setSettingsOpen(false);
+    if (window.location.hash !== '#notifications') {
+      window.history.replaceState(null, '', '#notifications');
+    }
+    void unread.refresh();
+  }, [unread.refresh]);
+
+  const goLoginFromNotifications = useCallback(() => {
+    setNotificationsOpen(false);
+    setSettingsOpen(true);
+    if (window.location.hash !== '#settings') {
+      window.history.replaceState(null, '', '#settings');
+    }
+  }, []);
+
   return (
     <>
+      <h1 className="sr-only">T2 Web Extension · Dashboard</h1>
+
       <header className="masthead">
         <div className="masthead__inner">
           <a
@@ -104,12 +120,34 @@ export default function Dashboard() {
             href={LINKS.site}
             target="_blank"
             rel="noreferrer"
-            title="打开 2Libra"
+            title="打开站点"
           >
-            <Brand />
+            <Brand sub={null} />
+            <span className="masthead__page">Dashboard</span>
           </a>
-          <span className="masthead__date">{todayLabel()}</span>
+
           <div className="masthead__actions">
+            <button
+              type="button"
+              className="btn masthead__refresh"
+              onClick={handleRefreshAll}
+              title="刷新全部榜单"
+            >
+              <Icon name="refresh" size={15} />
+              <span>全部刷新</span>
+            </button>
+            <button
+              type="button"
+              className="btn btn--icon masthead__bell"
+              onClick={openNotifications}
+              title={
+                unread.count > 0 ? `通知（${unread.count} 条未读）` : '通知'
+              }
+              aria-label={unread.count > 0 ? `通知，${unread.count} 条未读` : '通知'}
+            >
+              <Icon name="bell" size={17} />
+              {unread.count > 0 && <span className="masthead__bell-dot" aria-hidden="true" />}
+            </button>
             <AccountChip
               signedIn={signedIn}
               loading={sessionLoading}
@@ -128,7 +166,6 @@ export default function Dashboard() {
             </button>
           </div>
         </div>
-        <div className="masthead__rule" aria-hidden="true" />
       </header>
 
       {!storageAvailable && (
@@ -141,70 +178,40 @@ export default function Dashboard() {
         </div>
       )}
 
-      <div className="shell">
-        <aside className="side">
-          <div className="section-card">
-            <SectionRail
-              nodes={nodes}
-              value={section}
-              onChange={handleSection}
-              loading={nodesStatus === 'loading'}
-              failed={nodesStatus === 'error'}
-              onRetry={() => void reloadNodes(true)}
+      <main className="shell" aria-label="榜单看板">
+        <div className="board-grid">
+          {BOARDS.map((meta) => (
+            <BoardCard
+              key={`${meta.id}:${refreshKey}`}
+              meta={meta}
+              limit={limit}
+              enabled={ready}
+              onLogin={() => setSettingsOpen(true)}
             />
-          </div>
-        </aside>
+          ))}
+        </div>
+      </main>
 
-        <main className="main">
-          <header className="page-head">
-            <div className="page-head__copy">
-              <span className="t2-eyebrow page-head__eyebrow">全部榜单</span>
-              <h1 className="page-head__title t2-serif">{sectionName}</h1>
-              <p className="page-head__sub">并排展示，不用切换 · 分区筛选同步到支持的榜单</p>
-            </div>
-            <button
-              type="button"
-              className="btn page-head__refresh"
-              onClick={refreshAll}
-              title="刷新全部榜单"
-            >
-              <Icon name="refresh" size={16} />
-              全部刷新
-            </button>
-          </header>
-
-          <div className="board-grid">
-            {BOARDS.map((meta) => (
-              <BoardCard
-                key={`${meta.id}:${refreshKey}`}
-                meta={meta}
-                section={section}
-                sectionName={sectionName}
-                nodes={nodes}
-                nodesReady={nodesReady}
-                limit={limit}
-                enabled={applied}
-                onLogin={() => setSettingsOpen(true)}
-                onResetSection={() => handleSection({ kind: 'all' })}
-              />
-            ))}
-          </div>
-        </main>
-      </div>
+      <NotificationsDialog
+        open={notificationsOpen}
+        onClose={closeNotifications}
+        signedIn={signedIn}
+        sessionLoading={sessionLoading}
+        unread={unread.count}
+        onLogin={goLoginFromNotifications}
+        onRefreshUnread={unread.refresh}
+      />
 
       <SettingsDialog
         open={settingsOpen}
         onClose={closeSettings}
         settings={settings ?? { board: 'latest', section: 'all', pageSize: 20 }}
-        nodes={nodes}
         signedIn={signedIn}
-        tokens={tokens ?? null}
         profile={profile}
         onUpdateSettings={update}
         onSignedIn={handleSignedIn}
         onSignOut={() => void handleSignOut()}
         onToast={showToast}
-        onClearCache={handleClearCache}
       />
 
       <Toast message={toast} />

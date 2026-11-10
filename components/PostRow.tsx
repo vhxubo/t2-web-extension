@@ -9,6 +9,8 @@ interface PostRowProps {
   showRank?: boolean;
   /** 只显示标题，省略分区、作者和时间；回复数固定在行尾（弹窗用）。 */
   titleOnly?: boolean;
+  /** 标题单行截断，回复数只保留数字（弹窗 Dock 布局用）。 */
+  oneLine?: boolean;
 }
 
 export function PostRow({
@@ -17,6 +19,7 @@ export function PostRow({
   compact = false,
   showRank = true,
   titleOnly = false,
+  oneLine = false,
 }: PostRowProps) {
   const author = topic.author?.username ?? '匿名';
   const nodeName = topic.node?.name ?? topic.node?.slug ?? '未分区';
@@ -29,7 +32,7 @@ export function PostRow({
     <li
       className={`feed-row${compact ? ' feed-row--compact' : ''}${
         titleOnly ? ' feed-row--title-only' : ''
-      }`}
+      }${oneLine ? ' feed-row--one-line' : ''}`}
     >
       <a
         className="feed-row__link"
@@ -45,7 +48,7 @@ export function PostRow({
         )}
 
         <span className="feed-row__body">
-          <span className="feed-row__title t2-serif">
+          <span className="feed-row__title">
             {topic.is_pinned && <span className="chip chip--pin">置顶</span>}
             {typeLabel && <span className="chip">{typeLabel}</span>}
             <span className="feed-row__titletext">{topic.title || '（无标题）'}</span>
@@ -69,10 +72,7 @@ export function PostRow({
                   <span className="feed-row__sep" aria-hidden="true">
                     ·
                   </span>
-                  <span className="feed-row__comment-inline t2-mono">
-                    {comments} 回复
-                    {hot !== null ? ` · ${hot} 热度` : ''}
-                  </span>
+                  <span className="feed-row__comment-inline t2-mono">{comments} 回复</span>
                 </>
               )}
             </span>
@@ -81,7 +81,7 @@ export function PostRow({
 
         {titleOnly ? (
           <span className="feed-row__stats">
-            <span className="feed-row__stat">
+            <span className="feed-row__stat" aria-label={`${comments} 条回复`}>
               <b className="t2-mono">{comments}</b>
               <i>回复</i>
             </span>

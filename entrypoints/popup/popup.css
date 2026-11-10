@@ -1,37 +1,89 @@
+/* ------------------------------------------------------------------
+   弹窗：方案 C（底部固定 Dock + 清新素净）
+   暖白纸面 / 莫兰迪森林绿 / 极淡分离线 / 无衬线 + 等宽数字。
+------------------------------------------------------------------ */
+
+:root {
+  color-scheme: light;
+}
+
 html,
 body {
   width: 392px;
+  height: 480px;
   overflow: hidden;
-}
-
-body {
-  min-height: 420px;
+  background: #fafaf7;
 }
 
 #root {
   width: 392px;
+  height: 480px;
 }
 
 .popup {
+  /* 弹窗固定浅色：即使系统是深色模式，也保持素净的暖白纸面。 */
+  color-scheme: light;
+  --paper: #fafaf7;
+  --paper-2: #f2f3ee;
+  --surface: #ffffff;
+  --surface-2: #f2f5f0;
+  --ink: #222222;
+  --ink-2: #4c4f4b;
+  --ink-3: #888888;
+  --line: #f0f0f0;
+  --line-strong: #e4e6e1;
+  --leaf: #4a7c59;
+  --leaf-2: #3f6c4d;
+  --leaf-3: #8fb397;
+  --leaf-wash: #eef4ee;
+  --leaf-soft: #dce9dd;
+  --on-leaf: #ffffff;
+  --gold: #8a6a33;
+  --gold-wash: #f5efe3;
+  --danger: #b4544a;
+  --danger-wash: #f8ece9;
+  --notice: #c4554b;
+  --focus: #4a7c59;
+
   display: flex;
   flex-direction: column;
   width: 392px;
-  min-height: 420px;
+  height: 480px;
+  overflow: hidden;
   background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-ui);
 }
 
-/* ---------- 头部 ---------- */
+.popup ::selection {
+  background: #dce9dd;
+  color: #222222;
+}
+
+/* ---------- Header ---------- */
 
 .popup__head {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 10px 6px 12px;
+  flex: none;
+  padding: 12px 12px 8px;
+}
+
+.popup__head .brand {
+  gap: 8px;
 }
 
 .popup__head .brand__mark {
   width: 22px;
   height: 22px;
+  border-radius: 7px;
+}
+
+.popup__head .brand__name {
+  font-size: 15px;
+  font-weight: 650;
+  letter-spacing: 0.01em;
 }
 
 .popup__head-actions {
@@ -41,72 +93,68 @@ body {
   margin-left: auto;
 }
 
-.popup__full {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 5px 8px;
+.popup__icon-btn {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
   border: none;
-  border-radius: 7px;
+  border-radius: 50%;
   background: none;
   color: var(--ink-3);
-  font-size: 11.5px;
-  font-weight: 500;
-  white-space: nowrap;
   cursor: pointer;
   transition: background 0.16s var(--ease), color 0.16s var(--ease);
 }
 
-.popup__full:hover {
+.popup__icon-btn:hover {
   background: var(--surface-2);
   color: var(--ink);
+}
+
+.popup__icon-btn[data-spinning='true'] svg {
+  animation: t2-spin 0.9s linear infinite;
 }
 
 /* 唯一的账号入口：点开完整页面的设置弹窗，登录 / 退出都在里面。 */
 .popup__account {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  max-width: 150px;
-  padding: 3px 8px 3px 5px;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
   border: none;
-  border-radius: 999px;
+  border-radius: 50%;
   background: none;
-  color: var(--ink);
-  font: inherit;
-  font-size: 12px;
-  font-weight: 600;
+  color: var(--ink-3);
   cursor: pointer;
-  transition: background 0.16s var(--ease);
+  transition: background 0.16s var(--ease), color 0.16s var(--ease);
 }
 
 .popup__account:hover:not(:disabled) {
   background: var(--surface-2);
+  color: var(--ink);
 }
 
 .popup__account:disabled {
   cursor: default;
+  opacity: 0.7;
 }
 
 .popup__account .avatar {
   width: 24px;
   height: 24px;
-  font-size: 10.5px;
-}
-
-.popup__account .account__name {
-  max-width: 96px;
-  font-size: 12px;
+  font-size: 10px;
 }
 
 .popup__account-skeleton {
-  display: inline-block;
-  width: 56px;
-  height: 12px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
 }
 
 .popup__warn {
-  margin: 0 14px 10px;
+  margin: 0 12px 8px;
   padding: 8px 10px;
   border-radius: 8px;
   background: var(--gold-wash);
@@ -115,39 +163,48 @@ body {
   line-height: 1.5;
 }
 
-/* ---------- 榜单标签（底部） ---------- */
+/* ---------- 榜单 Tab ---------- */
 
-.popup__bottom {
-  display: flex;
-  padding: 4px 6px 6px;
-  border-top: 1px solid var(--line);
-  background: var(--paper);
+.popup__tabs {
+  flex: none;
+  padding: 0 12px 6px;
 }
 
-.popup__bottom .board-tabs {
-  flex: 1;
-  min-width: 0;
+.popup .board-tabs {
   flex-wrap: nowrap;
-  justify-content: space-between;
-  gap: 0;
+  gap: 4px;
 }
 
-.popup__bottom .board-tab {
-  flex: 1 1 auto;
-  justify-content: center;
-  padding: 7px 4px;
-  border-radius: 6px;
-  font-size: 13px;
+.popup .board-tab {
+  padding: 6px 10px;
+  border-radius: 999px;
+  color: var(--ink-3);
+  font-size: 12.5px;
+  font-weight: 500;
+  line-height: 1.2;
   white-space: nowrap;
+  transition: background 0.16s var(--ease), color 0.16s var(--ease);
 }
 
-/* 标签在底部，选中线挪到上沿，贴着分隔线。 */
-.popup__bottom .board-tab--active::after {
-  left: 4px;
-  right: 4px;
-  top: 0;
-  bottom: auto;
-  height: 2px;
+.popup .board-tab:hover {
+  background: var(--surface-2);
+  color: var(--ink);
+}
+
+.popup .board-tab--active,
+.popup .board-tab--active:hover {
+  background: var(--leaf-wash);
+  color: var(--leaf);
+  font-weight: 600;
+}
+
+/* 选中态用柔和的药丸底色，不再画下划线。 */
+.popup .board-tab--active::after {
+  display: none;
+}
+
+.popup .board-tab__tag {
+  color: var(--leaf-3);
 }
 
 /* ---------- 列表 ---------- */
@@ -156,58 +213,242 @@ body {
   display: flex;
   flex: 1;
   flex-direction: column;
-  border-top: 1px solid var(--line);
-  background: var(--surface);
-}
-
-.popup__feed-head {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 9px 10px 6px 14px;
-}
-
-.popup__feed-title {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 15px;
-  font-weight: 600;
-}
-
-.popup__refresh {
-  width: 28px;
-  height: 28px;
-  margin-left: auto;
-  color: var(--ink-3);
-}
-
-.popup__refresh[data-spinning='true'] svg {
-  animation: t2-spin 0.9s linear infinite;
+  min-height: 0;
 }
 
 .popup__feed-body {
   flex: 1;
   min-height: 0;
-  max-height: 400px;
   overflow-y: auto;
   overscroll-behavior: contain;
-  padding: 0 6px 4px;
+  /* 左右留 8px：悬浮底色不再贴边，行内文字仍落在 12px 处。 */
+  padding: 2px 8px 8px;
+  scrollbar-gutter: stable;
+}
+
+.popup .feed-list {
+  gap: 0;
+}
+
+.popup .feed-row {
+  border-bottom: none;
+}
+
+.popup .feed-list .feed-row__link {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 4px;
+  border-radius: 8px;
+}
+
+.popup .feed-row__link::before {
+  display: none;
+}
+
+.popup .feed-row__link:hover {
+  background: var(--surface-2);
+}
+
+.popup .feed-row__title {
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+.popup .feed-row__link:hover .feed-row__titletext {
+  color: var(--leaf);
+}
+
+/* 单行标题：徽标不参与截断，标题文本省略号收尾。 */
+.popup .feed-list--one-line .feed-row__title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow: visible;
+  -webkit-line-clamp: unset;
+  -webkit-box-orient: initial;
+}
+
+.popup .feed-list--one-line .feed-row__titletext {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.popup .feed-row__title .chip {
+  flex: none;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--ink-3);
+  font-family: var(--font-ui);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0;
+  line-height: 1.5;
+}
+
+.popup .feed-row__title .chip--pin {
+  color: var(--leaf);
+}
+
+/* 行尾只留等宽数字。 */
+.popup .feed-row__stats {
+  padding-top: 0;
+}
+
+.popup .feed-row__stat {
+  min-width: 18px;
+  gap: 0;
+  padding-left: 2px;
+  text-align: right;
+}
+
+.popup .feed-row__stat b {
+  color: var(--ink-3);
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+}
+
+.popup .feed-row__stat i {
+  display: none;
+}
+
+.popup .feed-row__link:hover .feed-row__stat b {
+  color: var(--leaf);
+}
+
+/* ---------- 骨架屏 / 空状态 / 错误 ---------- */
+
+.popup .feed-skeleton__row {
+  grid-template-columns: minmax(0, 1fr) 20px;
+  gap: 12px;
+  padding: 10px 4px;
+  border-bottom: none;
+}
+
+.popup .feed-skeleton--one-line .feed-skeleton__body {
+  gap: 0;
+}
+
+.popup .feed-skeleton__reply {
+  width: 18px;
+  height: 9px;
+}
+
+.popup .skeleton {
+  border-radius: 4px;
 }
 
 .popup .empty {
-  padding: 30px 14px 34px;
+  align-items: center;
+  gap: 6px;
+  padding: 46px 14px;
+  text-align: center;
 }
 
 .popup .empty__title {
-  font-size: 16px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.popup .empty__desc {
+  max-width: 28ch;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.popup .empty__actions {
+  margin-top: 8px;
 }
 
 .popup .feed-state {
-  padding: 12px 8px;
+  padding: 14px 6px;
 }
 
 .popup .banner {
+  gap: 8px;
   padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 12px;
+}
+
+.popup .banner__title {
+  font-size: 12.5px;
+}
+
+/* ---------- 底部固定 Dock ---------- */
+
+.popup__dock {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex: none;
+  padding: 7px 8px 9px;
+  border-top: 1px solid var(--line);
+  background: var(--surface);
+  box-shadow: 0 -10px 24px -22px rgba(34, 34, 34, 0.28);
+}
+
+.popup__dock-item {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 0;
+  padding: 8px 4px;
+  border: none;
+  border-radius: 10px;
+  background: none;
+  color: var(--ink-3);
+  font-family: var(--font-ui);
+  font-size: 11.5px;
+  font-weight: 500;
+  line-height: 1.2;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.16s var(--ease), color 0.16s var(--ease);
+}
+
+.popup__dock-item:hover {
+  background: var(--surface-2);
+  color: var(--ink);
+}
+
+.popup__dock-item--active,
+.popup__dock-item--active:hover {
+  background: var(--leaf-wash);
+  color: var(--leaf);
+  font-weight: 600;
+}
+
+.popup__dock-icon {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 未读通知小红点：陶土红，2px 纸色描边，不与主色抢戏。 */
+.popup__dock-dot {
+  position: absolute;
+  top: -2px;
+  right: -3px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--notice);
+  box-shadow: 0 0 0 2px var(--surface);
+}
+
+.popup__dock-item--active:hover .popup__dock-dot {
+  box-shadow: 0 0 0 2px var(--leaf-wash);
 }

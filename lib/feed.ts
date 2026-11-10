@@ -1,11 +1,12 @@
 /** 排行榜 / 列表接口的读取与归一化。 */
 import { apiGet } from './api';
 import { sectionQuery, sectionResolved } from './section';
-import type { BoardId, ScoreEntry, ScorePage, Section, Topic, TopicPage, ApiNode } from './types';
+import type { BoardId, Section, Topic, TopicPage, ApiNode } from './types';
 
-export type FeedItem =
-  | { kind: 'topic'; key: string; topic: Topic }
-  | { kind: 'score'; key: string; entry: ScoreEntry };
+export interface FeedItem {
+  key: string;
+  topic: Topic;
+}
 
 export interface FeedPage {
   items: FeedItem[];
@@ -23,30 +24,8 @@ export interface LoadFeedOptions {
   signal?: AbortSignal;
 }
 
-const SCORES_LIMIT = 30;
-
 export async function loadFeed(options: LoadFeedOptions): Promise<FeedPage> {
   const { board, section, nodes, page, pageSize, signal } = options;
-
-  if (board === 'scores') {
-    const limit = Math.min(pageSize, SCORES_LIMIT);
-    // 评分榜属于需开通能力，匿名读取，避免带令牌时撞上 scope 限制。
-    const data = await apiGet<ScorePage>('/v1/scores', {
-      auth: false,
-      query: { page, limit, sort: 'all' },
-      signal,
-    });
-    return {
-      items: (data.items ?? []).map((entry) => ({
-        kind: 'score' as const,
-        key: `score:${entry.score?.id ?? entry.post?.short_id ?? Math.random()}`,
-        entry,
-      })),
-      total: data.total ?? 0,
-      page: data.page ?? page,
-      totalPages: data.total_pages ?? 0,
-    };
-  }
 
   if (section.kind !== 'all' && !sectionResolved(section, nodes)) {
     // 节点数据还没到，先给空页，避免把全站内容误当成分区内容。
@@ -85,7 +64,6 @@ export async function loadFeed(options: LoadFeedOptions): Promise<FeedPage> {
   const posts = data.posts ?? [];
   return {
     items: posts.map((topic) => ({
-      kind: 'topic' as const,
       key: `topic:${topic.short_id}`,
       topic,
     })),
@@ -110,9 +88,4 @@ export function mergeItems(current: FeedItem[], incoming: FeedItem[]): FeedItem[
 export function topicHref(topic: Topic): string {
   const slug = topic.node?.slug ?? '';
   return `https://2libra.com/post/${encodeURIComponent(slug)}/${encodeURIComponent(topic.short_id)}`;
-}
-
-export function scoreHref(entry: ScoreEntry): string {
-  const slug = entry.post?.node?.slug ?? '';
-  return `https://2libra.com/post/${encodeURIComponent(slug)}/${encodeURIComponent(entry.post.short_id)}`;
 }

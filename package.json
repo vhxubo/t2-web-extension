@@ -1,6 +1,6 @@
 {
-  "name": "twolibra-post-browser",
-  "description": "浏览 2Libra 帖子列表的浏览器扩展（弹窗 + 新标签页）",
+  "name": "t2-web-extension",
+  "description": "浏览帖子榜单的浏览器扩展（弹窗 + 新标签页）",
   "private": true,
   "version": "0.1.0",
   "type": "module",

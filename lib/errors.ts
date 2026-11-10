@@ -10,7 +10,7 @@ export interface ErrorInfo {
 export function describeError(error: unknown): ErrorInfo {
   if (error instanceof AuthError) {
     if (error.code === 'network') {
-      return { title: '连不上 2Libra', detail: error.message, action: 'retry' };
+      return { title: '连不上服务器', detail: error.message, action: 'retry' };
     }
     if (error.code === 'expired' || error.code === 'token' || error.code === 'state') {
       return { title: '登录状态不可用', detail: error.message, action: 'login' };
@@ -20,7 +20,7 @@ export function describeError(error: unknown): ErrorInfo {
 
   if (error instanceof ApiError) {
     if (error.status === 0 || error.code === 'network') {
-      return { title: '连不上 2Libra', detail: error.message, action: 'retry' };
+      return { title: '连不上服务器', detail: error.message, action: 'retry' };
     }
     if (error.status === 401) {
       return { title: '登录已过期', detail: '重新授权后即可继续浏览。', action: 'login' };
@@ -46,13 +46,13 @@ export function describeError(error: unknown): ErrorInfo {
     }
     if (/cors/i.test(error.message)) {
       return {
-        title: '被 2Libra 的跨域策略拦下了',
-        detail: '扩展会在访问 2libra.com 接口时移除浏览器自动附加的 Origin 头。如果一直失败，到扩展管理页重新加载一次再试。',
+        title: '被服务端的跨域策略拦下了',
+        detail: '扩展会在访问接口时移除浏览器自动附加的 Origin 头。如果一直失败，到扩展管理页重新加载一次再试。',
         action: 'retry',
       };
     }
     if (error.status >= 500) {
-      return { title: '2Libra 服务暂时不可用', detail: '稍后再试一次。', action: 'retry' };
+      return { title: '服务暂时不可用', detail: '稍后再试一次。', action: 'retry' };
     }
     return { title: '请求没有成功', detail: error.message, action: 'retry' };
   }

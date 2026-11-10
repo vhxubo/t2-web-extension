@@ -1,4 +1,4 @@
-/** 2Libra 开放 API 的响应信封。 */
+/** 开放 API 的响应信封。 */
 export interface Envelope<T> {
   c: number;
   m: string;
@@ -15,7 +15,7 @@ export interface Envelope<T> {
   u?: string;
 }
 
-export type BoardId = 'latest' | 'hot24h' | 'hot7d' | 'value' | 'scores';
+export type BoardId = 'latest' | 'hot24h' | 'hot7d' | 'value';
 
 /** 分区：全站 / 顶层节点（含子节点） / 具体子节点。 */
 export type Section =
@@ -69,20 +69,6 @@ export interface Topic {
   status?: string;
 }
 
-export interface ScoreEntry {
-  post: { short_id: string; node?: { slug?: string } | null };
-  author?: Author | null;
-  score: {
-    id?: string;
-    target_name?: string;
-    score?: number;
-    comment?: string;
-    category?: string;
-    created_at?: string;
-    updated_at?: string;
-  };
-}
-
 export interface Profile {
   id?: string;
   username?: string;
@@ -96,14 +82,6 @@ export interface Profile {
 
 export interface TopicPage {
   posts?: Topic[];
-  total?: number;
-  page?: number;
-  limit?: number;
-  total_pages?: number;
-}
-
-export interface ScorePage {
-  items?: ScoreEntry[];
   total?: number;
   page?: number;
   limit?: number;

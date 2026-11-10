@@ -3,7 +3,6 @@ import type { FeedStatus } from '../hooks/useFeed';
 import { describeError } from '../lib/errors';
 import { Icon } from './Icon';
 import { PostRow } from './PostRow';
-import { ScoreRow } from './ScoreRow';
 
 interface PostListProps {
   items: FeedItem[];
@@ -14,6 +13,8 @@ interface PostListProps {
   showRank?: boolean;
   /** 只显示标题，回复数固定在行尾，省略分区、作者和时间（弹窗用）。 */
   titleOnly?: boolean;
+  /** 标题强制单行截断（弹窗 Dock 布局用）。 */
+  oneLine?: boolean;
   sectionFiltered: boolean;
   sectionName?: string;
   onRetry?: () => void;
@@ -26,17 +27,19 @@ export function FeedSkeleton({
   compact = false,
   showRank = true,
   titleOnly = false,
+  oneLine = false,
 }: {
   rows?: number;
   compact?: boolean;
   showRank?: boolean;
   titleOnly?: boolean;
+  oneLine?: boolean;
 }) {
   return (
     <div
       className={`feed-skeleton${compact ? ' feed-skeleton--compact' : ''}${
         showRank ? '' : ' feed-skeleton--no-rank'
-      }${titleOnly ? ' feed-skeleton--title-only' : ''}`}
+      }${titleOnly ? ' feed-skeleton--title-only' : ''}${oneLine ? ' feed-skeleton--one-line' : ''}`}
       aria-hidden="true"
     >
       {Array.from({ length: rows }).map((_, index) => (
@@ -44,9 +47,10 @@ export function FeedSkeleton({
           {showRank && <span className="skeleton skeleton--line feed-skeleton__rank" />}
           <div className="feed-skeleton__body">
             <span className="skeleton skeleton--title" />
-            {titleOnly ? (
+            {titleOnly && !oneLine && (
               <span className="skeleton skeleton--title skeleton--short" />
-            ) : (
+            )}
+            {!titleOnly && (
               <span className="skeleton skeleton--line skeleton--short feed-skeleton__meta" />
             )}
           </div>
@@ -64,6 +68,7 @@ export function PostList({
   compact = false,
   showRank = true,
   titleOnly = false,
+  oneLine = false,
   sectionFiltered,
   sectionName,
   onRetry,
@@ -76,7 +81,8 @@ export function PostList({
         compact={compact}
         showRank={showRank}
         titleOnly={titleOnly}
-        rows={compact ? (titleOnly ? 7 : 5) : 7}
+        oneLine={oneLine}
+        rows={7}
       />
     );
   }
@@ -93,7 +99,7 @@ export function PostList({
             <div className="banner__actions">
               {info.action === 'login' && onLogin && (
                 <button type="button" className="btn btn--sm btn--primary" onClick={onLogin}>
-                  登录 2Libra
+                  登录
                 </button>
               )}
               {info.action !== 'none' && onRetry && (
@@ -111,12 +117,12 @@ export function PostList({
   if (items.length === 0) {
     return (
       <div className="empty">
-        <span className="empty__title t2-serif">
+        <span className="empty__title">
           {sectionFiltered ? '这个分区暂时没有帖子' : '没有拿到帖子'}
         </span>
         <span className="empty__desc">
           {sectionFiltered
-            ? `2Libra 的「${sectionName ?? '当前分区'}」还没有可展示的内容，换个分区或看看全站。`
+            ? `「${sectionName ?? '当前分区'}」还没有可展示的内容，换个分区或看看全站。`
             : '可能刚好没有内容，刷新一次试试。'}
         </span>
         <div className="empty__actions">
@@ -139,29 +145,19 @@ export function PostList({
     <ol
       className={`feed-list${compact ? ' feed-list--compact' : ''}${
         showRank ? '' : ' feed-list--no-rank'
-      }${titleOnly ? ' feed-list--title-only' : ''}`}
+      }${titleOnly ? ' feed-list--title-only' : ''}${oneLine ? ' feed-list--one-line' : ''}`}
     >
-      {items.map((item, index) =>
-        item.kind === 'score' ? (
-          <ScoreRow
-            key={item.key}
-            entry={item.entry}
-            index={index}
-            compact={compact}
-            showRank={showRank}
-            titleOnly={titleOnly}
-          />
-        ) : (
-          <PostRow
-            key={item.key}
-            topic={item.topic}
-            index={index}
-            compact={compact}
-            showRank={showRank}
-            titleOnly={titleOnly}
-          />
-        ),
-      )}
+      {items.map((item, index) => (
+        <PostRow
+          key={item.key}
+          topic={item.topic}
+          index={index}
+          compact={compact}
+          showRank={showRank}
+          titleOnly={titleOnly}
+          oneLine={oneLine}
+        />
+      ))}
     </ol>
   );
 }

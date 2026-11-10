@@ -1,53 +1,56 @@
 /* ------------------------------------------------------------------
-   2Libra 帖子浏览 — 设计令牌与公共组件
-   调色板取自主站的叶子绿，纸面偏冷绿灰，数据一律用等宽字体。
+   T2 Web Extension — 设计令牌与公共组件
+   清新素净：暖白纸面、莫兰迪森林绿、极淡分割线。
+   字体只用现代无衬线；数字与回复数一律等宽。
 ------------------------------------------------------------------ */
 
 :root {
   color-scheme: light;
 
-  --paper: #eef0e7;
-  --paper-2: #e6e9dd;
-  --surface: #fbfcf8;
-  --surface-2: #f4f6ee;
+  --paper: #fafaf7;
+  --paper-2: #f2f3ee;
+  --surface: #ffffff;
+  --surface-2: #f4f6f1;
 
-  --ink: #18211a;
-  --ink-2: #4b564c;
-  --ink-3: #6b7565;
+  --ink: #222222;
+  --ink-2: #4c4f4b;
+  --ink-3: #888888;
 
-  --line: #dce0d2;
-  --line-strong: #c7cdbb;
+  --line: #f0f0f0;
+  --line-strong: #e4e6e1;
 
-  --leaf: #2c6a3d;
-  --leaf-2: #3d824f;
-  --leaf-3: #6fae72;
-  --leaf-wash: #e3eddf;
-  --leaf-soft: #d7e6d2;
-  --on-leaf: #f7fbf4;
+  --leaf: #4a7c59;
+  --leaf-2: #3f6c4d;
+  --leaf-3: #8fb397;
+  --leaf-wash: #eef4ee;
+  --leaf-soft: #dce9dd;
+  --on-leaf: #ffffff;
 
-  --gold: #8f6420;
-  --gold-wash: #f0e6d2;
+  --gold: #8a6a33;
+  --gold-wash: #f5efe3;
 
-  --danger: #a13c2d;
-  --danger-wash: #f7e4de;
+  --danger: #b4544a;
+  --danger-wash: #f8ece9;
 
-  --focus: #2c6a3d;
+  /* 未读提醒：克制的陶土红，避免高饱和刺眼。 */
+  --notice: #c4554b;
 
-  --shadow-sm: 0 1px 2px rgba(24, 33, 26, 0.05);
-  --shadow-md: 0 10px 30px -18px rgba(24, 33, 26, 0.35), 0 2px 6px rgba(24, 33, 26, 0.06);
-  --shadow-lg: 0 30px 80px -30px rgba(16, 24, 18, 0.5), 0 4px 14px rgba(16, 24, 18, 0.08);
+  --focus: #4a7c59;
+
+  --shadow-sm: 0 1px 2px rgba(34, 34, 34, 0.04);
+  --shadow-md: 0 10px 30px -18px rgba(34, 34, 34, 0.18), 0 2px 6px rgba(34, 34, 34, 0.04);
+  --shadow-lg: 0 30px 80px -30px rgba(34, 34, 34, 0.28), 0 4px 14px rgba(34, 34, 34, 0.06);
 
   --radius-sm: 10px;
-  --radius: 16px;
-  --radius-lg: 22px;
-  --radius-xl: 28px;
+  --radius: 14px;
+  --radius-lg: 20px;
+  --radius-xl: 26px;
 
-  --font-ui: "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", "Microsoft YaHei",
-    system-ui, -apple-system, "Segoe UI", sans-serif;
-  --font-display: "Songti SC", "Noto Serif SC", "Noto Serif CJK SC", "Source Han Serif SC",
-    "SimSun", Georgia, serif;
-  --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", "Cascadia Code", Menlo, Consolas,
-    monospace;
+  --font-ui: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC",
+    "Microsoft YaHei", sans-serif;
+  /* 不再使用宋体/衬线：品牌字标、标题与正文统一无衬线。 */
+  --font-display: var(--font-ui);
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
 
   --ease: cubic-bezier(0.2, 0.7, 0.3, 1);
 }
@@ -56,32 +59,34 @@
   :root {
     color-scheme: dark;
 
-    --paper: #0f1511;
-    --paper-2: #151d17;
-    --surface: #18211a;
-    --surface-2: #1d271f;
+    --paper: #121613;
+    --paper-2: #181d19;
+    --surface: #1b211c;
+    --surface-2: #202721;
 
-    --ink: #e9ece4;
-    --ink-2: #aeb8ac;
-    --ink-3: #859085;
+    --ink: #eceee9;
+    --ink-2: #b6bcb4;
+    --ink-3: #8b938c;
 
-    --line: #29332b;
-    --line-strong: #3a463c;
+    --line: #272e28;
+    --line-strong: #39423b;
 
-    --leaf: #84c48d;
-    --leaf-2: #9ad4a2;
-    --leaf-3: #5f9c68;
-    --leaf-wash: #1d2b20;
-    --leaf-soft: #24352a;
-    --on-leaf: #0d130f;
+    --leaf: #9ac7a2;
+    --leaf-2: #aed6b5;
+    --leaf-3: #6d9a76;
+    --leaf-wash: #1e2a21;
+    --leaf-soft: #26352a;
+    --on-leaf: #101512;
 
-    --gold: #d9b273;
-    --gold-wash: #2f2617;
+    --gold: #d5b47c;
+    --gold-wash: #2e2719;
 
-    --danger: #e08a76;
-    --danger-wash: #33201b;
+    --danger: #e09a8f;
+    --danger-wash: #32211e;
 
-    --focus: #8ccb95;
+    --notice: #e08a80;
+
+    --focus: #9ac7a2;
 
     --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
     --shadow-md: 0 12px 30px -18px rgba(0, 0, 0, 0.8), 0 2px 6px rgba(0, 0, 0, 0.3);
@@ -168,12 +173,21 @@ ul {
   font-variant-numeric: tabular-nums;
 }
 
-.t2-serif {
-  font-family: var(--font-display);
-}
-
 .t2-muted {
   color: var(--ink-2);
+}
+
+/* 只给屏幕阅读器的文字。 */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 /* ---------- 按钮 ---------- */
@@ -462,7 +476,7 @@ ul {
 }
 
 .empty__title {
-  font-family: var(--font-display);
+  font-family: var(--font-ui);
   font-size: 19px;
   font-weight: 600;
   color: var(--ink);
@@ -567,7 +581,7 @@ ul {
 }
 
 .dialog__title {
-  font-family: var(--font-display);
+  font-family: var(--font-ui);
   font-size: 21px;
   font-weight: 600;
   line-height: 1.3;
@@ -607,7 +621,7 @@ ul {
   align-items: baseline;
   gap: 8px;
   margin-bottom: 12px;
-  font-family: var(--font-display);
+  font-family: var(--font-ui);
   font-size: 16px;
   font-weight: 600;
 }

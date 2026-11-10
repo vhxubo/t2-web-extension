@@ -46,13 +46,13 @@ async function send(url: string, token: string | null, signal?: AbortSignal): Pr
     });
   } catch (error) {
     if (error instanceof DOMException && error.name === 'AbortError') throw error;
-    throw new ApiError('连不上 2Libra，请检查网络后重试', 0, 'network');
+    throw new ApiError('连不上服务器，请检查网络后重试', 0, 'network');
   }
 }
 
 /**
  * 读接口统一入口：处理信封、401 刷新后重试、网络错误。
- * 写操作按 2Libra 的跨域策略必须经自己的服务端，本扩展不做写操作。
+ * 写操作按服务端的跨域策略必须经自己的服务端，本扩展不做写操作。
  */
 export async function apiGet<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const { query, auth = true, signal } = options;
@@ -78,7 +78,7 @@ export async function apiGet<T>(path: string, options: RequestOptions = {}): Pro
   }
 
   if (!payload || typeof payload.c !== 'number') {
-    throw new ApiError(`2Libra 返回了无法解析的数据（HTTP ${response.status}）`, response.status);
+    throw new ApiError(`服务器返回了无法解析的数据（HTTP ${response.status}）`, response.status);
   }
 
   if (payload.c !== 0) {
