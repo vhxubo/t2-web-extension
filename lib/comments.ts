@@ -30,7 +30,8 @@ export async function loadLatestComments(
   return apiGet<CommentPage>('/v1/comments/latest', {
     // 只读端点；登录时走登录配额，匿名也能看。
     auth: true,
-    query: { page, limit },
+    // page 默认 1，且该端点实际只取最近的 N 条；只有显式翻页时才带上。
+    query: { ...(page > 1 ? { page } : {}), limit },
     signal,
   });
 }

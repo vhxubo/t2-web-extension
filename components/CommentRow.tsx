@@ -137,7 +137,9 @@ export function CommentRow({
             <Icon name="external" size={10} className="comment-row__post-icon" />
           </a>
           {typeof replyCount === 'number' && replyCount >= 0 && (
-            <span className="comment-row__count t2-mono">{replyCount} 评论</span>
+            <span className="comment-row__count t2-mono" title={`帖子共 ${replyCount} 条评论`}>
+              {replyCount} 评论
+            </span>
           )}
         </span>
       </div>
