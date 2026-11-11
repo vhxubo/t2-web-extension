@@ -1,24 +1,23 @@
-import { browser } from '#imports';
 import { useState } from 'react';
 import { startLogin } from '../lib/auth';
-import { AUTHOR, LINKS, OAUTH_CONFIGURED } from '../lib/config';
+import { OAUTH_CONFIGURED } from '../lib/config';
 import { describeError } from '../lib/errors';
+import { type Settings, type ThemePreference } from '../lib/storage';
 import type { NodesStatus } from '../hooks/useNodes';
-import type { Settings, ThemePreference } from '../lib/storage';
 import type { ApiNode, Profile } from '../lib/types';
 import { Avatar } from './Avatar';
-import { Icon } from './Icon';
+import { Icon, type IconName } from './Icon';
 import { NodeConfig } from './NodeConfig';
 
 const THEME_OPTIONS: ReadonlyArray<{
   value: ThemePreference;
-  emoji: string;
+  icon: IconName;
   label: string;
   hint: string;
 }> = [
-  { value: 'light', emoji: '☀️', label: '浅色', hint: '始终使用浅色界面' },
-  { value: 'dark', emoji: '🌙', label: '深色', hint: '始终使用深色界面' },
-  { value: 'system', emoji: '💻', label: '跟随系统', hint: '跟随操作系统的深浅色外观' },
+  { value: 'light', icon: 'sun', label: '浅色', hint: '始终使用浅色界面' },
+  { value: 'dark', icon: 'moon', label: '深色', hint: '始终使用深色界面' },
+  { value: 'system', icon: 'monitor', label: '跟随系统', hint: '跟随操作系统的深浅色外观' },
 ];
 
 interface SettingsPanelProps {
@@ -51,7 +50,7 @@ export function SettingsPanel({
   const [loginError, setLoginError] = useState<string | null>(null);
   const [loginBusy, setLoginBusy] = useState(false);
 
-  const manifest = browser.runtime.getManifest();
+  const accountName = profile?.display_name || profile?.username || '已登录';
 
   const handleLogin = async () => {
     setLoginError(null);
@@ -78,63 +77,80 @@ export function SettingsPanel({
   return (
     <div className="settings-panel">
       {/* ---------------- 账号 ---------------- */}
-      <section className="settings-card" aria-labelledby="settings-account">
-        <h3 className="settings-card__title" id="settings-account">
-          账号
-        </h3>
+      <section className="settings-card settings-card--account" aria-labelledby="settings-account">
+        <header className="settings-card__head">
+          <span className="settings-card__icon" aria-hidden="true">
+            <Icon name="user" size={17} />
+          </span>
+          <div className="settings-card__heading">
+            <h2 className="settings-card__title" id="settings-account">
+              账号
+            </h2>
+            <p className="settings-card__desc">
+              查看当前登录账号。设置只保存在本机，不会上传。
+            </p>
+          </div>
+        </header>
 
-        {signedIn ? (
-          <div className="settings-account">
-            <Avatar
-              className="avatar--lg"
-              src={profile?.avatar_url}
-              name={profile?.display_name || profile?.username}
-            />
-            <div className="settings-account__body">
-              <div className="settings-account__name">
-                <span>{profile?.display_name || profile?.username || '已登录'}</span>
-                {profile?.is_pro && <span className="chip chip--gold">PRO</span>}
-                {typeof profile?.level === 'number' && (
-                  <span className="chip">Lv.{profile.level}</span>
-                )}
+        <div className="settings-card__body">
+          {signedIn ? (
+            <div className="account-panel">
+              <Avatar
+                className="avatar--account"
+                src={profile?.avatar_url}
+                name={accountName}
+              />
+
+              <div className="account-panel__body">
+                <div className="account-panel__name-row">
+                  <span className="account-panel__name">{accountName}</span>
+                  {profile?.is_pro && <span className="chip chip--gold">PRO</span>}
+                  {typeof profile?.level === 'number' && (
+                    <span className="chip">Lv.{profile.level}</span>
+                  )}
+                </div>
+              </div>
+
+              <div className="account-panel__actions">
+                <button type="button" className="btn btn--ghost" onClick={onSignOut}>
+                  <Icon name="logout" size={14} />
+                  退出登录
+                </button>
               </div>
             </div>
-            <div className="settings-account__actions">
-              <button
-                type="button"
-                className="btn btn--sm"
-                onClick={handleLogin}
-                disabled={loginBusy}
-              >
-                重新授权
-              </button>
-              <button type="button" className="btn btn--sm btn--danger" onClick={onSignOut}>
-                退出登录
-              </button>
-            </div>
-          </div>
-        ) : (
-          <div className="settings-login">
-            <p className="settings-note">
-              登录后可同步个性化字段、收藏状态及未读通知红点。
-            </p>
-            <button
-              type="button"
-              className="btn btn--primary"
-              onClick={handleLogin}
-              disabled={loginBusy}
-            >
-              {loginBusy ? '等待授权…' : '登录'}
-            </button>
-          </div>
-        )}
+          ) : (
+            <div className="account-panel account-panel--signed-out">
+              <Avatar className="avatar--account" name={null} />
 
-        {loginError && (
-          <div className="banner banner--error settings-banner" role="alert">
-            <Icon name="alert" size={16} className="banner__icon" />
-            <div className="banner__body">{loginError}</div>
-          </div>
-        )}
+              <div className="account-panel__body">
+                <div className="account-panel__name-row">
+                  <span className="account-panel__name">尚未登录</span>
+                </div>
+                <p className="account-panel__hint">
+                  设置会保存在本机，登录只用于读取个人资料与通知。
+                </p>
+              </div>
+
+              <div className="account-panel__actions">
+                <button
+                  type="button"
+                  className="btn btn--primary"
+                  onClick={handleLogin}
+                  disabled={loginBusy}
+                >
+                  {loginBusy ? '等待授权…' : '登录 2Libra'}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {loginError && (
+            <div className="banner banner--error settings-banner" role="alert">
+              <Icon name="alert" size={16} className="banner__icon" />
+              <div className="banner__body">{loginError}</div>
+            </div>
+          )}
+        </div>
       </section>
 
       {/* ---------------- 节点配置 ---------------- */}
@@ -149,85 +165,62 @@ export function SettingsPanel({
       />
 
       {/* ---------------- 外观 ---------------- */}
-      <section className="settings-card" aria-labelledby="settings-appearance">
-        <h3 className="settings-card__title" id="settings-appearance">
-          外观
-        </h3>
+      <section
+        className="settings-card settings-card--appearance"
+        aria-labelledby="settings-appearance"
+      >
+        <header className="settings-card__head">
+          <span className="settings-card__icon" aria-hidden="true">
+            <Icon name="palette" size={17} />
+          </span>
+          <div className="settings-card__heading">
+            <h2 className="settings-card__title" id="settings-appearance">
+              外观
+            </h2>
+            <p className="settings-card__desc">选择界面主题；弹窗、仪表盘与设置页会一起变化。</p>
+          </div>
+        </header>
 
-        <div className="settings-row settings-row--theme">
-          <div className="settings-row__intro">
-            <span className="settings-row__label" id="theme-label">
-              主题模式
-            </span>
-            <p className="settings-row__hint">夜间使用深色界面可减少眩光。</p>
+        <div className="settings-card__body">
+          <div className="appearance-panel">
+            <div className="appearance-panel__copy">
+              <span className="appearance-panel__label" id="theme-label">
+                主题模式
+              </span>
+              <p className="appearance-panel__hint">选定后立即生效，无需刷新页面。</p>
+            </div>
+
+            <div className="theme-segmented" role="radiogroup" aria-labelledby="theme-label">
+              {THEME_OPTIONS.map((option) => {
+                const active = settings.theme === option.value;
+                return (
+                  <label
+                    key={option.value}
+                    className={`theme-segmented__option${
+                      active ? ' is-active' : ''
+                    }`}
+                    title={option.hint}
+                  >
+                    <input
+                      className="sr-only"
+                      type="radio"
+                      name="theme-preference"
+                      value={option.value}
+                      checked={active}
+                      onChange={() => void onUpdateSettings({ theme: option.value })}
+                    />
+                    <Icon name={option.icon} size={16} />
+                    <span>{option.label}</span>
+                  </label>
+                );
+              })}
+            </div>
           </div>
 
-          <div className="theme-choice" role="radiogroup" aria-labelledby="theme-label">
-            {THEME_OPTIONS.map((option) => {
-              const active = settings.theme === option.value;
-              return (
-                <label
-                  key={option.value}
-                  className={`theme-choice__option${
-                    active ? ' theme-choice__option--active' : ''
-                  }`}
-                  title={option.hint}
-                >
-                  <input
-                    className="sr-only"
-                    type="radio"
-                    name="theme-preference"
-                    value={option.value}
-                    checked={active}
-                    onChange={() => void onUpdateSettings({ theme: option.value })}
-                  />
-                  <span className="theme-choice__emoji" aria-hidden="true">
-                    {option.emoji}
-                  </span>
-                  <span>{option.label}</span>
-                </label>
-              );
-            })}
-          </div>
+          <p className="settings-inline-note">
+            「跟随系统」会随操作系统的浅色 / 深色外观自动切换；主题偏好只保存在本地设备。
+          </p>
         </div>
-
-        <p className="settings-note settings-defaults__hint">
-          「跟随系统」会随操作系统的浅色 / 深色外观自动切换；选择只保存在本地设备。
-        </p>
-      </section>
-
-      {/* ---------------- 关于 ---------------- */}
-      <section className="settings-card" aria-labelledby="settings-about">
-        <h3 className="settings-card__title" id="settings-about">
-          关于
-        </h3>
-
-        <dl className="settings-meta">
-          <div>
-            <dt>版本</dt>
-            <dd>
-              {manifest.version} · Manifest V{manifest.manifest_version}
-            </dd>
-          </div>
-          <div>
-            <dt>数据来源</dt>
-            <dd>开放 API v1</dd>
-          </div>
-          <div>
-            <dt>作者</dt>
-            <dd>
-              {AUTHOR.name} ·{' '}
-              <a className="settings-meta__mail" href={`mailto:${AUTHOR.email}`}>
-                {AUTHOR.email}
-              </a>
-            </dd>
-          </div>
-        </dl>
-
-        <a className="settings-link" href={LINKS.docs} target="_blank" rel="noreferrer">
-          接口文档
-          <Icon name="external" size={12} />
-        </a>
       </section>
     </div>
   );

@@ -20,6 +20,8 @@ export type IconName =
   | 'search'
   | 'sun'
   | 'moon'
+  | 'monitor'
+  | 'palette'
   | 'folder'
   | 'bookmark'
   | 'plus'
@@ -145,6 +147,22 @@ const PATHS: Record<IconName, ReactNode> = {
     </>
   ),
   moon: <path d="M20.4 14.2A8.4 8.4 0 0 1 9.8 3.6 8.4 8.4 0 1 0 20.4 14.2Z" />,
+  monitor: (
+    <>
+      <rect x="3.5" y="4.5" width="17" height="12" rx="2" />
+      <path d="M9 20h6" />
+      <path d="M12 16.5V20" />
+    </>
+  ),
+  palette: (
+    <>
+      <path d="M12 3.4a8.6 8.6 0 0 0 0 17.2c1.3 0 2.2-.9 2.2-2 0-.5-.2-1-.5-1.4-.3-.4-.4-.8-.4-1.3 0-1.1.9-2 2-2h1.4a3.9 3.9 0 0 0 3.9-3.9c0-3.7-3.9-6.6-8.6-6.6Z" />
+      <circle cx="7.8" cy="11.4" r="1" fill="currentColor" stroke="none" />
+      <circle cx="10" cy="7.8" r="1" fill="currentColor" stroke="none" />
+      <circle cx="14.2" cy="7.4" r="1" fill="currentColor" stroke="none" />
+      <circle cx="17" cy="10.5" r="1" fill="currentColor" stroke="none" />
+    </>
+  ),
   folder: (
     <>
       <path d="M4 7.6A1.6 1.6 0 0 1 5.6 6h3.6l2 2h7.2A1.6 1.6 0 0 1 20 9.6v8A1.6 1.6 0 0 1 18.4 19H5.6A1.6 1.6 0 0 1 4 17.4V7.6Z" />

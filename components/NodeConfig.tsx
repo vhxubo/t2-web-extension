@@ -28,7 +28,7 @@ interface OptionGroup {
 
 /**
  * 节点配置：
- * - 每一行是一个视图（内置榜单 / 全站 / 父节点 / 子节点），拖动或上下按钮调整顺序；
+ * - 每一行是一个视图（内置榜单 / 全站 / 父节点 / 子节点），拖动或方向键调整顺序；
  * - 两个开关分别控制弹窗 Tab 与仪表盘卡片，弹窗最多 6 个，仪表盘不限；
  * - 「添加节点」列出全站、父节点（含全部子节点）与具体子节点。
  */
@@ -150,10 +150,7 @@ export function NodeConfig({
   const add = (option: ViewOption) => {
     if (views.some((view) => view.id === option.id)) return;
     const fitsPopup = popupCount < POPUP_TAB_LIMIT;
-    commit([
-      ...views,
-      { id: option.id, popup: fitsPopup, dashboard: true },
-    ]);
+    commit([...views, { id: option.id, popup: fitsPopup, dashboard: true }]);
     onToast(
       fitsPopup
         ? `已添加「${option.label}」`
@@ -173,12 +170,19 @@ export function NodeConfig({
 
   return (
     <section className="settings-card node-config" aria-labelledby="settings-nodes">
-      <div className="node-config__head">
-        <div className="node-config__heading">
-          <h3 className="settings-card__title" id="settings-nodes">
+      <header className="settings-card__head node-config__head">
+        <span className="settings-card__icon" aria-hidden="true">
+          <Icon name="settings" size={17} />
+        </span>
+
+        <div className="settings-card__heading">
+          <h2 className="settings-card__title" id="settings-nodes">
             节点配置
-          </h3>
-          <p className="node-config__summary">
+          </h2>
+          <p className="settings-card__desc">
+            控制每个节点在弹窗与仪表盘中的显示位置；拖动排序后立即保存。
+          </p>
+          <p className="node-config__counts">
             <span>
               弹窗 <b>{popupCount}</b>/{POPUP_TAB_LIMIT}
             </span>
@@ -188,13 +192,14 @@ export function NodeConfig({
             </span>
           </p>
         </div>
+
         <div className="node-config__head-actions">
           <button type="button" className="btn btn--ghost btn--sm" onClick={reset}>
             恢复默认
           </button>
           <button
             type="button"
-            className="btn btn--sm"
+            className="btn btn--primary btn--sm"
             onClick={() => {
               setQuery('');
               setAddOpen(true);
@@ -207,178 +212,210 @@ export function NodeConfig({
             添加节点
           </button>
         </div>
-      </div>
+      </header>
 
-      <p className="node-config__tip">
-        拖动左侧手柄或使用上下箭头调整顺序。开关分别控制弹窗 Tab 与仪表盘卡片；弹窗最多{' '}
-        {POPUP_TAB_LIMIT} 个，仪表盘不限。
-      </p>
+      <div className="settings-card__body node-config__body">
+        <p className="node-config__tip">
+          拖动左侧手柄调整顺序；聚焦手柄后可用 ↑ ↓ 键移动。开关分别控制弹窗 Tab 与仪表盘卡片。
+        </p>
 
-      <div className="node-config__list" role="list" aria-label="节点顺序与展示位置">
-        {entries.map((entry, index) => {
-          const hidden = !entry.popup && !entry.dashboard;
-          const popupBlocked = !entry.popup && popupCount >= POPUP_TAB_LIMIT;
-          return (
-            <div
-              key={entry.id}
-              role="listitem"
-              className={`node-config__row${hidden ? ' node-config__row--hidden' : ''}${
-                dragIndex === index ? ' is-dragging' : ''
-              }${dropIndex === index && dragIndex !== index ? ' is-drop-target' : ''}`}
-              onDragStart={(event) => {
-                setDragIndex(index);
-                setDropIndex(index);
-                event.dataTransfer.effectAllowed = 'move';
-                event.dataTransfer.setData('text/plain', String(index));
-              }}
-              onDragOver={(event) => {
-                event.preventDefault();
-                event.dataTransfer.dropEffect = 'move';
-                if (dropIndex !== index) setDropIndex(index);
-              }}
-              onDrop={(event) => {
-                event.preventDefault();
-                const raw = dragIndex ?? Number(event.dataTransfer.getData('text/plain'));
-                if (Number.isFinite(raw)) move(raw, index);
-                setDragIndex(null);
-                setDropIndex(null);
-              }}
-              onDragEnd={() => {
-                setDragIndex(null);
-                setDropIndex(null);
-              }}
-            >
-              <span
-                className="node-config__grip"
-                title="拖动调整顺序"
-                aria-hidden="true"
-                draggable
+        <div className="node-config__list" role="list" aria-label="节点顺序与展示位置">
+          {entries.map((entry, index) => {
+            const hidden = !entry.popup && !entry.dashboard;
+            const popupBlocked = !entry.popup && popupCount >= POPUP_TAB_LIMIT;
+            return (
+              <div
+                key={entry.id}
+                role="listitem"
+                className={`node-config__row${hidden ? ' node-config__row--hidden' : ''}${
+                  dragIndex === index ? ' is-dragging' : ''
+                }${dropIndex === index && dragIndex !== index ? ' is-drop-target' : ''}`}
+                onDragStart={(event) => {
+                  setDragIndex(index);
+                  setDropIndex(index);
+                  event.dataTransfer.effectAllowed = 'move';
+                  event.dataTransfer.setData('text/plain', String(index));
+                }}
+                onDragOver={(event) => {
+                  event.preventDefault();
+                  event.dataTransfer.dropEffect = 'move';
+                  if (dropIndex !== index) setDropIndex(index);
+                }}
+                onDrop={(event) => {
+                  event.preventDefault();
+                  const raw = dragIndex ?? Number(event.dataTransfer.getData('text/plain'));
+                  if (Number.isFinite(raw)) move(raw, index);
+                  setDragIndex(null);
+                  setDropIndex(null);
+                }}
+                onDragEnd={() => {
+                  setDragIndex(null);
+                  setDropIndex(null);
+                }}
               >
-                <Icon name="grip" size={15} />
-              </span>
+                <button
+                  type="button"
+                  className="node-config__grip"
+                  draggable
+                  title="拖动排序；聚焦后按 ↑ ↓ 移动"
+                  aria-label={`${entry.view.label}：拖动或按上下方向键调整顺序`}
+                  onKeyDown={(event) => {
+                    if (event.key === 'ArrowUp') {
+                      event.preventDefault();
+                      move(index, index - 1);
+                    } else if (event.key === 'ArrowDown') {
+                      event.preventDefault();
+                      move(index, index + 1);
+                    } else if (event.key === 'Home') {
+                      event.preventDefault();
+                      move(index, 0);
+                    } else if (event.key === 'End') {
+                      event.preventDefault();
+                      move(index, entries.length - 1);
+                    }
+                  }}
+                >
+                  <Icon name="grip" size={15} />
+                </button>
 
-              <span className="node-config__icon" aria-hidden="true">
-                {entry.view.icon}
-              </span>
-
-              <span className="node-config__info">
-                <span className="node-config__name">
-                  <span className="node-config__label" title={entry.view.hint}>
-                    {entry.view.label}
-                  </span>
-                  <span className="node-config__source">{entry.view.sourceLabel}</span>
-                  {!entry.view.available && nodesStatus !== 'loading' && (
-                    <span className="node-config__warn">未找到</span>
-                  )}
-                  {hidden && <span className="node-config__muted">已隐藏</span>}
+                <span
+                  className={`node-config__icon node-config__icon--${entry.view.kind}`}
+                  aria-hidden="true"
+                >
+                  {entry.view.icon}
                 </span>
-                <span className="node-config__hint">{entry.view.hint}</span>
-              </span>
 
-              <span className="node-config__surfaces">
-                <button
-                  type="button"
-                  className={`node-config__toggle${entry.popup ? ' is-on' : ''}`}
-                  aria-pressed={entry.popup}
-                  aria-label={`${entry.view.label}：在弹窗展示`}
-                  title={
-                    popupBlocked
-                      ? `弹窗最多 ${POPUP_TAB_LIMIT} 个 Tab，先关闭其它项的弹窗展示`
-                      : '在弹窗中展示'
-                  }
-                  disabled={popupBlocked}
-                  draggable={false}
-                  onClick={() => toggleSurface(entry.id, 'popup')}
-                >
-                  弹窗
-                </button>
-                <button
-                  type="button"
-                  className={`node-config__toggle${entry.dashboard ? ' is-on' : ''}`}
-                  aria-pressed={entry.dashboard}
-                  aria-label={`${entry.view.label}：在仪表盘展示`}
-                  title="在仪表盘中展示"
-                  draggable={false}
-                  onClick={() => toggleSurface(entry.id, 'dashboard')}
-                >
-                  仪表盘
-                </button>
-              </span>
+                <span className="node-config__info">
+                  <span className="node-config__name">
+                    <span className="node-config__label" title={entry.view.hint}>
+                      {entry.view.label}
+                    </span>
+                    <span
+                      className={`node-config__badge node-config__badge--${entry.view.kind}`}
+                    >
+                      {entry.view.sourceLabel}
+                    </span>
+                    {!entry.view.available && nodesStatus !== 'loading' && (
+                      <span className="node-config__warn">未找到</span>
+                    )}
+                    {hidden && <span className="node-config__muted">已隐藏</span>}
+                  </span>
+                  <span className="node-config__hint">{entry.view.hint}</span>
+                </span>
 
-              <span className="node-config__order">
-                <button
-                  type="button"
-                  className="btn btn--icon btn--sm node-config__order-btn"
-                  aria-label={`上移${entry.view.label}`}
-                  title="上移"
-                  disabled={index === 0}
-                  draggable={false}
-                  onClick={() => move(index, index - 1)}
-                >
-                  <Icon name="up" size={13} />
-                </button>
-                <button
-                  type="button"
-                  className="btn btn--icon btn--sm node-config__order-btn"
-                  aria-label={`下移${entry.view.label}`}
-                  title="下移"
-                  disabled={index === entries.length - 1}
-                  draggable={false}
-                  onClick={() => move(index, index + 1)}
-                >
-                  <Icon name="down" size={13} />
-                </button>
-              </span>
+                <span className="node-config__surfaces">
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={entry.popup}
+                    aria-label={`${entry.view.label}：在弹窗展示`}
+                    className={`node-config__switch${entry.popup ? ' is-on' : ''}`}
+                    title={
+                      popupBlocked
+                        ? `弹窗最多 ${POPUP_TAB_LIMIT} 个 Tab，先关闭其它项的弹窗展示`
+                        : '在弹窗中展示'
+                    }
+                    disabled={popupBlocked}
+                    draggable={false}
+                    onClick={() => toggleSurface(entry.id, 'popup')}
+                  >
+                    <span>弹窗</span>
+                    <span className="node-config__track" aria-hidden="true">
+                      <span className="node-config__thumb" />
+                    </span>
+                  </button>
 
-              {entry.view.kind === 'section' ? (
-                <button
-                  type="button"
-                  className="btn btn--icon btn--sm node-config__remove"
-                  aria-label={`移除${entry.view.label}`}
-                  title="从配置中移除"
-                  draggable={false}
-                  onClick={() => remove(entry.id, entry.view.label)}
-                >
-                  <Icon name="trash" size={14} />
-                </button>
-              ) : (
-                <span className="node-config__remove-spacer" aria-hidden="true" />
-              )}
-            </div>
-          );
-        })}
-      </div>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={entry.dashboard}
+                    aria-label={`${entry.view.label}：在仪表盘展示`}
+                    className={`node-config__switch${entry.dashboard ? ' is-on' : ''}`}
+                    title="在仪表盘中展示"
+                    draggable={false}
+                    onClick={() => toggleSurface(entry.id, 'dashboard')}
+                  >
+                    <span>仪表盘</span>
+                    <span className="node-config__track" aria-hidden="true">
+                      <span className="node-config__thumb" />
+                    </span>
+                  </button>
+                </span>
 
-      <div className="node-config__default">
-        <div className="node-config__default-text">
-          <label className="node-config__default-label" htmlFor="node-config-default-view">
-            弹窗默认进入
-          </label>
-          <p className="node-config__default-hint">
-            打开弹窗时先显示哪个 Tab；在弹窗里切换只影响当次浏览，不会改动这里。候选只包含
-            「弹窗」开关打开的视图。
-          </p>
+                <span className="node-config__order">
+                  <button
+                    type="button"
+                    className="node-config__order-btn"
+                    aria-label={`上移${entry.view.label}`}
+                    title="上移"
+                    disabled={index === 0}
+                    draggable={false}
+                    onClick={() => move(index, index - 1)}
+                  >
+                    <Icon name="up" size={13} />
+                  </button>
+                  <button
+                    type="button"
+                    className="node-config__order-btn"
+                    aria-label={`下移${entry.view.label}`}
+                    title="下移"
+                    disabled={index === entries.length - 1}
+                    draggable={false}
+                    onClick={() => move(index, index + 1)}
+                  >
+                    <Icon name="down" size={13} />
+                  </button>
+                </span>
+
+                {entry.view.kind === 'section' ? (
+                  <button
+                    type="button"
+                    className="node-config__remove"
+                    aria-label={`移除${entry.view.label}`}
+                    title="从配置中移除"
+                    draggable={false}
+                    onClick={() => remove(entry.id, entry.view.label)}
+                  >
+                    <Icon name="trash" size={14} />
+                  </button>
+                ) : (
+                  <span className="node-config__remove-spacer" aria-hidden="true" />
+                )}
+              </div>
+            );
+          })}
         </div>
-        <select
-          id="node-config-default-view"
-          className="select"
-          value={defaultView}
-          disabled={popupOptions.length === 0}
-          onChange={(event) => {
-            const value = event.target.value;
-            if (value) void onUpdateSettings({ defaultView: value });
-          }}
-        >
-          {popupOptions.length === 0 ? (
-            <option value="">没有弹窗 Tab</option>
-          ) : (
-            popupOptions.map((entry) => (
-              <option key={entry.id} value={entry.id}>
-                {entry.view.label}
-              </option>
-            ))
-          )}
-        </select>
+
+        <div className="node-config__default">
+          <div className="node-config__default-text">
+            <label className="node-config__default-label" htmlFor="node-config-default-view">
+              弹窗默认进入
+            </label>
+            <p className="node-config__default-hint">
+              打开弹窗时先显示哪个 Tab；在弹窗里切换只影响当次浏览，不会改动这里。
+            </p>
+          </div>
+          <select
+            id="node-config-default-view"
+            className="select"
+            value={defaultView}
+            disabled={popupOptions.length === 0}
+            onChange={(event) => {
+              const value = event.target.value;
+              if (value) void onUpdateSettings({ defaultView: value });
+            }}
+          >
+            {popupOptions.length === 0 ? (
+              <option value="">没有弹窗 Tab</option>
+            ) : (
+              popupOptions.map((entry) => (
+                <option key={entry.id} value={entry.id}>
+                  {entry.view.label}
+                </option>
+              ))
+            )}
+          </select>
+        </div>
       </div>
 
       <dialog
