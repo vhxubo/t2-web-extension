@@ -187,7 +187,7 @@ https://1e3dfcf6f6cd76246e686cabdf2e53df06ab002f.extensions.allizom.org/cb
 - **兜底刷新保留**：后台 `browser.alarms` 每分钟抓一次未读数（文档对「没有长连接 / 在后台」的建议就是轮询未读数），既用于 service worker 被浏览器回收后的恢复，也用于纠正站内已读这类不会推送的变化。页面在任意一条长连接就绪时都不轮询；两条都未就绪时每 15 秒兜底刷新。页面重新可见或窗口重新获得焦点时会立即刷新一次，并把结果回报给后台同步角标——站内读掉通知不会产生 `notification_update`，这一步保证切回扩展页面时小红点已经是最新值。
 - 工具栏图标右下角的数字角标由后台维护：用 `action.setBadgeText` **直接显示真实个数**，底色与界面小红点一致（`#c4554b`）、文字白色。未读为 0 时不显示角标。登录 / 退出 / 令牌刷新会立即触发一次，不必等下一轮；浏览器重启或扩展更新后会自动重建定时器。
 - 未读数请求失败时：未登录、令牌缺少 `read:me`、`401` / `403` 会**静默隐藏**图标角标与界面小红点；断网或 `429` 等临时故障保留上一次的角标，不影响榜单浏览。在通知中心里会显示可操作的重试 / 重新授权提示。
-- 通知列表的字段名是 `list`（不是 `items`）。展示层从 `payload` 中读取回复 / 提及的 `commentText`、`postTitle`、`commentLevel`、`target`，表态的 `reactionType` / `reactions` / `relations`，打赏的 `amount` / `rewardType`，以及系统消息、内容检定、徽章、升级等字段（映射见 [`lib/notification-view.ts`](lib/notification-view.ts)）。匿名回复用 `alias_name` / `alias_avatar_url`，帖子链接优先用 `path`，其次用 `postNodeSlug` + `postShortId` 拼详情页；无法识别的字段一律忽略并退回「一条新通知」。
+- 通知列表的字段名是 `list`（不是 `items`）。展示层从 `payload` 中读取回复 / 提及的 `commentText`、`postTitle`、`commentLevel`、`target`，表态的 `reactionType` / `reactions` / `relations`（按 emoji 分组显示表态 username），打赏的 `amount` / `rewardType`，以及系统消息、内容检定、徽章、升级等字段（映射见 [`lib/notification-view.ts`](lib/notification-view.ts)）。匿名回复用 `alias_name` / `alias_avatar_url`，帖子链接优先用 `path`，其次用 `postNodeSlug` + `postShortId` 拼详情页；无法识别的字段一律忽略并退回「一条新通知」。
 - 通知内容只随列表请求临时展示，不写入 storage；`notification_update` 事件本身仍然不带正文，页面收到后再拉列表。
 - **标记已读仍需到站点内完成**：`/api/v1/*` 的跨域策略只放行 `GET` / `HEAD` / `OPTIONS`，扩展发不了 `POST /v1/me/notifications/read`。
 - 授权 scope 是 `read profile read:me`；旧令牌需要重新授权一次才会出现通知角标。SSE 复用同一套 `declarativeNetRequest` 规则（移除 `Origin` 头），没有新增权限。

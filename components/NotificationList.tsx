@@ -114,7 +114,29 @@ export function NotificationList({ items, variant = 'dialog' }: NotificationList
                     {view.reactions.map((reaction) => (
                       <span className="notice-reaction" key={`${reaction.emoji}:${reaction.count}`}>
                         <span className="notice-reaction__emoji">{reaction.emoji}</span>
-                        <span className="notice-reaction__count">{reaction.count}</span>
+                        {reaction.usernames.length > 0 ? (
+                          <span
+                            className="notice-reaction__users"
+                            title={reaction.usernames.join('、')}
+                          >
+                            {reaction.usernames.map((username, index) => (
+                              <span className="notice-reaction__user" key={username}>
+                                {index > 0 && (
+                                  <span className="notice-reaction__sep">、</span>
+                                )}
+                                {username}
+                              </span>
+                            ))}
+                          </span>
+                        ) : (
+                          <span className="notice-reaction__count">×{reaction.count}</span>
+                        )}
+                        {reaction.usernames.length > 0 &&
+                          reaction.count > reaction.usernames.length && (
+                            <span className="notice-reaction__count">
+                              等 {reaction.count} 人
+                            </span>
+                          )}
                       </span>
                     ))}
                   </span>

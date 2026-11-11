@@ -90,8 +90,8 @@ describe('describeNotification', () => {
     expect(view.action).toBe('你的评论收到了新表态');
     expect(view.excerpt).toBe('被表态的评论');
     expect(view.reactions).toEqual([
-      { emoji: '👍', count: 2 },
-      { emoji: '❤️', count: 1 },
+      { emoji: '👍', count: 2, usernames: ['a'] },
+      { emoji: '❤️', count: 1, usernames: [] },
     ]);
     expect(view.targetHref).toBe(`${APP}/post/life/r1?commentId=c9`);
   });
@@ -109,10 +109,31 @@ describe('describeNotification', () => {
     );
 
     expect(view.reactions).toEqual([
-      { emoji: '🔥', count: 2 },
-      { emoji: '👀', count: 1 },
+      { emoji: '🔥', count: 2, usernames: ['a', 'b'] },
+      { emoji: '👀', count: 1, usernames: ['c'] },
     ]);
     expect(view.action).toBe('你的帖子收到了新表态');
+  });
+
+  test('reaction usernames are deduped and keep relations order', () => {
+    const view = describeNotification(
+      notification('reaction', {
+        reactions: { '🔥': 3 },
+        relations: [
+          { emoji: '🔥', username: 'first' },
+          { emoji: '🔥', username: 'second' },
+          { emoji: '🔥', username: 'first' },
+          { emoji: '❤️', username: 'third' },
+          { emoji: '😀' },
+        ],
+      }),
+    );
+
+    expect(view.reactions).toEqual([
+      { emoji: '🔥', count: 3, usernames: ['first', 'second'] },
+      { emoji: '❤️', count: 1, usernames: ['third'] },
+      { emoji: '😀', count: 1, usernames: [] },
+    ]);
   });
 
   test('reward shows amount, target and comment content', () => {

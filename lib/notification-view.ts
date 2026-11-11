@@ -66,6 +66,8 @@ export type NotificationDetailTone = 'success' | 'warning' | 'danger' | 'muted';
 export interface NotificationReaction {
   emoji: string;
   count: number;
+  /** 已按 relations 顺序去重的表态用户名。 */
+  usernames: string[];
 }
 
 /** 把一条原始通知归一成可直接渲染的字段，页面不需要再猜 payload。 */
@@ -193,28 +195,44 @@ export function notificationHref(item: AppNotification): string {
   return LINKS.notifications;
 }
 
-/** 规范化 `payload.reactions`（emoji → 人数），缺失时退回到 relations 聚合。 */
+/** 规范化 `payload.reactions`（emoji → 人数）并附上 relations 里的用户名。 */
 function reactionSummary(payload: Record<string, unknown>): NotificationReaction[] {
-  const fromCounts: NotificationReaction[] = [];
+  const usersByEmoji = new Map<string, string[]>();
+  const relationCounts = new Map<string, number>();
+  const relations = payload.relations;
+  if (Array.isArray(relations)) {
+    for (const relation of relations) {
+      if (!relation || typeof relation !== 'object') continue;
+      const record = relation as Record<string, unknown>;
+      const emoji = stringValue(record.emoji);
+      if (!emoji) continue;
+      relationCounts.set(emoji, (relationCounts.get(emoji) ?? 0) + 1);
+      const username = stringValue(record.username);
+      const users = usersByEmoji.get(emoji) ?? [];
+      if (username && !users.includes(username)) users.push(username);
+      usersByEmoji.set(emoji, users);
+    }
+  }
+
+  const counts = new Map<string, number>();
   const raw = payload.reactions;
   if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
     for (const [emoji, value] of Object.entries(raw)) {
       const count = numberValue(value);
-      if (emoji && count !== null && count > 0) fromCounts.push({ emoji, count });
+      if (emoji && count !== null && count > 0) counts.set(emoji, count);
     }
   }
-  if (fromCounts.length > 0) return fromCounts;
 
-  const relations = payload.relations;
-  if (!Array.isArray(relations)) return [];
-  const counts = new Map<string, number>();
-  for (const relation of relations) {
-    if (!relation || typeof relation !== 'object') continue;
-    const emoji = stringValue((relation as Record<string, unknown>).emoji);
-    if (!emoji) continue;
-    counts.set(emoji, (counts.get(emoji) ?? 0) + 1);
+  const result: NotificationReaction[] = [];
+  for (const [emoji, count] of counts) {
+    result.push({ emoji, count, usernames: usersByEmoji.get(emoji) ?? [] });
   }
-  return Array.from(counts, ([emoji, count]) => ({ emoji, count }));
+  // 计数缺失时（或某个 emoji 只出现在 relations 里）仍按 relations 聚合出数量。
+  for (const [emoji, count] of relationCounts) {
+    if (counts.has(emoji)) continue;
+    result.push({ emoji, count, usernames: usersByEmoji.get(emoji) ?? [] });
+  }
+  return result;
 }
 
 function actionText(
