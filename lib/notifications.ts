@@ -2,19 +2,8 @@
 import { apiGet } from './api';
 import type { AppNotification } from './notification-view';
 
-export type {
-  AppNotification,
-  NotificationDetailTone,
-  NotificationKind,
-  NotificationReaction,
-  NotificationTone,
-  NotificationView,
-} from './notification-view';
-export {
-  describeNotification,
-  notificationHref,
-  notificationTypeLabel,
-} from './notification-view';
+export type { AppNotification, NotificationKind } from './notification-view';
+export { describeNotification } from './notification-view';
 
 export interface NotificationPage {
   /** 注意：通知列表的字段名是 `list`，不是 `items`。 */

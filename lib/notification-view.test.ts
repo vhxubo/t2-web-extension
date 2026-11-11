@@ -150,7 +150,6 @@ describe('describeNotification', () => {
     expect(view.action).toBe('打赏了你的评论');
     expect(view.detail).toBe('+12 金币');
     expect(view.detailTone).toBe('success');
-    expect(view.coins).toBe(12);
     expect(view.excerpt).toBe('打赏的评论');
     expect(view.targetHref).toBe(`${APP}/post/dev/reward1?commentId=c2`);
   });

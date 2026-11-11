@@ -109,7 +109,3 @@ export const BOARD_MAP: Record<BoardId, BoardMeta> = BOARDS.reduce(
 export function isBoardId(value: string): value is BoardId {
   return value in BOARD_MAP;
 }
-
-export function boardMeta(id: BoardId): BoardMeta {
-  return BOARD_MAP[id];
-}

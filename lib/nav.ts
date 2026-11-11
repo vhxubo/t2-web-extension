@@ -20,10 +20,6 @@ export function settingsUrl(): string {
   return browser.runtime.getURL(SETTINGS_PAGE);
 }
 
-export async function openTab(url: string): Promise<void> {
-  await browser.tabs.create({ url });
-}
-
 export function postHref(nodeSlug: string, shortId: string): string {
   return `https://2libra.com/post/${encodeURIComponent(nodeSlug)}/${encodeURIComponent(shortId)}`;
 }

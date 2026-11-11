@@ -39,7 +39,7 @@ const TYPE_LABELS: Record<string, string> = {
   badge_unlocked: '徽章',
 };
 
-export function notificationTypeLabel(type?: string): string {
+function notificationTypeLabel(type?: string): string {
   if (!type) return '通知';
   return TYPE_LABELS[type] ?? type;
 }
@@ -93,8 +93,6 @@ export interface NotificationView {
   /** RSS 地址、连续失败次数等辅助信息。 */
   meta: string[];
   reactions: NotificationReaction[];
-  /** 打赏 / 置顶通知里的金币数，负数和 0 也保留。 */
-  coins: number | null;
 }
 
 const KIND_MAP: Record<string, NotificationKind> = {
@@ -418,6 +416,5 @@ export function describeNotification(item: AppNotification): NotificationView {
     detailTone,
     meta: metaOf(kind, payload),
     reactions: kind === 'reaction' ? reactionSummary(payload) : [],
-    coins: numberValue(kind === 'get_reward' ? payload.amount : payload.coins),
   };
 }

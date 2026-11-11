@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { NOTIFICATION_LOCAL_EVENT, isNotificationEventMessage } from '../lib/messages';
 import { getNotifications, type AppNotification } from '../lib/notifications';
 
-export type NotificationsStatus = 'idle' | 'loading' | 'ready' | 'error';
+type NotificationsStatus = 'idle' | 'loading' | 'ready' | 'error';
 
 interface UseNotificationsOptions {
   /** 面板打开时才拉取；关闭后停止监听和刷新。 */
@@ -22,8 +22,6 @@ interface UseNotificationsResult {
   error: unknown;
   /** 用户主动重试 / 刷新（显示 loading）。 */
   reload: () => Promise<void>;
-  /** 推送或切回页面时静默刷新，失败保留旧列表。 */
-  refresh: () => Promise<void>;
 }
 
 /**
@@ -165,7 +163,6 @@ export function useNotifications({
   }, [enabled, signedIn, sessionLoading, load]);
 
   const reload = useCallback(() => load(), [load]);
-  const refresh = useCallback(() => load({ silent: true }), [load]);
 
-  return { status, items, total, error, reload, refresh };
+  return { status, items, total, error, reload };
 }

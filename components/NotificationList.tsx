@@ -37,7 +37,7 @@ const ICONS: Record<NotificationKind, IconName> = {
  */
 export function NotificationList({ items, variant = 'dialog' }: NotificationListProps) {
   return (
-    <ul className={`notice-list notice-list--${variant}`}>
+    <ul className={variant === 'popup' ? 'notice-list notice-list--popup' : 'notice-list'}>
       {items.map((item) => {
         const view = describeNotification(item);
         const time = relativeTime(item.created_at);

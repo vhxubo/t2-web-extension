@@ -26,11 +26,6 @@ export function boardViewId(board: BoardId): string {
   return `board:${board}`;
 }
 
-export function sectionViewId(section: Section): string {
-  if (section.kind === 'all') return 'section:all';
-  return `section:${section.kind === 'parent' ? 'p' : 'n'}:${section.slug}`;
-}
-
 export type ParsedViewId =
   | { kind: 'board'; board: BoardId }
   | { kind: 'section'; section: Section };

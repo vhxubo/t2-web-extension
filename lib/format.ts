@@ -4,8 +4,6 @@ const MINUTE = 60_000;
 const HOUR = 60 * MINUTE;
 const DAY = 24 * HOUR;
 
-const WEEKDAYS = ['日', '一', '二', '三', '四', '五', '六'];
-
 /**
  * 把服务端返回的头像地址收敛成浏览器能直接用的绝对地址。
  * 媒体地址本应已经是绝对地址（见开放 API 4.10），这里只做兜底：
@@ -51,17 +49,6 @@ export function dateTime(iso?: string | null): string {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
-/** 顶部日期行：2026 年 11 月 10 日 · 周一。 */
-export function todayLabel(date = new Date()): string {
-  const weekday = WEEKDAYS[date.getDay()] ?? '一';
-  return `${date.getFullYear()} 年 ${date.getMonth() + 1} 月 ${date.getDate()} 日 · 周${weekday}`;
-}
-
-export function clockLabel(date = new Date()): string {
-  const pad = (value: number) => String(value).padStart(2, '0');
-  return `${pad(date.getHours())}:${pad(date.getMinutes())}`;
-}
-
 export function compactNumber(value?: number | null): string {
   if (typeof value !== 'number' || !Number.isFinite(value)) return '0';
   if (value >= 10000) {
@@ -73,13 +60,4 @@ export function compactNumber(value?: number | null): string {
 
 export function rankLabel(index: number): string {
   return String(index + 1).padStart(2, '0');
-}
-
-export function hostOf(url?: string | null): string {
-  if (!url) return '';
-  try {
-    return new URL(url).host;
-  } catch {
-    return '';
-  }
 }
