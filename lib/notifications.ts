@@ -1,5 +1,5 @@
-/** 通知：只读未读数与通知列表（需要 `read:me` scope）。 */
-import { apiGet } from './api';
+/** 通知：未读数 / 通知列表 / 单条与全部标记已读（需要 `read:me` scope）。 */
+import { apiGet, apiPost } from './api';
 import type { AppNotification } from './notification-view';
 
 export type { AppNotification, NotificationKind } from './notification-view';
@@ -25,7 +25,7 @@ export async function getUnreadNotificationCount(signal?: AbortSignal): Promise<
   return Number.isFinite(count) && count > 0 ? count : 0;
 }
 
-/** 拉取通知列表；扩展只读，标记已读仍需到站点内完成。 */
+/** 拉取通知列表；单条 / 全部已读分别走站点接口和开放 API。 */
 export async function getNotifications(
   options: {
     page?: number;
@@ -45,4 +45,25 @@ export async function getNotifications(
     },
     signal,
   });
+}
+
+/**
+ * 单条标记已读：站点通知中心使用的 `POST /api/notifications/mark-as-read`，
+ * 请求体是 `{ id: [通知 id] }`。
+ *
+ * 开放 API 文档目前只列出「全部标记已读」（`POST /v1/me/notifications/read`），
+ * 没有逐条端点；单条按钮要真正落到服务端，只能沿用站点自己的这个接口。
+ */
+export async function markNotificationRead(id: string, signal?: AbortSignal): Promise<void> {
+  await apiPost<unknown>('/notifications/mark-as-read', {
+    body: { id: [id] },
+    signal,
+  });
+}
+
+/**
+ * 全部标记已读：`POST /v1/me/notifications/read`，返回 `{ ok: true }`。
+ */
+export async function markAllNotificationsRead(signal?: AbortSignal): Promise<void> {
+  await apiPost<{ ok?: boolean }>('/v1/me/notifications/read', { signal });
 }

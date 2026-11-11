@@ -12,6 +12,10 @@ interface NotificationListProps {
   items: AppNotification[];
   /** 弹窗预览更紧凑；通知中心保留完整的元信息。 */
   variant?: 'dialog' | 'popup';
+  /** 点单条「已读」时调用外层；未读项才显示按钮。 */
+  onRead?: (id: string) => void | Promise<void>;
+  /** 正在提交已读的通知 id，用于禁用按钮。 */
+  pendingReadIds?: ReadonlySet<string>;
 }
 
 const ICONS: Record<NotificationKind, IconName> = {
@@ -35,7 +39,12 @@ const ICONS: Record<NotificationKind, IconName> = {
  * 通知列表。把来源、具体操作、目标标题、评论正文和附加信息分层展示，
  * 通知中心和弹窗预览共用同一套字段，只是密度不同。
  */
-export function NotificationList({ items, variant = 'dialog' }: NotificationListProps) {
+export function NotificationList({
+  items,
+  variant = 'dialog',
+  onRead,
+  pendingReadIds,
+}: NotificationListProps) {
   return (
     <ul className={variant === 'popup' ? 'notice-list notice-list--popup' : 'notice-list'}>
       {items.map((item) => {
@@ -77,12 +86,6 @@ export function NotificationList({ items, variant = 'dialog' }: NotificationList
                       <time className="t2-mono" dateTime={item.created_at} title={dateTime(item.created_at)}>
                         {time}
                       </time>
-                    </>
-                  )}
-                  {!item.is_read && (
-                    <>
-                      <span aria-hidden="true">·</span>
-                      <span className="notice-row__unread">未读</span>
                     </>
                   )}
                 </span>
@@ -152,11 +155,21 @@ export function NotificationList({ items, variant = 'dialog' }: NotificationList
                   <span className="notice-row__extra">{view.meta.join(' · ')}</span>
                 )}
               </span>
-
-              {item.is_read ? null : (
-                <span className="notice-row__dot" aria-hidden="true" />
-              )}
             </a>
+
+            {!item.is_read && onRead && (
+              <button
+                type="button"
+                className="notice-row__read"
+                onClick={() => void onRead(item.id)}
+                disabled={pendingReadIds?.has(item.id) ?? false}
+                title="标记为已读"
+                aria-label="标记为已读"
+                aria-busy={pendingReadIds?.has(item.id) ?? false}
+              >
+                已读
+              </button>
+            )}
           </li>
         );
       })}

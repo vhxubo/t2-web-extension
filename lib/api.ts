@@ -25,6 +25,17 @@ interface RequestOptions {
   /** 默认 true：已登录时带上令牌拿个性化字段。 */
   auth?: boolean;
   signal?: AbortSignal;
+  /** POST 的 JSON 请求体；不传则发空 body。 */
+  body?: unknown;
+  /** 额外请求头。 */
+  headers?: Record<string, string>;
+}
+
+/** 写操作统一走 POST / DELETE；`mark-all-read`、收藏这类端点大多不需要请求体。 */
+interface SendInit {
+  method?: 'GET' | 'POST' | 'DELETE';
+  body?: string;
+  headers?: Record<string, string>;
 }
 
 function buildUrl(path: string, query?: RequestOptions['query']): string {
@@ -37,12 +48,22 @@ function buildUrl(path: string, query?: RequestOptions['query']): string {
   return `${API_BASE}${path}${search ? `?${search}` : ''}`;
 }
 
-async function send(url: string, token: string | null, signal?: AbortSignal): Promise<Response> {
+async function send(
+  url: string,
+  token: string | null,
+  signal?: AbortSignal,
+  init: SendInit = {},
+): Promise<Response> {
   try {
     return await fetch(url, {
+      method: init.method ?? 'GET',
       signal,
       credentials: 'omit',
-      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...init.headers,
+      },
+      body: init.body,
     });
   } catch (error) {
     if (error instanceof DOMException && error.name === 'AbortError') throw error;
@@ -50,26 +71,8 @@ async function send(url: string, token: string | null, signal?: AbortSignal): Pr
   }
 }
 
-/**
- * 读接口统一入口：处理信封、401 刷新后重试、网络错误。
- * 写操作按服务端的跨域策略必须经自己的服务端，本扩展不做写操作。
- */
-export async function apiGet<T>(path: string, options: RequestOptions = {}): Promise<T> {
-  const { query, auth = true, signal } = options;
-  const url = buildUrl(path, query);
-  const token = auth ? await getAccessToken() : null;
-
-  let response = await send(url, token, signal);
-
-  if (response.status === 401 && token) {
-    const next = await refreshTokens();
-    if (!next) {
-      await tokensItem.setValue(null);
-      throw new ApiError('登录已过期，请重新授权', 401, 'unauthorized');
-    }
-    response = await send(url, next.accessToken, signal);
-  }
-
+/** 解信封并转成 ApiError；GET / POST 共用。 */
+async function readEnvelope<T>(response: Response): Promise<T> {
   let payload: Envelope<T> | null = null;
   try {
     payload = (await response.json()) as Envelope<T>;
@@ -86,6 +89,71 @@ export async function apiGet<T>(path: string, options: RequestOptions = {}): Pro
   }
 
   return payload.d;
+}
+
+/** 写操作前的令牌处理：401 时刷新一次并重试。 */
+async function withAuthRetry(
+  run: (token: string | null) => Promise<Response>,
+  token: string | null,
+): Promise<Response> {
+  let response = await run(token);
+  if (response.status !== 401 || !token) return response;
+
+  const next = await refreshTokens();
+  if (!next) {
+    await tokensItem.setValue(null);
+    throw new ApiError('登录已过期，请重新授权', 401, 'unauthorized');
+  }
+  response = await run(next.accessToken);
+  return response;
+}
+
+/**
+ * 读接口统一入口：处理信封、401 刷新后重试、网络错误。
+ */
+export async function apiGet<T>(path: string, options: RequestOptions = {}): Promise<T> {
+  const { query, auth = true, signal } = options;
+  const url = buildUrl(path, query);
+  const token = auth ? await getAccessToken() : null;
+  const response = await withAuthRetry((next) => send(url, next, signal), token);
+  return readEnvelope<T>(response);
+}
+
+/**
+ * 写接口统一入口。
+ *
+ * 服务端对 `/api/v1/*` 的 CORS 只放行站点来源，但扩展用 DNR 移除了 `Origin`
+ * 头（见 entrypoints/background.ts），请求会像普通客户端一样被接受。目前只用于
+ * 通知标记已读、帖子收藏这类轻量、可重试的写操作；不把用户令牌交给第三方。
+ */
+async function apiWrite<T>(
+  method: 'POST' | 'DELETE',
+  path: string,
+  options: RequestOptions = {},
+): Promise<T> {
+  const { query, auth = true, signal, body, headers } = options;
+  const url = buildUrl(path, query);
+  const token = auth ? await getAccessToken() : null;
+  const serialized = body === undefined ? undefined : JSON.stringify(body);
+  const init: SendInit = {
+    method,
+    body: serialized,
+    headers: serialized ? { 'Content-Type': 'application/json', ...headers } : headers,
+  };
+
+  const response = await withAuthRetry(
+    (next) => send(url, next, signal, init),
+    token,
+  );
+  return readEnvelope<T>(response);
+}
+
+export function apiPost<T>(path: string, options: RequestOptions = {}): Promise<T> {
+  return apiWrite<T>('POST', path, options);
+}
+
+export function apiDelete<T>(path: string, options: RequestOptions = {}): Promise<T> {
+  return apiWrite<T>('DELETE', path, options);
 }
 
 /** 精简身份快照：启动时校验登录态用它，比 `/v1/me` 便宜。 */

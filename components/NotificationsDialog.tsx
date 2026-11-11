@@ -1,8 +1,10 @@
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { LINKS } from '../lib/config';
 import { describeError } from '../lib/errors';
+import { notificationFilterMeta } from '../lib/notification-filter';
 import { useNotifications } from '../hooks/useNotifications';
 import { Icon } from './Icon';
+import { NotificationFilters } from './NotificationFilters';
 import { NotificationList } from './NotificationList';
 
 interface NotificationsDialogProps {
@@ -16,7 +18,7 @@ interface NotificationsDialogProps {
   onRefreshUnread: () => void;
 }
 
-/** 通知中心：只读展示，标记已读仍需回到站点内完成。 */
+/** 通知中心：单条 / 全部「已读」都会调用服务端接口。 */
 export function NotificationsDialog({
   open,
   onClose,
@@ -27,7 +29,20 @@ export function NotificationsDialog({
   onRefreshUnread,
 }: NotificationsDialogProps) {
   const dialogRef = useRef<HTMLDialogElement | null>(null);
-  const { status, items, total, error, reload } = useNotifications({
+  const {
+    status,
+    items,
+    total,
+    error,
+    reload,
+    markRead,
+    readingIds,
+    markAllRead,
+    markingAll,
+    actionError,
+    filter,
+    setFilter,
+  } = useNotifications({
     enabled: open,
     signedIn,
     sessionLoading,
@@ -47,7 +62,21 @@ export function NotificationsDialog({
   }, [open, onRefreshUnread]);
 
   const errorInfo = status === 'error' ? describeError(error) : null;
+  const actionErrorInfo = actionError ? describeError(actionError) : null;
+  const filterMeta = notificationFilterMeta(filter);
   const unreadInList = items.filter((item) => !item.is_read).length;
+  const canMarkAll = signedIn && !sessionLoading && (unread > 0 || unreadInList > 0);
+
+  const handleRead = useCallback(
+    async (id: string) => {
+      if (await markRead(id)) onRefreshUnread();
+    },
+    [markRead, onRefreshUnread],
+  );
+
+  const handleMarkAllRead = useCallback(async () => {
+    if (await markAllRead()) onRefreshUnread();
+  }, [markAllRead, onRefreshUnread]);
 
   return (
     <dialog
@@ -63,24 +92,19 @@ export function NotificationsDialog({
       }}
     >
       <header className="dialog__head">
-        <div>
-          <h2 className="dialog__title" id="notifications-title">
-            通知
-          </h2>
-          <p className="dialog__desc">
-            {sessionLoading
-              ? '正在读取登录状态…'
-              : signedIn
-                ? unread > 0
-                  ? `未读 ${unread} 条 · 这里展示最近 50 条`
-                  : '暂无未读通知 · 这里展示最近 50 条'
-                : '登录后可以查看通知'}
-          </p>
-        </div>
+        <h2 className="dialog__title" id="notifications-title">
+          通知
+        </h2>
         <button type="button" className="btn btn--icon" onClick={onClose} aria-label="关闭通知">
           <Icon name="close" size={16} />
         </button>
       </header>
+
+      {signedIn && !sessionLoading && (
+        <div className="notifications-dialog__filters">
+          <NotificationFilters value={filter} onChange={setFilter} />
+        </div>
+      )}
 
       <div className="dialog__body notifications-dialog__body">
         {sessionLoading ? (
@@ -139,14 +163,23 @@ export function NotificationsDialog({
           </div>
         ) : items.length === 0 ? (
           <div className="empty notifications-empty">
-            <span className="empty__title">没有通知</span>
-            <span className="empty__desc">
-              收到回复、提及、表态、打赏或系统消息时，会出现在这里。
-            </span>
+            <span className="empty__title">{filterMeta.emptyTitle}</span>
+            <span className="empty__desc">{filterMeta.emptyHint}</span>
+            {filter !== 'all' && (
+              <div className="empty__actions">
+                <button type="button" className="btn btn--sm" onClick={() => setFilter('all')}>
+                  查看全部
+                </button>
+              </div>
+            )}
           </div>
         ) : (
           <>
-            <NotificationList items={items} />
+            <NotificationList
+              items={items}
+              onRead={handleRead}
+              pendingReadIds={readingIds}
+            />
             {total > items.length && (
               <p className="notifications-dialog__more">
                 还有 {total - items.length} 条更早的通知，请到站点查看。
@@ -157,12 +190,23 @@ export function NotificationsDialog({
       </div>
 
       <footer className="dialog__foot">
-        <span className="dialog__note">
-          {signedIn && unreadInList > 0
-            ? `当前列表里还有 ${unreadInList} 条未读；扩展只读，标记已读请到站点。`
-            : '扩展只读通知，标记已读请到站点。'}
-        </span>
+        {actionErrorInfo && (
+          <span className="dialog__note dialog__note--error">
+            操作失败：{actionErrorInfo.title}
+          </span>
+        )}
         <div className="dialog__actions">
+          {signedIn && (
+            <button
+              type="button"
+              className="btn btn--sm"
+              onClick={() => void handleMarkAllRead()}
+              disabled={!canMarkAll || markingAll}
+              title="全部标记为已读（同步到站点）"
+            >
+              {markingAll ? '处理中…' : '全部已读'}
+            </button>
+          )}
           <a
             className="btn btn--sm"
             href={LINKS.notifications}

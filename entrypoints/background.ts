@@ -24,7 +24,8 @@ import { tokensItem } from '@/lib/storage';
  * 这里用 declarativeNetRequest 在「扩展自己发往 API 域名的请求」上移除
  * 浏览器自动附加的 Origin 头，让请求表现得像 curl 一样的普通客户端。
  * 规则限定 initiatorDomains 为扩展自身，因此不会影响站点页面或其它网站
- * 的请求；CORS 不是鉴权，读接口本来就是公开的，令牌仍按 Authorization 传递。
+ * 的请求；CORS 不是鉴权，读接口本来就是公开的，登录令牌仍按 Authorization 传递，
+ * 通知已读这类写请求也由 scope + 令牌控制。
  */
 const RULE_ID = 1;
 

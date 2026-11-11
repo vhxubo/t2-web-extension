@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Avatar } from '@/components/Avatar';
 import { Brand } from '@/components/Brand';
 import { Icon } from '@/components/Icon';
+import { NotificationFilters } from '@/components/NotificationFilters';
 import { NotificationList } from '@/components/NotificationList';
 import { PostList } from '@/components/PostList';
 import { SearchDialog } from '@/components/SearchDialog';
@@ -18,6 +19,7 @@ import { useUnreadNotifications } from '@/hooks/useUnreadNotifications';
 import { LINKS } from '@/lib/config';
 import { describeError } from '@/lib/errors';
 import { openDashboard, openSettings } from '@/lib/nav';
+import { notificationFilterMeta } from '@/lib/notification-filter';
 import { DEFAULT_SETTINGS, storageAvailable } from '@/lib/storage';
 import type { Section } from '@/lib/types';
 import { POPUP_TAB_LIMIT, popupViewIds, viewDomId } from '@/lib/viewIds';
@@ -164,6 +166,18 @@ export default function Popup() {
     void feed.reload();
   }, [feed.reload, notifications.reload, notificationsOpen, unread.refresh]);
 
+  const handleRead = useCallback(
+    async (id: string) => {
+      if (await notifications.markRead(id)) void unread.refresh();
+    },
+    [notifications.markRead, unread.refresh],
+  );
+
+  const handleMarkAllRead = useCallback(async () => {
+    const ok = await notifications.markAllRead();
+    if (ok) void unread.refresh();
+  }, [notifications.markAllRead, unread.refresh]);
+
   const handleRetry = useCallback(() => {
     if (nodeMissing) {
       void nodeState.reload(true);
@@ -192,6 +206,12 @@ export default function Popup() {
 
   const notificationsError =
     notifications.status === 'error' ? describeError(notifications.error) : null;
+  const actionErrorInfo = notifications.actionError
+    ? describeError(notifications.actionError)
+    : null;
+  const activeFilterMeta = notificationFilterMeta(notifications.filter);
+  const hasUnreadInList = notifications.items.some((item) => !item.is_read);
+  const canMarkAll = signedIn && !sessionLoading && (unread.count > 0 || hasUnreadInList);
 
   return (
     <div className="popup">
@@ -311,7 +331,28 @@ export default function Popup() {
               在站点查看
               <Icon name="external" size={11} />
             </a>
+            {signedIn && (
+              <button
+                type="button"
+                className="popup__notices-read"
+                onClick={() => void handleMarkAllRead()}
+                disabled={!canMarkAll || notifications.markingAll}
+                title="全部标记为已读（同步到站点）"
+              >
+                {notifications.markingAll ? '处理中…' : '全部已读'}
+              </button>
+            )}
           </div>
+
+          {signedIn && !sessionLoading && (
+            <div className="popup__notices-filters">
+              <NotificationFilters
+                value={notifications.filter}
+                onChange={notifications.setFilter}
+                variant="popup"
+              />
+            </div>
+          )}
 
           <div className="popup__notices-body" ref={noticesRef}>
             {sessionLoading ? (
@@ -352,17 +393,33 @@ export default function Popup() {
               </div>
             ) : notifications.items.length === 0 ? (
               <div className="empty notifications-empty">
-                <span className="empty__title">暂无通知</span>
-                <span className="empty__desc">收到回复、提及、表态或系统消息时会出现在这里。</span>
+                <span className="empty__title">{activeFilterMeta.emptyTitle}</span>
+                <span className="empty__desc">{activeFilterMeta.emptyHint}</span>
+                {notifications.filter !== 'all' && (
+                  <div className="empty__actions">
+                    <button
+                      type="button"
+                      className="btn btn--sm"
+                      onClick={() => notifications.setFilter('all')}
+                    >
+                      查看全部
+                    </button>
+                  </div>
+                )}
               </div>
             ) : (
-              <NotificationList items={notifications.items} variant="popup" />
+              <NotificationList
+                items={notifications.items}
+                variant="popup"
+                onRead={handleRead}
+                pendingReadIds={notifications.readingIds}
+              />
             )}
           </div>
 
-          {signedIn && notifications.items.length > 0 && (
-            <p className="popup__notices-foot">
-              最近 {notifications.items.length} 条 · 扩展只读，标记已读请到站点
+          {actionErrorInfo && (
+            <p className="popup__notices-foot popup__notices-foot--error">
+              操作失败：{actionErrorInfo.title}
             </p>
           )}
         </section>
