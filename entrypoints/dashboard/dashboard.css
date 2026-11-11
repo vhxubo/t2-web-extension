@@ -295,7 +295,7 @@ textarea {
 .board-grid {
   display: grid;
   flex: 1 1 auto;
-  /* 四列：前三列各一张整高看板，第四列由「生活 / 工作」上下分割。 */
+  /* 四列：前两列各一张整高看板，第三列由「近期热议 / 新发表」、第四列由「生活 / 工作」上下分割。 */
   grid-template-columns: repeat(4, minmax(0, 1fr));
   grid-template-rows: repeat(2, minmax(0, 1fr));
   gap: 16px;
@@ -307,7 +307,7 @@ textarea {
 
 .board-card {
   display: grid;
-  /* 默认纵向占满两行栅格；第四列的生活 / 工作只占其中一行。 */
+  /* 默认纵向占满两行栅格；第三、四列的分割卡片只占其中一行。 */
   grid-row: span 2;
   grid-template-rows: auto minmax(0, 1fr) auto;
   height: 100%;
@@ -320,6 +320,17 @@ textarea {
   overflow: hidden;
   animation: t2-card-in 0.32s var(--ease) both;
   transition: border-color 0.18s var(--ease), box-shadow 0.18s var(--ease);
+}
+
+/* 第三列：近期热议在上、新发表在下。 */
+.board-card[data-board='hot7d'] {
+  grid-column: 3;
+  grid-row: 1;
+}
+
+.board-card[data-board='latest'] {
+  grid-column: 3;
+  grid-row: 2;
 }
 
 /* 第四列：生活在上、工作在下，各占半高。 */
@@ -352,6 +363,10 @@ textarea {
 
 .board-card:nth-child(5) {
   animation-delay: 0.16s;
+}
+
+.board-card:nth-child(6) {
+  animation-delay: 0.2s;
 }
 
 @keyframes t2-card-in {
@@ -728,10 +743,9 @@ textarea {
     height: auto;
   }
 
-  /* 窄屏回到普通卡片流：生活 / 工作不再固定在第四列。 */
+  /* 窄屏回到普通卡片流：分割列不再固定列 / 行。 */
   .board-card,
-  .board-card[data-board='work'],
-  .board-card[data-board='life'] {
+  .board-card[data-board] {
     grid-column: auto;
     grid-row: auto;
   }

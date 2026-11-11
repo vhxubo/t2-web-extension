@@ -12,7 +12,7 @@ export interface BoardMeta {
   supportsSection: boolean;
   /** 该榜单对应 `GET /v1/topics?dimensions=...` 的维度。 */
   dimension?: TopicDimension;
-  /** `/v1/topics` 必填的 limit；hot 走接口默认值，用不到这个字段。 */
+  /** `/v1/topics` 必填的 limit；hot / latest 走接口默认值，用不到这个字段。 */
   pageSize: number;
 }
 
@@ -42,6 +42,15 @@ export const BOARDS: BoardMeta[] = [
     hint: '7 天内最活跃',
     icon: '📈',
     supportsSection: false,
+    pageSize: 50,
+  },
+  {
+    id: 'latest',
+    label: '新发表',
+    shortLabel: '新发表',
+    hint: '按发布时间',
+    icon: '📑',
+    supportsSection: true,
     pageSize: 50,
   },
   {

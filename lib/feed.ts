@@ -21,7 +21,7 @@ export interface LoadFeedOptions {
   section: Section;
   nodes: ApiNode[];
   page: number;
-  /** 仅 `/v1/topics` 使用；hot 端点不传 limit，走接口默认值。 */
+  /** 仅 `/v1/topics` 使用；hot / latest 端点不传 limit，走接口默认值。 */
   pageSize: number;
   signal?: AbortSignal;
 }
@@ -35,6 +35,7 @@ export async function loadFeed(options: LoadFeedOptions): Promise<FeedPage> {
   }
 
   const filter = sectionQuery(section, nodes);
+  const isFiltered = section.kind !== 'all';
   let data: TopicPage;
 
   if (board === 'home') {
@@ -59,6 +60,13 @@ export async function loadFeed(options: LoadFeedOptions): Promise<FeedPage> {
         ...(page > 1 ? { page } : {}),
         ...(board === 'hot7d' ? { period: '7d' } : {}),
       },
+      signal,
+    });
+  } else if (board === 'latest' && !isFiltered) {
+    // 新发表 = 站点最新帖子流：page 默认 1、limit 默认 50，只有第 2 页起才带 page。
+    data = await apiGet<TopicPage>('/v1/topics/latest', {
+      auth: true,
+      query: { ...(page > 1 ? { page } : {}) },
       signal,
     });
   } else {
