@@ -207,7 +207,7 @@ export default function Popup() {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [closeDetail, detailTopic, notificationsOpen, searchOpen]);
 
-  // 通知预览是独立于榜单 Tab 的层级：打开时盖住 Tab + 列表，再点铃铛或 Esc 返回。
+  // 消息预览是独立于榜单 Tab 的层级：打开时盖住 Tab + 列表，再点铃铛或 Esc 返回。
   const toggleNotifications = useCallback(() => {
     if (notificationsOpen) {
       setNotificationsOpen(false);
@@ -243,7 +243,7 @@ export default function Popup() {
     [mode],
   );
 
-  // 切换一级 Tab 时收起通知 / 搜索 / 详情，回到对应模式的列表。
+  // 切换一级 Tab 时收起消息 / 搜索 / 详情，回到对应模式的列表。
   const handleMode = useCallback(
     (id: string) => {
       const next: PrimaryMode = id === 'me' ? 'me' : 'posts';
@@ -276,7 +276,7 @@ export default function Popup() {
   }, []);
 
   const handleDashboard = useCallback(() => {
-    // 有未读提醒时直接落在通知面板，否则停留在榜单仪表盘。
+    // 有未读提醒时直接落在消息面板，否则停留在榜单仪表盘。
     goDashboard(unread.count > 0 ? 'notifications' : undefined);
   }, [goDashboard, unread.count]);
 
@@ -322,7 +322,7 @@ export default function Popup() {
     void feed.reload();
   }, [feed, nodeMissing, nodeState]);
 
-  const unreadLabel = unread.count > 0 ? `，${unread.count} 条未读通知` : '';
+  const unreadLabel = unread.count > 0 ? `，${unread.count} 条未读消息` : '';
   const accountLoading = sessionLoading || (signedIn && !profile && profileLoading);
   const themePreference = settings?.theme ?? 'system';
   const currentThemeLabel = resolvedTheme === 'dark' ? '深色' : '浅色';
@@ -383,15 +383,12 @@ export default function Popup() {
         ) : signedIn ? (
           <>
             <Brand markOnly />
-            {/* 通知预览占用一级 Tab 的位置：标题 + 未读数，关闭后换回「帖子 / 我的」。 */}
+            {/* 消息预览占用一级 Tab 的位置：标题 + 未读数，关闭后换回「帖子 / 我的」。 */}
             {notificationsOpen ? (
               <>
-                <span className="popup__notices-title">
-                  <Icon name="bell" size={13} />
-                  通知预览
-                </span>
+                <span className="popup__notices-title">消息预览</span>
                 <span className="popup__notices-count">
-                  {unread.count > 0 ? `${unread.count} 条未读` : '最近通知'}
+                  {unread.count > 0 ? `${unread.count} 条未读` : '最近消息'}
                 </span>
               </>
             ) : (
@@ -408,17 +405,17 @@ export default function Popup() {
             onClick={toggleNotifications}
             title={
               notificationsOpen
-                ? '关闭通知预览，返回榜单'
+                ? '关闭消息预览，返回榜单'
                 : unread.count > 0
-                  ? `通知预览（${unread.count} 条未读）`
-                  : '通知预览'
+                  ? `消息预览（${unread.count} 条未读）`
+                  : '消息预览'
             }
             aria-label={
               notificationsOpen
-                ? '关闭通知预览'
+                ? '关闭消息预览'
                 : unread.count > 0
-                  ? `通知预览，${unread.count} 条未读`
-                  : '通知预览'
+                  ? `消息预览，${unread.count} 条未读`
+                  : '消息预览'
             }
             aria-expanded={notificationsOpen}
             aria-controls="notifications-preview"
@@ -447,10 +444,10 @@ export default function Popup() {
             className="popup__icon-btn"
             onClick={handleRefresh}
             title={
-              notificationsOpen ? '刷新通知' : detailTopic ? '刷新详情' : '刷新列表'
+              notificationsOpen ? '刷新消息' : detailTopic ? '刷新详情' : '刷新列表'
             }
             aria-label={
-              notificationsOpen ? '刷新通知' : detailTopic ? '刷新详情' : '刷新列表'
+              notificationsOpen ? '刷新消息' : detailTopic ? '刷新详情' : '刷新列表'
             }
             data-spinning={
               notificationsOpen
@@ -501,7 +498,7 @@ export default function Popup() {
       )}
 
       {notificationsOpen ? (
-        <section className="popup__notices" id="notifications-preview" aria-label="通知预览">
+        <section className="popup__notices" id="notifications-preview" aria-label="消息预览">
           {signedIn && !sessionLoading && (
             <div className="popup__notices-filters">
               <NotificationFilters

@@ -25,7 +25,7 @@ import { tokensItem } from '@/lib/storage';
  * 浏览器自动附加的 Origin 头，让请求表现得像 curl 一样的普通客户端。
  * 规则限定 initiatorDomains 为扩展自身，因此不会影响站点页面或其它网站
  * 的请求；CORS 不是鉴权，读接口本来就是公开的，登录令牌仍按 Authorization 传递，
- * 通知已读这类写请求也由 scope + 令牌控制。
+ * 消息已读这类写请求也由 scope + 令牌控制。
  */
 const RULE_ID = 1;
 
@@ -70,7 +70,7 @@ async function applyBadge(count: number): Promise<void> {
     await action.setBadgeTextColor?.({ color: BADGE_TEXT_COLOR });
     await action.setBadgeText({ text });
     await action.setTitle({
-      title: unread > 0 ? `${unread} 条未读通知 · ${DEFAULT_TITLE}` : DEFAULT_TITLE,
+      title: unread > 0 ? `${unread} 条未读消息 · ${DEFAULT_TITLE}` : DEFAULT_TITLE,
     });
   } catch (error) {
     console.debug('[T2] 更新扩展角标失败', error);
@@ -78,7 +78,7 @@ async function applyBadge(count: number): Promise<void> {
 }
 
 /* ------------------------------------------------------------------
-   通知：后台优先持有长连接
+   消息：后台优先持有长连接
    - SSE 负责即时提醒：帧里带未读数就直接用，没带才补一次 unread-count；
    - 不再定时轮询未读数；闹钟只用来唤醒 service worker 重建长连接；
    - 结果同时写进工具栏角标，并广播给打开着的弹窗与仪表盘；
@@ -104,7 +104,7 @@ async function broadcast(message: NotificationBroadcast): Promise<void> {
     // 没有页面在监听（弹窗和仪表盘都没开）时 Chrome 会 reject，属于正常情况。
     await browser.runtime.sendMessage(message);
   } catch {
-    // 忽略：通知结果已经写进角标，页面下次打开会自己拉一次。
+    // 忽略：消息结果已经写进角标，页面下次打开会自己拉一次。
   }
 }
 
@@ -143,7 +143,7 @@ function ensureNotificationStream(): void {
       void syncUnreadBadge();
     },
     onNotification: (unreadCount) => {
-      // 让打开着的通知中心按需刷新列表；事件本身不带正文。
+      // 让打开着的消息中心按需刷新列表；事件本身不带正文。
       void broadcast({ type: NOTIFICATION_EVENT_MESSAGE });
       if (unreadCount !== null) {
         void publishUnread(unreadCount);
@@ -165,7 +165,7 @@ function ensureNotificationStream(): void {
         void publishUnread(0);
         return;
       }
-      console.debug('[T2] 通知长连接断开，稍后自动重连', error);
+      console.debug('[T2] 消息长连接断开，稍后自动重连', error);
     },
   });
 }
@@ -209,7 +209,7 @@ async function syncUnreadBadge(): Promise<void> {
       await publishUnread(0);
       return;
     }
-    console.debug('[T2] 未读通知数抓取失败，保留上次角标', error);
+    console.debug('[T2] 未读消息数抓取失败，保留上次角标', error);
   }
 }
 
@@ -221,7 +221,7 @@ async function ensureStreamAlarm(alarms: typeof browser.alarms | null): Promise<
     if (existing) return;
     await alarms.create(STREAM_ALARM, { periodInMinutes: STREAM_ALARM_MINUTES });
   } catch (error) {
-    console.warn('[T2] 长连接保活定时器创建失败，后台被回收后可能收不到实时通知', error);
+    console.warn('[T2] 长连接保活定时器创建失败，后台被回收后可能收不到实时消息', error);
   }
 }
 

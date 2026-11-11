@@ -37,8 +37,8 @@ export const FIREFOX_REDIRECT_HASH = '1e3dfcf6f6cd76246e686cabdf2e53df06ab002f';
 export const FIREFOX_REDIRECT_URI = `https://${FIREFOX_REDIRECT_HASH}.extensions.allizom.org/cb`;
 
 /**
- * 浏览 + 未读通知 + 帖子收藏所需的最小 scope。
- * `read:me` 用于读取未读数 / 通知列表，以及通知的单条 / 全部标记已读；
+ * 浏览 + 未读消息 + 帖子收藏所需的最小 scope。
+ * `read:me` 用于读取未读数 / 消息列表，以及消息的单条 / 全部标记已读；
  * `interact` 用于帖子详情的收藏 / 取消收藏（`/v1/topics/:short_id/favorite`）。
  */
 export const REQUESTED_SCOPE = 'read profile read:me interact';
@@ -61,7 +61,7 @@ export const REVOKE_HINT = '你可以随时在 2Libra 的「授权应用」页�
 export const LIABILITY_NOTE =
   '2Libra 仅提供账号授权与接口，不对本应用的可用性、内容与数据处理负责。';
 export const PERMISSION_NOTE =
-  '本应用申请的权限：read（浏览公开内容）、profile（读取公开资料）、read:me（未读通知与通知列表）、interact（帖子收藏）。';
+  '本应用申请的权限：read（浏览公开内容）、profile（读取公开资料）、read:me（未读消息与消息列表）、interact（帖子收藏）。';
 export const ATTRIBUTION = '内容来自 2Libra 用户，版权归原作者所有。原文链接：点击标题打开原帖。';
 
 export const LINKS = {

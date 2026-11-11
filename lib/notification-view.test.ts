@@ -27,7 +27,7 @@ describe('describeNotification', () => {
       notification(
         'reply',
         {
-          postTitle: '如何给扩展做通知中心',
+          postTitle: '如何给扩展做消息中心',
           postNodeSlug: 'dev',
           postShortId: 'a1b2c3',
           postSlug: 'how-to',
@@ -47,7 +47,7 @@ describe('describeNotification', () => {
     expect(view.actorAvatar).toBe('https://r2.2libra.com/avatars/alias.png');
     expect(view.actorIsAlias).toBe(true);
     expect(view.action).toBe('回复了你的评论');
-    expect(view.targetTitle).toBe('如何给扩展做通知中心');
+    expect(view.targetTitle).toBe('如何给扩展做消息中心');
     expect(view.excerpt).toBe('这个思路不错 :doge:');
     expect(view.targetHref).toBe(`${APP}/post/dev/a1b2c3?commentId=comment-1`);
   });
@@ -205,7 +205,7 @@ describe('describeNotification', () => {
     const view = describeNotification(notification('like', { anything: true }));
 
     expect(view.typeLabel).toBe('点赞');
-    expect(view.action).toBe('发来一条新通知');
+    expect(view.action).toBe('发来一条新消息');
     expect(view.tone).toBe('muted');
     expect(view.excerpt).toBeNull();
   });

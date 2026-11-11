@@ -46,7 +46,7 @@ function reserveLocalStreamSlot(): boolean {
 }
 
 /**
- * 未读通知数。
+ * 未读消息数。
  *
  * - 登录状态由调用方传入；未登录直接归零，不发请求；
  * - 后台持有一条 SSE 长连接，`notification_update` 帧里带未读数就直接用，
@@ -190,8 +190,8 @@ export function useUnreadNotifications(enabled: boolean) {
     };
   }, [enabled]);
 
-  // 切回页面 / 窗口重新聚焦时立刻校准一次。SSE 只推送「有新通知」，
-  // 在站内读掉通知不会产生事件，这一步是小红点跟随减少的关键。
+  // 切回页面 / 窗口重新聚焦时立刻校准一次。SSE 只推送「有新消息」，
+  // 在站内读掉消息不会产生事件，这一步是小红点跟随减少的关键。
   useEffect(() => {
     if (!enabled) return;
     activeRefreshAt.current = Date.now();
@@ -249,7 +249,7 @@ export function useUnreadNotifications(enabled: boolean) {
         },
         onNotification: (unreadCount) => {
           if (cancelled) return;
-          // 帧里带未读数就直接用，没带才拉一次；顺带让通知中心刷新列表。
+          // 帧里带未读数就直接用，没带才拉一次；顺带让消息中心刷新列表。
           if (unreadCount !== null) acceptPush(unreadCount);
           else void refresh();
           window.dispatchEvent(new Event(NOTIFICATION_LOCAL_EVENT));

@@ -10,11 +10,11 @@ import { Icon, type IconName } from './Icon';
 
 interface NotificationListProps {
   items: AppNotification[];
-  /** 弹窗预览更紧凑；通知中心保留完整的元信息。 */
+  /** 弹窗预览更紧凑；消息中心保留完整的元信息。 */
   variant?: 'dialog' | 'popup';
   /** 点单条「已读」时调用外层；未读项才显示按钮。 */
   onRead?: (id: string) => void | Promise<void>;
-  /** 正在提交已读的通知 id，用于禁用按钮。 */
+  /** 正在提交已读的消息 id，用于禁用按钮。 */
   pendingReadIds?: ReadonlySet<string>;
 }
 
@@ -36,8 +36,8 @@ const ICONS: Record<NotificationKind, IconName> = {
 };
 
 /**
- * 通知列表。把来源、具体操作、目标标题、评论正文和附加信息分层展示，
- * 通知中心和弹窗预览共用同一套字段，只是密度不同。
+ * 消息列表。把来源、具体操作、目标标题、评论正文和附加信息分层展示，
+ * 消息中心和弹窗预览共用同一套字段，只是密度不同。
  */
 export function NotificationList({
   items,
@@ -62,7 +62,7 @@ export function NotificationList({
               href={view.targetHref}
               target="_blank"
               rel="noreferrer noopener"
-              title="在站点查看这条通知"
+              title="在站点查看这条消息"
             >
               <span
                 className={`notice-row__avatar${view.actorName ? '' : ' notice-row__avatar--icon'}`}

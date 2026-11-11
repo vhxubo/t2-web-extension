@@ -20,7 +20,7 @@ interface UseNotificationsOptions {
   signedIn: boolean;
   /** 会话还在读 storage 时不要抢先发请求，避免误报「未登录」。 */
   sessionLoading?: boolean;
-  /** 通知列表每页条数，接口上限 50。 */
+  /** 消息列表每页条数，接口上限 50。 */
   limit?: number;
 }
 
@@ -33,7 +33,7 @@ interface UseNotificationsResult {
   reload: () => Promise<void>;
   /** 单条标记已读：调用站点接口，成功返回 true。 */
   markRead: (id: string) => Promise<boolean>;
-  /** 正在提交单条已读的通知 id。 */
+  /** 正在提交单条已读的消息 id。 */
   readingIds: ReadonlySet<string>;
   /** 全部标记已读：调用 `POST /v1/me/notifications/read`。成功返回 true。 */
   markAllRead: () => Promise<boolean>;
@@ -48,7 +48,7 @@ interface UseNotificationsResult {
 }
 
 /**
- * 通知列表数据源：封装拉取、SSE 事件刷新和切回页面时的静默校准。
+ * 消息列表数据源：封装拉取、SSE 事件刷新和切回页面时的静默校准。
  *
  * - 只在面板打开时请求，避免弹窗 / 仪表盘常驻占用读配额；
  * - `notification_update` 事件里没有正文，收到后由这里重新拉列表；
@@ -56,8 +56,8 @@ interface UseNotificationsResult {
  * - 单条「已读」调用站点接口，成功后把该条从列表的未读状态里移除；
  * - 「全部已读」调用 `POST /v1/me/notifications/read`，成功后列表全部置读；
  * - 分段筛选直接复用接口已有的 `type` / `unread_only` 参数，不新增接口；
- * - 通知行本身不置灰：已读只表现为按钮消失；
- * - 静默刷新失败保留旧列表，不把正在看的通知换成错误页。
+ * - 消息行本身不置灰：已读只表现为按钮消失；
+ * - 静默刷新失败保留旧列表，不把正在看的消息换成错误页。
  */
 export function useNotifications({
   enabled,
@@ -93,7 +93,7 @@ export function useNotifications({
     };
   }, []);
 
-  // 退出登录后清掉本地已读覆盖，避免下一个账号复用同一条通知 id。
+  // 退出登录后清掉本地已读覆盖，避免下一个账号复用同一条消息 id。
   useEffect(() => {
     if (!signedIn) {
       readingRef.current.clear();
@@ -161,7 +161,7 @@ export function useNotifications({
   }, [enabled, load]);
 
   // 面板关闭后回到 idle 并中止在途请求：下次打开先显示骨架，不闪上一次的旧列表。
-  // 分段也一并回到「全部」，避免下次打开时只看到某个分类而误以为没有通知。
+  // 分段也一并回到「全部」，避免下次打开时只看到某个分类而误以为没有消息。
   useEffect(() => {
     if (enabled) return;
     generation.current += 1;
@@ -286,7 +286,7 @@ export function useNotifications({
   }, [enabled, signedIn, sessionLoading, items, load, filter]);
 
   // 展示用的列表：服务端已读的保持已读，本页刚刚提交成功的也按已读渲染。
-  // 这样静默刷新不会把刚点过的通知重新变回未读；重开页面则回到服务端状态。
+  // 这样静默刷新不会把刚点过的消息重新变回未读；重开页面则回到服务端状态。
   // 「未读」筛选下额外过滤掉刚读掉的条目（静默刷新失败时也不会残留）。
   const visibleItems = useMemo(() => {
     const withRead =

@@ -5,7 +5,7 @@ import { tokensItem } from './storage';
 import type { Envelope } from './types';
 
 /**
- * 通知长连接（SSE）。
+ * 消息长连接（SSE）。
  *
  * 文档：https://r2.2libra.com/openapi/v1/api-read.md#我的
  *
@@ -15,7 +15,7 @@ import type { Envelope } from './types';
  *
  * 连接生命周期（按文档约定）：
  * - `ready`：握手成功；之后的未读变化靠 `notification_update` 推动；
- * - `notification_update`：只保证「有新通知」，没有正文；如果帧里带了
+ * - `notification_update`：只保证「有新消息」，没有正文；如果帧里带了
  *   `unread_count`（服务端可选的扩展字段）就直接用，没有才回调去拉一次；
  * - `reconnect`：服务端主动断开（15 分钟寿命 / 令牌快过期），不是故障，立即重连；
  * - `retry: 25000` 心跳：25 秒一次，45 秒一个字节都没收到就认为连接已死；
@@ -53,7 +53,7 @@ export interface NotificationStreamHandlers {
   /** 握手成功（每次重连成功都会回调）。 */
   onReady?: (unreadCount: number | null) => void;
   /**
-   * 有新通知。`unreadCount` 是帧里自带的未读数（没有则为 `null`）：
+   * 有新消息。`unreadCount` 是帧里自带的未读数（没有则为 `null`）：
    * 有就不要再请求 `unread-count`，没有才自己去拉。
    */
   onNotification?: (unreadCount: number | null) => void;
@@ -106,7 +106,7 @@ function toStreamError(error: unknown): NotificationStreamError {
       error.status,
     );
   }
-  return new NotificationStreamError('通知长连接出错', 'network');
+  return new NotificationStreamError('消息长连接出错', 'network');
 }
 
 interface StreamFrame {
@@ -167,10 +167,10 @@ async function requestStream(
     });
   } catch (error) {
     if (signal.aborted) {
-      throw new NotificationStreamError('通知长连接已中断', 'timeout');
+      throw new NotificationStreamError('消息长连接已中断', 'timeout');
     }
     if (error instanceof DOMException && error.name === 'AbortError') {
-      throw new NotificationStreamError('通知长连接已中止', 'timeout');
+      throw new NotificationStreamError('消息长连接已中止', 'timeout');
     }
     throw new NotificationStreamError('连不上服务器，请检查网络后重试', 'network');
   }
@@ -178,7 +178,7 @@ async function requestStream(
 
 async function readToken(): Promise<string> {
   const token = await getAccessToken();
-  if (!token) throw new NotificationStreamError('未登录，无法建立通知长连接', 'auth');
+  if (!token) throw new NotificationStreamError('未登录，无法建立消息长连接', 'auth');
   return token;
 }
 
@@ -266,7 +266,7 @@ export function openNotificationStream(
         throw new NotificationStreamError('45 秒没收到数据，主动重连', 'timeout');
       }
       if (error instanceof NotificationStreamError) throw error;
-      throw new NotificationStreamError('通知长连接读取失败', 'network');
+      throw new NotificationStreamError('消息长连接读取失败', 'network');
     } finally {
       if (idleTimer !== null) clearTimeout(idleTimer);
       parser.reset();
@@ -302,7 +302,7 @@ export function openNotificationStream(
       if (response.status === 403) {
         const payload = await readErrorEnvelope(response);
         throw new NotificationStreamError(
-          payload?.m || '当前授权不能读取通知，请重新授权',
+          payload?.m || '当前授权不能读取消息，请重新授权',
           'auth',
           403,
         );
@@ -315,7 +315,7 @@ export function openNotificationStream(
             ? payload.retry_after
             : null;
         throw new NotificationStreamError(
-          payload?.m || `通知长连接建立失败（HTTP ${response.status}）`,
+          payload?.m || `消息长连接建立失败（HTTP ${response.status}）`,
           'http',
           response.status,
           retryAfter,
@@ -323,7 +323,7 @@ export function openNotificationStream(
       }
 
       if (!response.body) {
-        throw new NotificationStreamError('通知长连接没有可读的数据流', 'http', response.status);
+        throw new NotificationStreamError('消息长连接没有可读的数据流', 'http', response.status);
       }
 
       return await readFrames(response.body, controller);

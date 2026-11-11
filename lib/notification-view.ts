@@ -1,5 +1,5 @@
 /**
- * 通知 payload → 展示字段。
+ * 消息 payload → 展示字段。
  *
  * 这里刻意不依赖扩展运行时（browser / storage / fetch），方便用 bun test
  * 直接验证字段映射；请求逻辑留在 lib/notifications.ts。
@@ -11,7 +11,7 @@ export interface AppNotification {
   id: string;
   type?: string;
   /**
-   * 通知负载的结构没有在文档里逐项承诺，但站点自己的通知中心会读取这些字段。
+   * 消息负载的结构没有在文档里逐项承诺，但站点自己的消息中心会读取这些字段。
    * 这里按「字段可能新增」处理：认识的字段用于展示，不认识的一律忽略。
    */
   payload?: Record<string, unknown> | null;
@@ -40,7 +40,7 @@ const TYPE_LABELS: Record<string, string> = {
 };
 
 function notificationTypeLabel(type?: string): string {
-  if (!type) return '通知';
+  if (!type) return '消息';
   return TYPE_LABELS[type] ?? type;
 }
 
@@ -70,7 +70,7 @@ export interface NotificationReaction {
   usernames: string[];
 }
 
-/** 把一条原始通知归一成可直接渲染的字段，页面不需要再猜 payload。 */
+/** 把一条原始消息归一成可直接渲染的字段，页面不需要再猜 payload。 */
 export interface NotificationView {
   kind: NotificationKind;
   typeLabel: string;
@@ -83,7 +83,7 @@ export interface NotificationView {
   action: string;
   /** 被操作的帖子 / 评论标题。 */
   targetTitle: string | null;
-  /** 目标内容的站点地址；没有可定位内容时回落到通知页。 */
+  /** 目标内容的站点地址；没有可定位内容时回落到消息页。 */
   targetHref: string;
   /** 回复 / 提及 / 表态的正文；评论内容会原样展示。 */
   excerpt: string | null;
@@ -159,8 +159,8 @@ function withComment(href: string, commentId: string | null): string {
 }
 
 /**
- * 通知里最值得打开的目标地址：优先用服务端给出的 path（RSS、投票等都在里面），
- * 其次是帖子 short_id 拼出来的详情页；两者都没有时回到通知中心。
+ * 消息里最值得打开的目标地址：优先用服务端给出的 path（RSS、投票等都在里面），
+ * 其次是帖子 short_id 拼出来的详情页；两者都没有时回到消息中心。
  */
 export function notificationHref(item: AppNotification): string {
   const payload = payloadOf(item);
@@ -284,7 +284,7 @@ function actionText(
     case 'follow':
       return '关注了你';
     default:
-      return '发来一条新通知';
+      return '发来一条新消息';
   }
 }
 
@@ -355,8 +355,8 @@ function metaOf(kind: NotificationKind, payload: Record<string, unknown>): strin
 }
 
 /**
- * 通知中心与弹窗预览共用：从 payload 中挑出稳定可展示的字段。
- * 只做展示，不缓存正文；无法识别的 payload 会退回到「一条新通知」。
+ * 消息中心与弹窗预览共用：从 payload 中挑出稳定可展示的字段。
+ * 只做展示，不缓存正文；无法识别的 payload 会退回到「一条新消息」。
  */
 export function describeNotification(item: AppNotification): NotificationView {
   const kind = KIND_MAP[item.type ?? ''] ?? 'unknown';
@@ -365,7 +365,7 @@ export function describeNotification(item: AppNotification): NotificationView {
   const aliasName = stringValue(payload.alias_name);
   const followerName = stringValue(payload.followerUsername);
   const fromName = stringValue(item.from_user?.username);
-  // 表态通知是聚合事件（payload.relations 里才是一组用户），不把 from_user 当操作者。
+  // 表态消息是聚合事件（payload.relations 里才是一组用户），不把 from_user 当操作者。
   const actorName = kind === 'reaction' ? null : (aliasName ?? followerName ?? fromName);
   const actorIsAlias = kind !== 'reaction' && aliasName !== null;
   const actorAvatar = actorIsAlias

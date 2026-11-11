@@ -18,7 +18,7 @@ interface NotificationsDialogProps {
   onRefreshUnread: () => void;
 }
 
-/** 通知中心：单条 / 全部「已读」都会调用服务端接口。 */
+/** 消息中心：单条 / 全部「已读」都会调用服务端接口。 */
 export function NotificationsDialog({
   open,
   onClose,
@@ -93,9 +93,9 @@ export function NotificationsDialog({
     >
       <header className="dialog__head">
         <h2 className="dialog__title" id="notifications-title">
-          通知
+          消息
         </h2>
-        <button type="button" className="btn btn--icon" onClick={onClose} aria-label="关闭通知">
+        <button type="button" className="btn btn--icon" onClick={onClose} aria-label="关闭消息">
           <Icon name="close" size={16} />
         </button>
       </header>
@@ -182,7 +182,7 @@ export function NotificationsDialog({
             />
             {total > items.length && (
               <p className="notifications-dialog__more">
-                还有 {total - items.length} 条更早的通知，请到站点查看。
+                还有 {total - items.length} 条更早的消息，请到站点查看。
               </p>
             )}
           </>

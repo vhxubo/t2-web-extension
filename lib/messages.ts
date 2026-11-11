@@ -1,7 +1,7 @@
 /**
- * 后台与扩展页面之间的通知消息。
+ * 后台与扩展页面之间的消息。
  *
- * 正常情况下后台是通知长连接（SSE）的持有者：拿到未读数后既更新工具栏角标，
+ * 正常情况下后台是消息长连接（SSE）的持有者：拿到未读数后既更新工具栏角标，
  * 也通过 `runtime.sendMessage` 广播给所有打开的扩展页面。页面挂载时再主动
  * 问一次长连接状态；后台没就绪时页面会自己连一条短连接兜底，保证小红点
  * 不依赖 service worker 是否存活。
@@ -9,7 +9,7 @@
  * 页面自己拉到未读数后也会回报给后台：这样即使长连接暂时不可用，
  * 页面上的小红点和工具栏角标也始终是同一份、最新的数字。
  *
- * 消息只带数字和布尔值：推送里没有通知内容，扩展也不缓存别人的内容。
+ * 消息只带数字和布尔值：推送里没有消息内容，扩展也不缓存别人的内容。
  */
 
 export const UNREAD_COUNT_MESSAGE = 't2:notifications/unread-count';
@@ -20,7 +20,7 @@ export const STREAM_STATUS_QUERY = 't2:notifications/stream-status-query';
 
 /**
  * 页面自己的长连接收到 notification_update 时派发的窗口事件。
- * 后台不可用时由页面兜底连一条 SSE；通知中心据此刷新列表，
+ * 后台不可用时由页面兜底连一条 SSE；消息中心据此刷新列表，
  * 不必依赖后台广播（后台可能正被浏览器回收）。
  */
 export const NOTIFICATION_LOCAL_EVENT = 't2:notifications/local-event';
@@ -31,7 +31,7 @@ export interface UnreadCountMessage {
   count: number;
 }
 
-/** 服务端推送了一条 `notification_update`；页面可以按需刷新通知列表。 */
+/** 服务端推送了一条 `notification_update`；页面可以按需刷新消息列表。 */
 export interface NotificationEventMessage {
   type: typeof NOTIFICATION_EVENT_MESSAGE;
 }

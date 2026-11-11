@@ -46,7 +46,7 @@ describe('NOTIFICATION_FILTERS', () => {
   });
 
   test('meta 覆盖所有分段并给出空列表提示', () => {
-    expect(notificationFilterMeta('unread').emptyTitle).toBe('没有未读通知');
-    expect(notificationFilterMeta('reward').emptyTitle).toBe('没有打赏通知');
+    expect(notificationFilterMeta('unread').emptyTitle).toBe('没有未读消息');
+    expect(notificationFilterMeta('reward').emptyTitle).toBe('没有打赏消息');
   });
 });

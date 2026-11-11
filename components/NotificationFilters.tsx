@@ -9,7 +9,7 @@ interface NotificationFiltersProps {
 }
 
 /**
- * 通知分段筛选：全部 / 未读 / 回复 / 提及 / 表态 / 打赏。
+ * 消息分段筛选：全部 / 未读 / 回复 / 提及 / 表态 / 打赏。
  *
  * 直接对应接口已有的 `type` 与 `unread_only` 参数，切换后由数据层重新拉取，
  * 不在客户端对已加载的 50 条做假筛选。
@@ -24,7 +24,7 @@ export function NotificationFilters({
     <div
       className={`notice-filters${variant === 'popup' ? ' notice-filters--popup' : ''}`}
       role="group"
-      aria-label="按通知类别筛选"
+      aria-label="按消息类别筛选"
     >
       {NOTIFICATION_FILTERS.map((option) => {
         const active = option.id === value;

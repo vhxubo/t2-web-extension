@@ -196,8 +196,8 @@ export default function Dashboard() {
               type="button"
               className="masthead__action masthead__bell"
               onClick={openNotifications}
-              title={unread.count > 0 ? `通知（${unread.count} 条未读）` : '通知'}
-              aria-label={unread.count > 0 ? `通知，${unread.count} 条未读` : '通知'}
+              title={unread.count > 0 ? `消息（${unread.count} 条未读）` : '消息'}
+              aria-label={unread.count > 0 ? `消息，${unread.count} 条未读` : '消息'}
             >
               <Icon name="bell" size={16} />
               {unread.count > 0 && (

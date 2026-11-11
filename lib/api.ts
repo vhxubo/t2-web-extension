@@ -162,7 +162,7 @@ export async function apiGet<T>(path: string, options: RequestOptions = {}): Pro
  *
  * 服务端对 `/api/v1/*` 的 CORS 只放行站点来源，但扩展用 DNR 移除了 `Origin`
  * 头（见 entrypoints/background.ts），请求会像普通客户端一样被接受。目前只用于
- * 通知标记已读、帖子收藏这类轻量、可重试的写操作；不把用户令牌交给第三方。
+ * 消息标记已读、帖子收藏这类轻量、可重试的写操作；不把用户令牌交给第三方。
  */
 async function apiWrite<T>(
   method: 'POST' | 'DELETE',

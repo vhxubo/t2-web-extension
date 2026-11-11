@@ -143,7 +143,7 @@ export function SettingsPanel({
                   <span className="account-panel__name">尚未登录</span>
                 </div>
                 <p className="account-panel__hint">
-                  设置会保存在本机，登录只用于读取个人资料与通知。
+                  设置会保存在本机，登录只用于读取个人资料与消息。
                 </p>
               </div>
 

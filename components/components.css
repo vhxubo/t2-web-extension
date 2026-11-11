@@ -1609,7 +1609,7 @@
   pointer-events: none;
 }
 
-/* ---------- 通知中心 ---------- */
+/* ---------- 消息中心 ---------- */
 
 .notifications-dialog {
   width: min(620px, calc(100vw - 28px));
@@ -1626,7 +1626,7 @@
   border-bottom: 1px solid var(--line);
 }
 
-/* 分段筛选：与站点通知中心使用同一组 type 值，切换后重新请求。 */
+/* 分段筛选：与站点消息中心使用同一组 type 值，切换后重新请求。 */
 .notice-filters {
   display: flex;
   align-items: center;

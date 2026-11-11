@@ -140,7 +140,7 @@ body {
   animation: t2-spin 0.9s linear infinite;
 }
 
-/* 通知入口：固定在搜索左侧，数字角标直接显示未读条数。 */
+/* 消息入口：固定在搜索左侧，数字角标直接显示未读条数。 */
 .popup__notice-btn {
   position: relative;
 }
@@ -687,7 +687,7 @@ body {
   margin-top: 8px;
 }
 
-/* ---------- 通知预览 ---------- */
+/* ---------- 消息预览 ---------- */
 
 .popup__notices {
   display: flex;
@@ -797,7 +797,7 @@ body {
   color: var(--danger);
 }
 
-/* 预览列表比通知中心更紧凑，但仍保留操作、标题、评论与表态。 */
+/* 预览列表比消息中心更紧凑，但仍保留操作、标题、评论与表态。 */
 .popup .notice-list--popup .notice-row__link {
   gap: 9px;
   padding: 9px 40px 9px 4px;
@@ -945,7 +945,7 @@ body {
   justify-content: center;
 }
 
-/* 未读通知小红点：陶土红，2px 纸色描边，不与主色抢戏。 */
+/* 未读消息小红点：陶土红，2px 纸色描边，不与主色抢戏。 */
 .popup__dock-dot {
   position: absolute;
   top: -2px;
