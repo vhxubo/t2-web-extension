@@ -12,16 +12,19 @@ export interface BoardMeta {
   supportsSection: boolean;
   /** 该榜单对应 `GET /v1/topics?dimensions=...` 的维度。 */
   dimension?: TopicDimension;
+  /** `/v1/topics` 必填的 limit；hot 走接口默认值，用不到这个字段。 */
+  pageSize: number;
 }
 
 export const BOARDS: BoardMeta[] = [
   {
-    id: 'latest',
-    label: '新发表',
-    shortLabel: '最新',
-    hint: '按发布时间',
-    icon: '📑',
+    id: 'home',
+    label: '首页',
+    shortLabel: '首页',
+    hint: '全站按价值排序',
+    icon: '🏠',
     supportsSection: true,
+    pageSize: 50,
   },
   {
     id: 'hot24h',
@@ -30,6 +33,7 @@ export const BOARDS: BoardMeta[] = [
     hint: '24 小时内最活跃',
     icon: '🔥',
     supportsSection: false,
+    pageSize: 50,
   },
   {
     id: 'hot7d',
@@ -38,6 +42,7 @@ export const BOARDS: BoardMeta[] = [
     hint: '7 天内最活跃',
     icon: '📈',
     supportsSection: false,
+    pageSize: 50,
   },
   {
     id: 'work',
@@ -47,6 +52,7 @@ export const BOARDS: BoardMeta[] = [
     icon: '💼',
     supportsSection: true,
     dimension: 'work',
+    pageSize: 20,
   },
   {
     id: 'life',
@@ -56,6 +62,7 @@ export const BOARDS: BoardMeta[] = [
     icon: '🌿',
     supportsSection: true,
     dimension: 'life',
+    pageSize: 20,
   },
 ];
 

@@ -84,7 +84,7 @@ export function SettingsDialog({
     }
   };
 
-  const defaultBoard = isBoardId(settings.board) ? settings.board : 'latest';
+  const defaultBoard = isBoardId(settings.board) ? settings.board : 'home';
 
   return (
     <dialog

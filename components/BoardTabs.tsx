@@ -10,7 +10,7 @@ interface BoardTabsProps {
   sectionFiltered: boolean;
   /** 只展示这些榜单；默认展示全部。 */
   boards?: BoardMeta[];
-  /** 使用短标签（弹窗里「新发表」显示为「最新」，把宽度留给列表）。 */
+  /** 使用短标签（弹窗空间窄，优先把宽度留给列表）。 */
   shortLabels?: boolean;
 }
 

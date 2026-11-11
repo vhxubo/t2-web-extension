@@ -9,9 +9,6 @@ export interface FeedItem {
   topic: Topic;
 }
 
-/** 只有 `/v1/topics` 必须显式传 limit；其余榜单用接口默认值。 */
-export const FEED_PAGE_SIZE = 20;
-
 export interface FeedPage {
   items: FeedItem[];
   total: number;
@@ -24,7 +21,7 @@ export interface LoadFeedOptions {
   section: Section;
   nodes: ApiNode[];
   page: number;
-  /** 仅 `/v1/topics` 使用；latest / hot 不传 limit，走接口默认值。 */
+  /** 仅 `/v1/topics` 使用；hot 端点不传 limit，走接口默认值。 */
   pageSize: number;
   signal?: AbortSignal;
 }
@@ -38,10 +35,22 @@ export async function loadFeed(options: LoadFeedOptions): Promise<FeedPage> {
   }
 
   const filter = sectionQuery(section, nodes);
-  const isFiltered = section.kind !== 'all';
   let data: TopicPage;
 
-  if (board === 'hot24h' || board === 'hot7d') {
+  if (board === 'home') {
+    // 首页 = 站点首页 feed：全站（parent_slug=All）按价值排序。
+    // `page` / `limit` 必填，limit 取榜单配置的 50 条。
+    data = await apiGet<TopicPage>('/v1/topics', {
+      auth: true,
+      query: {
+        page,
+        limit: pageSize,
+        ...(section.kind === 'all' ? { parent_slug: 'All' } : filter),
+        sort: 'value',
+      },
+      signal,
+    });
+  } else if (board === 'hot24h' || board === 'hot7d') {
     // hot 的 page 默认 1、limit 默认 50、period 默认 24h：
     // 只有翻页和 7d 这类非默认值才显式传。
     data = await apiGet<TopicPage>('/v1/topics/hot', {
@@ -50,13 +59,6 @@ export async function loadFeed(options: LoadFeedOptions): Promise<FeedPage> {
         ...(page > 1 ? { page } : {}),
         ...(board === 'hot7d' ? { period: '7d' } : {}),
       },
-      signal,
-    });
-  } else if (board === 'latest' && !isFiltered) {
-    // latest 的 page 默认 1、limit 默认 50：只有第 2 页起才带 page。
-    data = await apiGet<TopicPage>('/v1/topics/latest', {
-      auth: true,
-      query: { ...(page > 1 ? { page } : {}) },
       signal,
     });
   } else {

@@ -12,7 +12,6 @@ import { useSettings } from '@/hooks/useSettings';
 import { useTheme } from '@/hooks/useTheme';
 import { useUnreadNotifications } from '@/hooks/useUnreadNotifications';
 import { BOARD_MAP, BOARDS, isBoardId } from '@/lib/boards';
-import { FEED_PAGE_SIZE } from '@/lib/feed';
 import { openDashboard } from '@/lib/nav';
 import { storageAvailable } from '@/lib/storage';
 import type { ApiNode, BoardId, Section } from '@/lib/types';
@@ -32,7 +31,7 @@ export default function Popup() {
   const { profile, signedIn, loading: sessionLoading, profileLoading } = useSession();
   const unread = useUnreadNotifications(signedIn);
 
-  const [board, setBoard] = useState<BoardId>('latest');
+  const [board, setBoard] = useState<BoardId>('home');
   const [initialized, setInitialized] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const listRef = useRef<HTMLDivElement | null>(null);
@@ -41,12 +40,14 @@ export default function Popup() {
   const closeSearch = useCallback(() => setSearchOpen(false), []);
   useSearchHotkey(openSearch);
 
+  const boardMeta = BOARD_MAP[board];
+
   const feed = useFeed({
     board,
     section: ALL_SITES,
     nodes: NO_NODES,
     nodesReady: true,
-    limit: FEED_PAGE_SIZE,
+    limit: boardMeta.pageSize,
     enabled: initialized,
   });
 
@@ -54,8 +55,8 @@ export default function Popup() {
   // 不改写设置 —— 默认进入只能在完整页面的设置弹窗里修改。
   useEffect(() => {
     if (!settings || initialized) return;
-    // 旧版本存下的榜单若已下线，回落到「最新」。
-    setBoard(isBoardId(settings.board) ? settings.board : 'latest');
+    // 旧版本存下的榜单若已下线，回落到「首页」。
+    setBoard(isBoardId(settings.board) ? settings.board : 'home');
     setInitialized(true);
   }, [settings, initialized]);
 
@@ -82,7 +83,6 @@ export default function Popup() {
     listRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
 
-  const boardMeta = BOARD_MAP[board];
   const unreadLabel = unread.count > 0 ? `，${unread.count} 条未读通知` : '';
   const accountLoading = sessionLoading || (signedIn && !profile && profileLoading);
   const themePreference = settings?.theme ?? 'system';

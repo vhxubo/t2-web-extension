@@ -54,7 +54,7 @@ export interface ProfileCache {
 }
 
 export const DEFAULT_SETTINGS: Settings = {
-  board: 'latest',
+  board: 'home',
   section: 'all',
   theme: 'system',
 };

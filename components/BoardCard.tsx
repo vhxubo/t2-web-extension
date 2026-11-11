@@ -1,6 +1,5 @@
 import type { BoardMeta } from '../lib/boards';
 import { describeError } from '../lib/errors';
-import { FEED_PAGE_SIZE } from '../lib/feed';
 import { useFeed } from '../hooks/useFeed';
 import type { ApiNode, Section } from '../lib/types';
 import { Icon } from './Icon';
@@ -22,7 +21,7 @@ export function BoardCard({ meta, enabled, onLogin }: BoardCardProps) {
     section: ALL_SITES,
     nodes: NO_NODES,
     nodesReady: true,
-    limit: FEED_PAGE_SIZE,
+    limit: meta.pageSize,
     enabled,
   });
 
