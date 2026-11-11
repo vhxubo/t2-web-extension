@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ApiError } from '../lib/api';
 import type { EmojiMap } from '../lib/emojis';
 import { describeError } from '../lib/errors';
-import { topicHref } from '../lib/feed';
 import { compactNumber, dateTime, relativeTime } from '../lib/format';
 import { profileHref } from '../lib/nav';
 import {
@@ -133,8 +132,6 @@ export function TopicDetail({
   const authorName = author || '匿名';
   const createdAt = meta.created_at;
   const views = meta.views;
-  const comments = meta.comment_count;
-  const hasComments = typeof comments === 'number' && comments >= 0;
 
   const detailErrorInfo = error ? describeError(error) : null;
   const favoriteErrorInfo = favoriteError ? describeError(favoriteError) : null;
@@ -201,6 +198,31 @@ export function TopicDetail({
               <span className="topic-detail__views t2-mono">{compactNumber(views)} 浏览</span>
             </>
           )}
+          <button
+            type="button"
+            className={`topic-detail__favorite${favorited ? ' is-on' : ''}`}
+            onClick={() => void handleFavorite()}
+            disabled={favoritePending}
+            aria-pressed={favorited}
+            title={
+              !signedIn
+                ? '登录后可收藏帖子'
+                : favorited
+                  ? '取消收藏'
+                  : '加入收藏（同步到站点）'
+            }
+          >
+            <Icon name={favorited ? 'check' : 'bookmark'} size={11} />
+            <span>
+              {favoritePending
+                ? '处理中…'
+                : !signedIn
+                  ? '登录后收藏'
+                  : favorited
+                    ? '已收藏'
+                    : '收藏'}
+            </span>
+          </button>
         </div>
       </header>
 
@@ -246,46 +268,6 @@ export function TopicDetail({
           ))}
         </>
       )}
-
-      <div className="topic-detail__foot">
-        <button
-          type="button"
-          className={`topic-detail__favorite${favorited ? ' is-on' : ''}`}
-          onClick={() => void handleFavorite()}
-          disabled={favoritePending}
-          aria-pressed={favorited}
-          title={
-            !signedIn
-              ? '登录后可收藏帖子'
-              : favorited
-                ? '取消收藏'
-                : '加入收藏（同步到站点）'
-          }
-        >
-          <Icon name={favorited ? 'check' : 'bookmark'} size={13} />
-          <span>
-            {favoritePending
-              ? '处理中…'
-              : !signedIn
-                ? '登录后收藏'
-                : favorited
-                  ? '已收藏'
-                  : '收藏'}
-          </span>
-        </button>
-
-        <a
-          className="topic-detail__open"
-          href={topicHref(meta)}
-          target="_blank"
-          rel="noreferrer"
-          title="打开原帖，查看评论与完整讨论"
-        >
-          到原帖看评论
-          {hasComments && <b className="t2-mono">{comments}</b>}
-          <Icon name="external" size={11} />
-        </a>
-      </div>
 
       {favoriteNotice && (
         <p className="topic-detail__notice" role="status">

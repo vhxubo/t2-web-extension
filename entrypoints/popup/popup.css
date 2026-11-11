@@ -406,7 +406,8 @@ body {
   min-height: 0;
 }
 
-.popup__detail-back {
+.popup__detail-back,
+.popup__detail-open {
   display: inline-flex;
   align-items: center;
   gap: 2px;
@@ -430,9 +431,23 @@ body {
 }
 
 .popup__detail-back:hover,
-.popup__detail-back:focus-visible {
+.popup__detail-back:focus-visible,
+.popup__detail-open:hover,
+.popup__detail-open:focus-visible {
   background: var(--leaf-wash);
   color: var(--leaf);
+}
+
+.popup__detail-open {
+  padding: 4px 8px;
+  color: var(--leaf);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.popup__detail-open b {
+  font-size: 10.5px;
+  font-weight: 600;
 }
 
 .popup__detail-body {

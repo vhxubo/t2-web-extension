@@ -18,8 +18,9 @@ import { useSession } from '@/hooks/useSession';
 import { useSettings } from '@/hooks/useSettings';
 import { useTheme } from '@/hooks/useTheme';
 import { useUnreadNotifications } from '@/hooks/useUnreadNotifications';
-import { ATTRIBUTION, LINKS } from '@/lib/config';
+import { ATTRIBUTION } from '@/lib/config';
 import { describeError } from '@/lib/errors';
+import { topicHref } from '@/lib/feed';
 import { openDashboard, openSettings } from '@/lib/nav';
 import { notificationFilterMeta } from '@/lib/notification-filter';
 import { BUILTIN_ME_VIEWS } from '@/lib/me';
@@ -354,20 +355,48 @@ export default function Popup() {
 
       <header className={`popup__head${signedIn ? ' popup__head--signed' : ''}`}>
         {detailTopic && !notificationsOpen ? (
-          <button
-            type="button"
-            className="popup__detail-back"
-            onClick={closeDetail}
-            title="返回列表"
-            aria-label="返回列表"
-          >
-            <Icon name="chevron" size={13} />
-            <span>返回列表</span>
-          </button>
+          <>
+            <button
+              type="button"
+              className="popup__detail-back"
+              onClick={closeDetail}
+              title="返回列表"
+              aria-label="返回列表"
+            >
+              <Icon name="chevron" size={13} />
+              <span>返回列表</span>
+            </button>
+            <a
+              className="popup__detail-open"
+              href={topicHref(detailTopic)}
+              target="_blank"
+              rel="noreferrer"
+              title="打开原帖，查看评论与完整讨论"
+            >
+              查看原帖
+              {typeof detailTopic.comment_count === 'number' && (
+                <b className="t2-mono">{detailTopic.comment_count}</b>
+              )}
+              <Icon name="external" size={11} />
+            </a>
+          </>
         ) : signedIn ? (
           <>
             <Brand markOnly />
-            <PrimaryTabs tabs={PRIMARY_TABS} value={mode} onChange={handleMode} />
+            {/* 通知预览占用一级 Tab 的位置：标题 + 未读数，关闭后换回「帖子 / 我的」。 */}
+            {notificationsOpen ? (
+              <>
+                <span className="popup__notices-title">
+                  <Icon name="bell" size={13} />
+                  通知预览
+                </span>
+                <span className="popup__notices-count">
+                  {unread.count > 0 ? `${unread.count} 条未读` : '最近通知'}
+                </span>
+              </>
+            ) : (
+              <PrimaryTabs tabs={PRIMARY_TABS} value={mode} onChange={handleMode} />
+            )}
           </>
         ) : (
           <Brand compact />
@@ -473,24 +502,13 @@ export default function Popup() {
 
       {notificationsOpen ? (
         <section className="popup__notices" id="notifications-preview" aria-label="通知预览">
-          <div className="popup__notices-head">
-            <span className="popup__notices-title">
-              <Icon name="bell" size={13} />
-              通知预览
-            </span>
-            <span className="popup__notices-count">
-              {unread.count > 0 ? `${unread.count} 条未读` : '最近通知'}
-            </span>
-            <a
-              className="popup__notices-link"
-              href={LINKS.notifications}
-              target="_blank"
-              rel="noreferrer"
-            >
-              在站点查看
-              <Icon name="external" size={11} />
-            </a>
-            {signedIn && (
+          {signedIn && !sessionLoading && (
+            <div className="popup__notices-filters">
+              <NotificationFilters
+                value={notifications.filter}
+                onChange={notifications.setFilter}
+                variant="popup"
+              />
               <button
                 type="button"
                 className="popup__notices-read"
@@ -500,16 +518,6 @@ export default function Popup() {
               >
                 {notifications.markingAll ? '处理中…' : '全部已读'}
               </button>
-            )}
-          </div>
-
-          {signedIn && !sessionLoading && (
-            <div className="popup__notices-filters">
-              <NotificationFilters
-                value={notifications.filter}
-                onChange={notifications.setFilter}
-                variant="popup"
-              />
             </div>
           )}
 
