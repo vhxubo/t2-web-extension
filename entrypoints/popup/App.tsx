@@ -6,6 +6,7 @@ import { PostList } from '@/components/PostList';
 import { SearchDialog } from '@/components/SearchDialog';
 import { ViewTabs } from '@/components/ViewTabs';
 import { useFeed } from '@/hooks/useFeed';
+import { useEmojiMap } from '@/hooks/useEmojis';
 import { useNodes } from '@/hooks/useNodes';
 import { useSearchHotkey } from '@/hooks/useSearch';
 import { useSession } from '@/hooks/useSession';
@@ -46,6 +47,7 @@ export default function Popup() {
     [tabs, activeId],
   );
   const activeView = activeEntry?.view ?? null;
+  const emojis = useEmojiMap(activeView?.board === 'comments');
 
   const needsNodes =
     activeView?.kind === 'section' && activeView.section.kind !== 'all';
@@ -224,6 +226,8 @@ export default function Popup() {
                 showRank={false}
                 titleOnly
                 oneLine
+                variant={activeView?.board === 'comments' ? 'comment' : 'topic'}
+                emojis={emojis}
                 sectionFiltered={Boolean(activeView?.section.kind !== 'all')}
                 sectionName={activeView?.label}
                 onRetry={handleRetry}

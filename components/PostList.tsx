@@ -1,6 +1,8 @@
 import type { FeedItem } from '../lib/feed';
 import type { FeedStatus } from '../hooks/useFeed';
+import type { EmojiMap } from '../lib/emojis';
 import { describeError } from '../lib/errors';
+import { CommentRow } from './CommentRow';
 import { Icon } from './Icon';
 import { PostRow } from './PostRow';
 
@@ -15,6 +17,10 @@ interface PostListProps {
   titleOnly?: boolean;
   /** 标题强制单行截断（弹窗 Dock 布局用）。 */
   oneLine?: boolean;
+  /** 列表内容：普通帖子，或「最新评论」时间线。 */
+  variant?: 'topic' | 'comment';
+  /** 评论正文的表情映射；页面级缓存，按需加载。 */
+  emojis?: EmojiMap;
   sectionFiltered: boolean;
   sectionName?: string;
   onRetry?: () => void;
@@ -28,13 +34,37 @@ export function FeedSkeleton({
   showRank = true,
   titleOnly = false,
   oneLine = false,
+  variant = 'topic',
 }: {
   rows?: number;
   compact?: boolean;
   showRank?: boolean;
   titleOnly?: boolean;
   oneLine?: boolean;
+  variant?: 'topic' | 'comment';
 }) {
+  if (variant === 'comment') {
+    return (
+      <div
+        className={`feed-skeleton feed-skeleton--comment${
+          compact ? ' feed-skeleton--compact' : ''
+        }${titleOnly || oneLine ? ' feed-skeleton--comment-dense' : ''}`}
+        aria-hidden="true"
+      >
+        {Array.from({ length: rows }).map((_, index) => (
+          <div className="comment-skeleton" key={index}>
+            <span className="skeleton comment-skeleton__avatar" />
+            <div className="comment-skeleton__body">
+              <span className="skeleton skeleton--line comment-skeleton__head" />
+              <span className="skeleton skeleton--title comment-skeleton__content" />
+              <span className="skeleton skeleton--line comment-skeleton__foot" />
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
   return (
     <div
       className={`feed-skeleton${compact ? ' feed-skeleton--compact' : ''}${
@@ -69,6 +99,8 @@ export function PostList({
   showRank = true,
   titleOnly = false,
   oneLine = false,
+  variant = 'topic',
+  emojis,
   sectionFiltered,
   sectionName,
   onRetry,
@@ -82,6 +114,7 @@ export function PostList({
         showRank={showRank}
         titleOnly={titleOnly}
         oneLine={oneLine}
+        variant={variant}
         rows={7}
       />
     );
@@ -115,16 +148,23 @@ export function PostList({
   }
 
   if (items.length === 0) {
+    const emptyTitle =
+      variant === 'comment'
+        ? '还没有最新评论'
+        : sectionFiltered
+          ? '这个分区暂时没有帖子'
+          : '没有拿到帖子';
+    const emptyDesc =
+      variant === 'comment'
+        ? '全站暂时没有新评论，刷新一次试试。'
+        : sectionFiltered
+          ? `「${sectionName ?? '当前分区'}」还没有可展示的内容，换个分区或看看全站。`
+          : '可能刚好没有内容，刷新一次试试。';
+
     return (
       <div className="empty">
-        <span className="empty__title">
-          {sectionFiltered ? '这个分区暂时没有帖子' : '没有拿到帖子'}
-        </span>
-        <span className="empty__desc">
-          {sectionFiltered
-            ? `「${sectionName ?? '当前分区'}」还没有可展示的内容，换个分区或看看全站。`
-            : '可能刚好没有内容，刷新一次试试。'}
-        </span>
+        <span className="empty__title">{emptyTitle}</span>
+        <span className="empty__desc">{emptyDesc}</span>
         <div className="empty__actions">
           {sectionFiltered && onResetSection && (
             <button type="button" className="btn btn--primary btn--sm" onClick={onResetSection}>
@@ -145,19 +185,31 @@ export function PostList({
     <ol
       className={`feed-list${compact ? ' feed-list--compact' : ''}${
         showRank ? '' : ' feed-list--no-rank'
-      }${titleOnly ? ' feed-list--title-only' : ''}${oneLine ? ' feed-list--one-line' : ''}`}
+      }${titleOnly ? ' feed-list--title-only' : ''}${oneLine ? ' feed-list--one-line' : ''}${
+        variant === 'comment' ? ' feed-list--comments' : ''
+      }`}
     >
-      {items.map((item, index) => (
-        <PostRow
-          key={item.key}
-          topic={item.topic}
-          index={index}
-          compact={compact}
-          showRank={showRank}
-          titleOnly={titleOnly}
-          oneLine={oneLine}
-        />
-      ))}
+      {items.map((item, index) =>
+        item.kind === 'comment' ? (
+          <CommentRow
+            key={item.key}
+            comment={item.comment}
+            compact={compact}
+            dense={titleOnly || oneLine}
+            emojis={emojis}
+          />
+        ) : (
+          <PostRow
+            key={item.key}
+            topic={item.topic}
+            index={index}
+            compact={compact}
+            showRank={showRank}
+            titleOnly={titleOnly}
+            oneLine={oneLine}
+          />
+        ),
+      )}
     </ol>
   );
 }

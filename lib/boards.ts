@@ -56,6 +56,16 @@ export const BOARDS: BoardMeta[] = [
     pageSize: 50,
   },
   {
+    // 全站最新评论时间线。每条评论自带帖子摘要，展示与跳转都走专门的行样式。
+    id: 'comments',
+    label: '最新评论',
+    shortLabel: '最新评论',
+    hint: '全站最新评论，可直达回复',
+    icon: '🗨️',
+    supportsSection: false,
+    pageSize: 20,
+  },
+  {
     id: 'community',
     label: '社区讨论',
     shortLabel: '社区讨论',

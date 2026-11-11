@@ -2,8 +2,10 @@ import { browser, storage } from '#imports';
 import { isBoardId } from './boards';
 import {
   DEFAULT_DEFAULT_VIEW,
+  VIEWS_VERSION,
   boardViewId,
   createDefaultViews,
+  migrateViewPreferences,
   normalizeViewPreferences,
 } from './viewIds';
 import type { ApiNode, Profile, ViewPreference } from './types';
@@ -31,6 +33,8 @@ export interface Settings {
    * 顺序即弹窗 Tab 和仪表盘卡片的顺序；popup 最多 6 个，dashboard 不限。
    */
   views: ViewPreference[];
+  /** 视图配置结构版本：用于把「最新评论」补给旧配置，只迁移一次。 */
+  viewsVersion: number;
   /** 外观偏好，保存在 local:t2:settings，所有页面共用。 */
   theme: ThemePreference;
 }
@@ -55,6 +59,13 @@ export interface NodesCache {
   partial?: boolean;
 }
 
+/** 表情短码 → 图片地址；最新评论正文要用它把 `:code:` 渲染成图片。 */
+export interface EmojisCache {
+  fetchedAt: number;
+  /** key 带两端冒号，如 `:sigh:`。 */
+  map: Record<string, string>;
+}
+
 /**
  * 上一次解析成功的用户资料。本地缓存只用于两件事：
  * 1. 精简快照没带头像时，直接复用上次的头像，省掉一次公开资料请求；
@@ -69,6 +80,7 @@ export interface ProfileCache {
 export const DEFAULT_SETTINGS: Settings = {
   defaultView: DEFAULT_DEFAULT_VIEW,
   views: createDefaultViews(),
+  viewsVersion: VIEWS_VERSION,
   theme: 'system',
 };
 
@@ -160,6 +172,11 @@ export const pendingAuthItem = definePersistentItem<PendingAuth | null>(
 
 export const nodesCacheItem = definePersistentItem<NodesCache | null>(`local:${PREFIX}:nodes`, null);
 
+export const emojisCacheItem = definePersistentItem<EmojisCache | null>(
+  `local:${PREFIX}:emojis`,
+  null,
+);
+
 export const profileCacheItem = definePersistentItem<ProfileCache | null>(
   `local:${PREFIX}:profile`,
   null,
@@ -173,7 +190,15 @@ interface StoredSettings extends Partial<Settings> {
 
 /** 把存储里的值收敛成可用的设置：旧版本字段、已下线视图都回落到合理值。 */
 export function normalizeSettings(stored: StoredSettings | null | undefined): Settings {
-  const views = normalizeViewPreferences(stored?.views);
+  const storedVersion =
+    typeof stored?.viewsVersion === 'number' && Number.isFinite(stored.viewsVersion)
+      ? stored.viewsVersion
+      : 0;
+  // v1（或更早）的配置没有「最新评论」；补一次后写回版本号，之后尊重用户的移除操作。
+  const views = migrateViewPreferences(
+    normalizeViewPreferences(stored?.views),
+    storedVersion,
+  );
   const popupIds = views.filter((view) => view.popup).map((view) => view.id);
 
   const legacyBoard =
@@ -193,6 +218,7 @@ export function normalizeSettings(stored: StoredSettings | null | undefined): Se
   return {
     defaultView,
     views,
+    viewsVersion: VIEWS_VERSION,
     theme: isThemePreference(stored?.theme) ? stored.theme : DEFAULT_SETTINGS.theme,
   };
 }

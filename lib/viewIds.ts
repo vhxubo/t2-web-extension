@@ -2,7 +2,7 @@
  * 视图（榜单 / 节点）身份与持久化配置。
  *
  * 一个「视图」是弹窗里的一个 Tab、仪表盘上的一张卡片。身份用稳定的字符串表示：
- * - `board:<id>`：七个内置榜单；
+ * - `board:<id>`：八个内置榜单；
  * - `section:all`：全站最新；
  * - `section:p:<slug>`：某个父节点（含全部子节点）；
  * - `section:n:<slug>`：某个具体子节点。
@@ -15,6 +15,12 @@ import type { BoardId, Section, ViewPreference } from './types';
 
 /** 弹窗最多展示的 Tab 数；仪表盘不限。 */
 export const POPUP_TAB_LIMIT = 6;
+
+/**
+ * 视图配置结构版本。
+ * v2 起默认带「最新评论」；旧配置在读取时补上这一项（见 migrateViewPreferences）。
+ */
+export const VIEWS_VERSION = 2;
 
 export function boardViewId(board: BoardId): string {
   return `board:${board}`;
@@ -50,12 +56,13 @@ export function parseViewId(id: string): ParsedViewId | null {
   return null;
 }
 
-/** 默认配置：保留原有的七个榜单，全部同时出现在弹窗与仪表盘。 */
+/** 默认配置：八个内置榜单，全部同时出现在弹窗与仪表盘。 */
 export const DEFAULT_VIEW_IDS = [
   boardViewId('home'),
   boardViewId('hot24h'),
   boardViewId('hot7d'),
   boardViewId('latest'),
+  boardViewId('comments'),
   boardViewId('community'),
   boardViewId('work'),
   boardViewId('life'),
@@ -64,12 +71,36 @@ export const DEFAULT_VIEW_IDS = [
 export const DEFAULT_DEFAULT_VIEW = boardViewId('home');
 
 export function createDefaultViews(): ViewPreference[] {
-  // 仪表盘放下全部 7 个内置榜单；弹窗只放前 6 个，最后一个默认仅在仪表盘展示。
+  // 仪表盘放下全部内置榜单；弹窗只放前 6 个，后面的默认仅在仪表盘展示。
   return DEFAULT_VIEW_IDS.map((id, index) => ({
     id,
     popup: index < POPUP_TAB_LIMIT,
     dashboard: true,
   }));
+}
+
+/**
+ * 旧配置补上「最新评论」。
+ *
+ * 只在新版本第一次读取时做一次（用 viewsVersion 标记），之后用户主动移除就不会再加回来。
+ * 弹窗已满时只加到仪表盘，避免悄悄挤掉用户自己挑的 Tab。
+ */
+export function migrateViewPreferences(
+  views: ViewPreference[],
+  storedVersion: number,
+): ViewPreference[] {
+  if (storedVersion >= VIEWS_VERSION) return views;
+  if (views.some((view) => view.id === boardViewId('comments'))) return views;
+
+  const next = [...views];
+  const latestIndex = next.findIndex((view) => view.id === boardViewId('latest'));
+  const popupCount = next.filter((view) => view.popup).length;
+  next.splice(latestIndex >= 0 ? latestIndex + 1 : next.length, 0, {
+    id: boardViewId('comments'),
+    popup: popupCount < POPUP_TAB_LIMIT,
+    dashboard: true,
+  });
+  return next;
 }
 
 function normalizeViewPreference(raw: unknown): ViewPreference | null {

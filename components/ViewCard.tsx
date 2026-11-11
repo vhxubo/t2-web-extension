@@ -1,5 +1,6 @@
 import type { FeedStatus } from '../hooks/useFeed';
 import { useFeed } from '../hooks/useFeed';
+import { useEmojiMap } from '../hooks/useEmojis';
 import type { NodesStatus } from '../hooks/useNodes';
 import { describeError } from '../lib/errors';
 import type { ApiNode } from '../lib/types';
@@ -27,6 +28,8 @@ export function ViewCard({
   onLogin,
   onReloadNodes,
 }: ViewCardProps) {
+  const isComments = view.board === 'comments';
+  const emojis = useEmojiMap(isComments);
   const needsNodes = view.kind === 'section' && view.section.kind !== 'all';
   const nodePending = needsNodes && nodesStatus === 'loading';
   const nodeMissing = needsNodes && nodesStatus !== 'loading' && !view.available;
@@ -104,6 +107,8 @@ export function ViewCard({
           status={status}
           error={error}
           compact
+          variant={isComments ? 'comment' : 'topic'}
+          emojis={emojis}
           sectionFiltered={view.section.kind !== 'all'}
           sectionName={view.label}
           onRetry={handleRetry}
@@ -133,6 +138,8 @@ export function ViewCard({
             >
               {feed.loadingMore ? '加载中…' : '加载更多'}
             </button>
+          ) : isComments ? (
+            <span className="board-card__end">— 仅展示最近 {feed.items.length} 条 —</span>
           ) : (
             <span className="board-card__end">— 到底了 —</span>
           )}

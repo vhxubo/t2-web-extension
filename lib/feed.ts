@@ -1,13 +1,14 @@
 /** 排行榜 / 列表接口的读取与归一化。 */
 import { apiGet } from './api';
 import { BOARD_MAP } from './boards';
+import { loadLatestComments } from './comments';
 import { sectionQuery, sectionResolved } from './section';
-import type { BoardId, Section, Topic, TopicPage, ApiNode } from './types';
+import type { BoardId, LatestComment, Section, Topic, TopicPage, ApiNode } from './types';
 
-export interface FeedItem {
-  key: string;
-  topic: Topic;
-}
+/** 一张卡片 / 一个 Tab 里的一行：普通帖子，或「最新评论」里的一条评论。 */
+export type FeedItem =
+  | { key: string; kind: 'topic'; topic: Topic }
+  | { key: string; kind: 'comment'; comment: LatestComment };
 
 export interface FeedPage {
   items: FeedItem[];
@@ -33,6 +34,23 @@ export async function loadFeed(options: LoadFeedOptions): Promise<FeedPage> {
   if (section.kind !== 'all' && !sectionResolved(section, nodes)) {
     // 节点数据还没到，先给空页，避免把全站内容误当成分区内容。
     return { items: [], total: 0, page, totalPages: 0 };
+  }
+
+  // 最新评论是独立的时间线（列表字段是 items，不是 posts）；没有分区筛选。
+  // 该端点实际上只取「最近的 N 条」，page 会被忽略，所以没有下一页。
+  if (board === 'comments') {
+    const data = await loadLatestComments({ limit: pageSize, signal });
+    const comments = data.items ?? [];
+    return {
+      items: comments.map((comment) => ({
+        key: `comment:${comment.id}`,
+        kind: 'comment',
+        comment,
+      })),
+      total: data.total ?? comments.length,
+      page: data.page ?? 1,
+      totalPages: 1,
+    };
   }
 
   const filter = sectionQuery(section, nodes);
@@ -98,6 +116,7 @@ export async function loadFeed(options: LoadFeedOptions): Promise<FeedPage> {
   return {
     items: posts.map((topic) => ({
       key: `topic:${topic.short_id}`,
+      kind: 'topic',
       topic,
     })),
     total: data.total ?? posts.length,

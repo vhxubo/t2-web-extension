@@ -18,7 +18,15 @@ export interface Envelope<T> {
 /** `/v1/topics` 的维度筛选。 */
 export type TopicDimension = 'work' | 'life' | 'special';
 
-export type BoardId = 'home' | 'hot24h' | 'hot7d' | 'latest' | 'community' | 'work' | 'life';
+export type BoardId =
+  | 'home'
+  | 'hot24h'
+  | 'hot7d'
+  | 'latest'
+  | 'comments'
+  | 'community'
+  | 'work'
+  | 'life';
 
 /** 分区：全站 / 顶层节点（含子节点） / 具体子节点。 */
 export type Section =
@@ -86,6 +94,59 @@ export interface Topic {
   tags?: { name?: string }[];
   hotScore?: number;
   status?: string;
+}
+
+/** `/v1/comments/latest` 里被回复的那条评论（可能只有摘要字段）。 */
+export interface CommentParentRef {
+  id: string;
+  content?: string | null;
+  created_at?: string;
+  is_deleted?: boolean;
+  /** 服务端当前不保证下发楼层；有就用，没有就退回 flat_floor。 */
+  floor?: number | null;
+  flat_floor?: number | null;
+  author?: Author | null;
+}
+
+/** 最新评论里附带的帖子摘要：够拼出帖子 / 节点链接。 */
+export interface CommentPostRef {
+  id?: string;
+  short_id: string;
+  title?: string;
+  comment_count?: number;
+  views?: number;
+  node?: TopicNodeRef | null;
+  parent_node?: TopicNodeRef | null;
+}
+
+/**
+ * 全站最新评论。
+ *
+ * 列表字段是 `items`（不是 `posts`）；每条都带 `post` 摘要，`parent` 只在「回复」
+ * 时出现。`floor` 为 null 表示这是楼层视图里的嵌套回复，站点用 flat_floor 定位。
+ */
+export interface LatestComment {
+  id: string;
+  floor?: number | null;
+  flat_floor?: number | null;
+  content?: string | null;
+  created_at?: string;
+  updated_at?: string;
+  is_deleted?: boolean;
+  author?: Author | null;
+  /** 被回复人的用户名；嵌套回复里也可能从 parent.author 取到。 */
+  reply_to_username?: string | null;
+  reply_to_is_alias?: boolean;
+  parent?: CommentParentRef | null;
+  post: CommentPostRef;
+}
+
+export interface CommentPage {
+  items?: LatestComment[];
+  total?: number;
+  page?: number;
+  limit?: number;
+  total_pages?: number;
 }
 
 export interface Profile {
