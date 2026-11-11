@@ -1,4 +1,4 @@
-import { DASHBOARD_PAGE } from './config';
+import { DASHBOARD_PAGE, SETTINGS_PAGE } from './config';
 import { browser } from '#imports';
 
 export async function openDashboard(hash?: string): Promise<void> {
@@ -9,6 +9,15 @@ export async function openDashboard(hash?: string): Promise<void> {
 export function dashboardUrl(hash?: string): string {
   const base = browser.runtime.getURL(DASHBOARD_PAGE);
   return hash ? `${base}#${hash}` : base;
+}
+
+/** 设置是独立页面（也是扩展的选项页），从弹窗和仪表盘都新开一个标签页。 */
+export async function openSettings(): Promise<void> {
+  await browser.tabs.create({ url: settingsUrl() });
+}
+
+export function settingsUrl(): string {
+  return browser.runtime.getURL(SETTINGS_PAGE);
 }
 
 export async function openTab(url: string): Promise<void> {

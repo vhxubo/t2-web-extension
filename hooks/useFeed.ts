@@ -4,7 +4,8 @@ import { sectionKey } from '../lib/section';
 import type { ApiNode, BoardId, Section } from '../lib/types';
 
 interface UseFeedOptions {
-  board: BoardId;
+  /** 内置榜单；节点视图不传，由 section 决定查询。 */
+  board?: BoardId;
   section: Section;
   nodes: ApiNode[];
   /** 节点数据是否可以参与请求（加载中时先不发分区请求）。 */
@@ -15,7 +16,14 @@ interface UseFeedOptions {
 
 export type FeedStatus = 'idle' | 'loading' | 'ready' | 'error';
 
-export function useFeed({ board, section, nodes, nodesReady, limit, enabled = true }: UseFeedOptions) {
+export function useFeed({
+  board,
+  section,
+  nodes,
+  nodesReady,
+  limit,
+  enabled = true,
+}: UseFeedOptions) {
   const [items, setItems] = useState<FeedItem[]>([]);
   const [page, setPage] = useState(0);
   const [total, setTotal] = useState(0);
@@ -30,8 +38,13 @@ export function useFeed({ board, section, nodes, nodesReady, limit, enabled = tr
   const abortRef = useRef<AbortController | null>(null);
   const nodesRef = useRef(nodes);
   nodesRef.current = nodes;
+  // section 对象会随着设置 / 节点数据重新解析而换引用；查询只由 key 决定，
+  // 这样切换主题等无关更新不会把正在看的列表重新请求一遍。
+  const sectionRef = useRef(section);
+  sectionRef.current = section;
 
-  const key = `${board}|${sectionKey(section)}|${limit}`;
+  const sectionId = sectionKey(section);
+  const key = `${board ?? 'section'}|${sectionId}|${limit}`;
 
   const loadFirstPage = useCallback(async () => {
     if (!enabled || !nodesReady) return;
@@ -52,7 +65,7 @@ export function useFeed({ board, section, nodes, nodesReady, limit, enabled = tr
     try {
       const result = await loadFeed({
         board,
-        section,
+        section: sectionRef.current,
         nodes: nodesRef.current,
         page: 1,
         pageSize: limit,
@@ -71,7 +84,7 @@ export function useFeed({ board, section, nodes, nodesReady, limit, enabled = tr
       setError(cause);
       setStatus('error');
     }
-  }, [board, section, limit, enabled, nodesReady]);
+  }, [board, sectionId, limit, enabled, nodesReady]);
 
   useEffect(() => {
     void loadFirstPage();
@@ -94,7 +107,7 @@ export function useFeed({ board, section, nodes, nodesReady, limit, enabled = tr
     try {
       const result = await loadFeed({
         board,
-        section,
+        section: sectionRef.current,
         nodes: nodesRef.current,
         page: page + 1,
         pageSize: limit,
@@ -111,7 +124,7 @@ export function useFeed({ board, section, nodes, nodesReady, limit, enabled = tr
     } finally {
       if (run === generation.current) setLoadingMore(false);
     }
-  }, [board, section, page, totalPages, loadingMore, status, limit]);
+  }, [board, sectionId, page, totalPages, loadingMore, status, limit]);
 
   return {
     items,

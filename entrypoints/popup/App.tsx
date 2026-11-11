@@ -1,67 +1,80 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Avatar } from '@/components/Avatar';
-import { BoardTabs } from '@/components/BoardTabs';
 import { Brand } from '@/components/Brand';
 import { Icon } from '@/components/Icon';
 import { PostList } from '@/components/PostList';
 import { SearchDialog } from '@/components/SearchDialog';
+import { ViewTabs } from '@/components/ViewTabs';
 import { useFeed } from '@/hooks/useFeed';
+import { useNodes } from '@/hooks/useNodes';
 import { useSearchHotkey } from '@/hooks/useSearch';
 import { useSession } from '@/hooks/useSession';
 import { useSettings } from '@/hooks/useSettings';
 import { useTheme } from '@/hooks/useTheme';
 import { useUnreadNotifications } from '@/hooks/useUnreadNotifications';
-import { BOARD_MAP, BOARDS, isBoardId } from '@/lib/boards';
-import { openDashboard } from '@/lib/nav';
-import { storageAvailable } from '@/lib/storage';
-import type { ApiNode, BoardId, Section } from '@/lib/types';
+import { openDashboard, openSettings } from '@/lib/nav';
+import { DEFAULT_SETTINGS, storageAvailable } from '@/lib/storage';
+import type { Section } from '@/lib/types';
+import { POPUP_TAB_LIMIT, popupViewIds, viewDomId } from '@/lib/viewIds';
+import { buildViewEntries, popupEntries } from '@/lib/views';
 
-/** 弹窗只看全站。 */
 const ALL_SITES: Section = { kind: 'all' };
-const NO_NODES: ApiNode[] = [];
 
 /**
- * 方案 C：顶部 Header + 榜单 Tab，中部单行标题列表，底部固定 Dock。
- * 三个 Dock 入口分别是「快捷热榜 / 数据仪表盘 / 设置」，
- * 仪表盘入口上的小红点来自未读通知数。
+ * 方案 C：顶部 Header + 可配置的视图 Tab，中部单行标题列表，底部固定 Dock。
+ * Tab 来自设置里的节点配置（最多 6 个），节点可以是内置榜单、全站、父节点或子节点。
  */
 export default function Popup() {
   const { settings, update } = useSettings();
   const resolvedTheme = useTheme(settings?.theme);
   const { profile, signedIn, loading: sessionLoading, profileLoading } = useSession();
   const unread = useUnreadNotifications(signedIn);
+  const nodeState = useNodes();
 
-  const [board, setBoard] = useState<BoardId>('home');
+  const [activeId, setActiveId] = useState<string | null>(null);
   const [initialized, setInitialized] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const listRef = useRef<HTMLDivElement | null>(null);
+
+  const entries = useMemo(
+    () => buildViewEntries(settings?.views ?? DEFAULT_SETTINGS.views, nodeState.nodes),
+    [settings?.views, nodeState.nodes],
+  );
+  const tabs = useMemo(() => popupEntries(entries), [entries]);
+  const activeEntry = useMemo(
+    () => tabs.find((entry) => entry.id === activeId) ?? tabs[0] ?? null,
+    [tabs, activeId],
+  );
+  const activeView = activeEntry?.view ?? null;
+
+  const needsNodes =
+    activeView?.kind === 'section' && activeView.section.kind !== 'all';
+  const nodePending = needsNodes && nodeState.status === 'loading';
+  const nodeMissing = needsNodes && nodeState.status !== 'loading' && !activeView?.available;
+
+  const feed = useFeed({
+    board: activeView?.kind === 'board' ? activeView.board : undefined,
+    section: activeView?.section ?? ALL_SITES,
+    nodes: nodeState.nodes,
+    nodesReady: !needsNodes || nodeState.status !== 'loading',
+    limit: activeView?.pageSize ?? 50,
+    enabled: initialized && Boolean(activeView) && !nodePending && !nodeMissing,
+  });
 
   const openSearch = useCallback(() => setSearchOpen(true), []);
   const closeSearch = useCallback(() => setSearchOpen(false), []);
   useSearchHotkey(openSearch);
 
-  const boardMeta = BOARD_MAP[board];
-
-  const feed = useFeed({
-    board,
-    section: ALL_SITES,
-    nodes: NO_NODES,
-    nodesReady: true,
-    limit: boardMeta.pageSize,
-    enabled: initialized,
-  });
-
-  // 只在弹窗打开时读取一次默认榜单；切换 Tab 只影响当次浏览，
-  // 不改写设置 —— 默认进入只能在完整页面的设置弹窗里修改。
+  // 只在弹窗打开时读取一次默认视图；之后切换 Tab 只影响当次浏览。
   useEffect(() => {
     if (!settings || initialized) return;
-    // 旧版本存下的榜单若已下线，回落到「首页」。
-    setBoard(isBoardId(settings.board) ? settings.board : 'home');
+    const ids = popupViewIds(settings.views).slice(0, POPUP_TAB_LIMIT);
+    setActiveId(ids.includes(settings.defaultView) ? settings.defaultView : (ids[0] ?? null));
     setInitialized(true);
   }, [settings, initialized]);
 
-  const handleBoard = useCallback((next: BoardId) => {
-    setBoard(next);
+  const handleActive = useCallback((id: string) => {
+    setActiveId(id);
   }, []);
 
   // Header 快捷键：在浅色 / 深色之间直接切换（想恢复跟随系统仍可到设置弹窗里选）。
@@ -69,9 +82,13 @@ export default function Popup() {
     void update({ theme: resolvedTheme === 'dark' ? 'light' : 'dark' });
   }, [resolvedTheme, update]);
 
-  // 弹窗只留一个账号入口：登录、退出、默认值都在完整页面的设置弹窗里。
+  // 弹窗只留一个账号入口：登录、退出、节点配置都在独立的设置页里。
   const goDashboard = useCallback((hash?: string) => {
     void openDashboard(hash).finally(() => window.close());
+  }, []);
+
+  const goSettings = useCallback(() => {
+    void openSettings().finally(() => window.close());
   }, []);
 
   const handleDashboard = useCallback(() => {
@@ -83,6 +100,14 @@ export default function Popup() {
     listRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
 
+  const handleRetry = useCallback(() => {
+    if (nodeMissing) {
+      void nodeState.reload(true);
+      return;
+    }
+    void feed.reload();
+  }, [feed, nodeMissing, nodeState]);
+
   const unreadLabel = unread.count > 0 ? `，${unread.count} 条未读通知` : '';
   const accountLoading = sessionLoading || (signedIn && !profile && profileLoading);
   const themePreference = settings?.theme ?? 'system';
@@ -92,6 +117,14 @@ export default function Popup() {
     themePreference === 'system'
       ? `外观：跟随系统（当前${currentThemeLabel}），点击改为${nextThemeLabel}`
       : `外观：当前${currentThemeLabel}，点击切换为${nextThemeLabel}`;
+
+  const nodeError = nodeMissing
+    ? new Error(
+        nodeState.status === 'error'
+          ? '节点列表加载失败，暂时没法读取这个节点。'
+          : `节点「${activeView?.label ?? ''}」已经不存在，请到节点配置里移除。`,
+      )
+    : null;
 
   return (
     <div className="popup">
@@ -118,6 +151,7 @@ export default function Popup() {
             title="刷新列表"
             aria-label="刷新列表"
             data-spinning={feed.status === 'loading'}
+            disabled={!activeView}
           >
             <Icon name="refresh" size={15} />
           </button>
@@ -134,8 +168,7 @@ export default function Popup() {
           <button
             type="button"
             className="popup__account"
-            onClick={() => goDashboard('settings')}
-            disabled={sessionLoading}
+            onClick={goSettings}
             title={signedIn ? `账号与设置（@${profile?.username ?? '已登录'}）` : '登录与设置'}
             aria-label={signedIn ? '账号与设置' : '登录与设置'}
           >
@@ -159,38 +192,62 @@ export default function Popup() {
         </p>
       )}
 
-      <div className="popup__tabs">
-        <BoardTabs
-          boards={BOARDS}
-          value={board}
-          onChange={(next) => void handleBoard(next)}
-          sectionFiltered={false}
-          shortLabels
-        />
-      </div>
+      {tabs.length > 0 ? (
+        <>
+          <div className="popup__tabs">
+            <ViewTabs
+              tabs={tabs.map((entry) => ({
+                id: entry.id,
+                label: entry.view.shortLabel,
+                title: entry.view.hint,
+              }))}
+              value={activeEntry?.id ?? null}
+              onChange={handleActive}
+              ariaLabel="视图"
+              stretch
+            />
+          </div>
 
-      <section
-        className="popup__feed"
-        id="feed-panel"
-        role="tabpanel"
-        aria-labelledby={`board-tab-${board}`}
-        aria-label={`${boardMeta.label}列表`}
-      >
-        <div className="popup__feed-body" ref={listRef}>
-          <PostList
-            items={feed.items}
-            status={feed.status}
-            error={feed.error}
-            compact
-            showRank={false}
-            titleOnly
-            oneLine
-            sectionFiltered={false}
-            onRetry={() => void feed.reload()}
-            onLogin={() => goDashboard('settings')}
-          />
+          <section
+            className="popup__feed"
+            id="feed-panel"
+            role="tabpanel"
+            aria-labelledby={`view-tab-${viewDomId(activeEntry?.id ?? '')}`}
+            aria-label={`${activeView?.label ?? ''}列表`}
+          >
+            <div className="popup__feed-body" ref={listRef}>
+              <PostList
+                items={nodePending ? [] : feed.items}
+                status={nodeMissing ? 'error' : nodePending ? 'loading' : feed.status}
+                error={nodeError ?? feed.error}
+                compact
+                showRank={false}
+                titleOnly
+                oneLine
+                sectionFiltered={Boolean(activeView?.section.kind !== 'all')}
+                sectionName={activeView?.label}
+                onRetry={handleRetry}
+                onLogin={goSettings}
+              />
+            </div>
+          </section>
+        </>
+      ) : (
+        <div className="popup__empty">
+          <span className="popup__empty-icon" aria-hidden="true">
+            <Icon name="folder" size={20} />
+          </span>
+          <p className="popup__empty-title">还没有弹窗 Tab</p>
+          <p className="popup__empty-desc">到设置里的「节点配置」添加榜单或节点，最多展示 {POPUP_TAB_LIMIT} 个。</p>
+          <button
+            type="button"
+            className="btn btn--primary btn--sm"
+            onClick={goSettings}
+          >
+            打开节点配置
+          </button>
         </div>
-      </section>
+      )}
 
       <nav className="popup__dock" aria-label="弹窗导航">
         <button
@@ -198,10 +255,11 @@ export default function Popup() {
           className="popup__dock-item popup__dock-item--active"
           onClick={handleQuick}
           aria-current="page"
-          title="回到快捷热榜顶部"
+          title="回到当前列表顶部"
+          disabled={tabs.length === 0}
         >
           <Icon name="flame" size={16} />
-          <span>快捷热榜</span>
+          <span>回到顶部</span>
         </button>
 
         <button
@@ -221,7 +279,7 @@ export default function Popup() {
         <button
           type="button"
           className="popup__dock-item"
-          onClick={() => goDashboard('settings')}
+          onClick={goSettings}
           title="打开设置"
         >
           <Icon name="settings" size={16} />
@@ -236,7 +294,7 @@ export default function Popup() {
         compact
         onLogin={() => {
           setSearchOpen(false);
-          goDashboard('settings');
+          goSettings();
         }}
       />
     </div>

@@ -1,20 +1,22 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AccountChip } from '@/components/AccountChip';
-import { BoardCard } from '@/components/BoardCard';
 import { Brand } from '@/components/Brand';
 import { Icon } from '@/components/Icon';
 import { NotificationsDialog } from '@/components/NotificationsDialog';
 import { SearchDialog } from '@/components/SearchDialog';
-import { SettingsDialog } from '@/components/SettingsDialog';
 import { Toast } from '@/components/Toast';
+import { ViewCard } from '@/components/ViewCard';
+import { useNodes } from '@/hooks/useNodes';
 import { useSearchHotkey } from '@/hooks/useSearch';
 import { useSession } from '@/hooks/useSession';
 import { useSettings } from '@/hooks/useSettings';
 import { useTheme } from '@/hooks/useTheme';
 import { useUnreadNotifications } from '@/hooks/useUnreadNotifications';
-import { BOARDS } from '@/lib/boards';
 import { LINKS } from '@/lib/config';
+import { openSettings } from '@/lib/nav';
 import { DEFAULT_SETTINGS, storageAvailable } from '@/lib/storage';
+import { POPUP_TAB_LIMIT } from '@/lib/viewIds';
+import { buildViewEntries, dashboardEntries } from '@/lib/views';
 
 const SHORTCUT_LABEL =
   typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.platform)
@@ -22,7 +24,7 @@ const SHORTCUT_LABEL =
     : 'Ctrl K';
 
 export default function Dashboard() {
-  const { settings, update } = useSettings();
+  const { settings } = useSettings();
   useTheme(settings?.theme);
   const {
     profile,
@@ -30,17 +32,22 @@ export default function Dashboard() {
     loading: sessionLoading,
     profileLoading,
     signOut,
-    reloadProfile,
   } = useSession();
   const unread = useUnreadNotifications(signedIn);
+  const nodeState = useNodes();
 
-  const [settingsOpen, setSettingsOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
 
   const ready = settings !== null;
+
+  const entries = useMemo(
+    () => buildViewEntries(settings?.views ?? DEFAULT_SETTINGS.views, nodeState.nodes),
+    [settings?.views, nodeState.nodes],
+  );
+  const cards = useMemo(() => dashboardEntries(entries), [entries]);
 
   const showToast = useCallback((message: string) => {
     setToast(message);
@@ -52,26 +59,24 @@ export default function Dashboard() {
     return () => window.clearTimeout(timer);
   }, [toast]);
 
-  // #settings / #login / #notifications / #search 用于从弹窗 Dock 直接跳到对应面板。
+  // #notifications / #search 用于从弹窗 Dock 直接跳到对应面板；
+  // 旧链接里的 #settings / #login / #nodes 现在改为打开独立设置页。
   useEffect(() => {
     const openFromHash = () => {
       const hash = window.location.hash.replace('#', '');
       if (hash === 'search') {
         setSearchOpen(true);
         setNotificationsOpen(false);
-        setSettingsOpen(false);
         return;
       }
       if (hash === 'notifications') {
         setNotificationsOpen(true);
-        setSettingsOpen(false);
         setSearchOpen(false);
         return;
       }
-      if (hash === 'settings' || hash === 'login') {
-        setSettingsOpen(true);
-        setNotificationsOpen(false);
-        setSearchOpen(false);
+      if (hash === 'settings' || hash === 'login' || hash === 'nodes') {
+        void openSettings();
+        window.history.replaceState(null, '', window.location.pathname + window.location.search);
       }
     };
     openFromHash();
@@ -85,14 +90,8 @@ export default function Dashboard() {
 
   const handleRefreshAll = useCallback(() => {
     refreshAll();
-    showToast('已刷新全部榜单');
+    showToast('已刷新全部卡片');
   }, [refreshAll, showToast]);
-
-  const handleSignedIn = useCallback(async () => {
-    // 拿到头像 / 昵称，再把带个性化字段的榜单重新拉一遍。
-    await reloadProfile();
-    refreshAll();
-  }, [reloadProfile, refreshAll]);
 
   const handleSignOut = useCallback(async () => {
     await signOut();
@@ -107,9 +106,11 @@ export default function Dashboard() {
     }
   }, []);
 
-  const closeSettings = useCallback(() => {
-    setSettingsOpen(false);
+  const goSettings = useCallback(() => {
+    setNotificationsOpen(false);
+    setSearchOpen(false);
     clearHash();
+    void openSettings();
   }, [clearHash]);
 
   const closeNotifications = useCallback(() => {
@@ -119,7 +120,6 @@ export default function Dashboard() {
 
   const openSearch = useCallback(() => {
     setSearchOpen(true);
-    setSettingsOpen(false);
     setNotificationsOpen(false);
     if (window.location.hash !== '#search') {
       window.history.replaceState(null, '', '#search');
@@ -135,7 +135,6 @@ export default function Dashboard() {
 
   const openNotifications = useCallback(() => {
     setNotificationsOpen(true);
-    setSettingsOpen(false);
     setSearchOpen(false);
     if (window.location.hash !== '#notifications') {
       window.history.replaceState(null, '', '#notifications');
@@ -145,12 +144,14 @@ export default function Dashboard() {
 
   const goLoginFromNotifications = useCallback(() => {
     setNotificationsOpen(false);
-    setSettingsOpen(true);
     setSearchOpen(false);
-    if (window.location.hash !== '#settings') {
-      window.history.replaceState(null, '', '#settings');
-    }
-  }, []);
+    clearHash();
+    void openSettings();
+  }, [clearHash]);
+
+  const reloadNodes = useCallback(() => {
+    void nodeState.reload(true);
+  }, [nodeState]);
 
   return (
     <>
@@ -186,8 +187,8 @@ export default function Dashboard() {
               type="button"
               className="masthead__action"
               onClick={handleRefreshAll}
-              title="刷新全部榜单"
-              aria-label="刷新全部榜单"
+              title="刷新全部卡片"
+              aria-label="刷新全部卡片"
             >
               <Icon name="refresh" size={16} />
             </button>
@@ -195,9 +196,7 @@ export default function Dashboard() {
               type="button"
               className="masthead__action masthead__bell"
               onClick={openNotifications}
-              title={
-                unread.count > 0 ? `通知（${unread.count} 条未读）` : '通知'
-              }
+              title={unread.count > 0 ? `通知（${unread.count} 条未读）` : '通知'}
               aria-label={unread.count > 0 ? `通知，${unread.count} 条未读` : '通知'}
             >
               <Icon name="bell" size={16} />
@@ -207,15 +206,15 @@ export default function Dashboard() {
               signedIn={signedIn}
               loading={sessionLoading || (signedIn && !profile && profileLoading)}
               profile={profile}
-              onLogin={() => setSettingsOpen(true)}
+              onLogin={goSettings}
               onSignOut={() => void handleSignOut()}
             />
             <button
               type="button"
               className="masthead__action"
-              onClick={() => setSettingsOpen(true)}
-              title="设置"
-              aria-label="打开设置"
+              onClick={goSettings}
+              title="设置与节点配置"
+              aria-label="打开设置与节点配置"
             >
               <Icon name="settings" size={16} />
             </button>
@@ -233,17 +232,36 @@ export default function Dashboard() {
         </div>
       )}
 
-      <main className="shell" aria-label="榜单看板">
-        <div className="board-grid">
-          {BOARDS.map((meta) => (
-            <BoardCard
-              key={`${meta.id}:${refreshKey}`}
-              meta={meta}
-              enabled={ready}
-              onLogin={() => setSettingsOpen(true)}
-            />
-          ))}
-        </div>
+      <main className="shell" aria-label="数据看板">
+        {ready && cards.length === 0 ? (
+          <section className="dashboard-empty">
+            <span className="dashboard-empty__icon" aria-hidden="true">
+              <Icon name="folder" size={22} />
+            </span>
+            <h2 className="dashboard-empty__title">仪表盘还是空的</h2>
+            <p className="dashboard-empty__desc">
+              到设置里的「节点配置」勾选要在仪表盘展示的榜单或节点。仪表盘不限数量，弹窗最多 {POPUP_TAB_LIMIT} 个 Tab。
+            </p>
+            <button type="button" className="btn btn--primary" onClick={goSettings}>
+              打开节点配置
+            </button>
+          </section>
+        ) : (
+          <div className="board-grid">
+            {cards.map((entry, index) => (
+              <ViewCard
+                key={`${entry.id}:${refreshKey}`}
+                view={entry.view}
+                nodes={nodeState.nodes}
+                nodesStatus={nodeState.status}
+                enabled={ready}
+                index={index}
+                onLogin={goSettings}
+                onReloadNodes={reloadNodes}
+              />
+            ))}
+          </div>
+        )}
       </main>
 
       <NotificationsDialog
@@ -262,23 +280,9 @@ export default function Dashboard() {
         signedIn={signedIn}
         onLogin={() => {
           setSearchOpen(false);
-          setSettingsOpen(true);
-          if (window.location.hash !== '#settings') {
-            window.history.replaceState(null, '', '#settings');
-          }
+          clearHash();
+          void openSettings();
         }}
-      />
-
-      <SettingsDialog
-        open={settingsOpen}
-        onClose={closeSettings}
-        settings={settings ?? DEFAULT_SETTINGS}
-        signedIn={signedIn}
-        profile={profile}
-        onUpdateSettings={update}
-        onSignedIn={handleSignedIn}
-        onSignOut={() => void handleSignOut()}
-        onToast={showToast}
       />
 
       <Toast message={toast} />

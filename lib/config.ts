@@ -24,6 +24,7 @@ export const OAUTH_CONFIGURED = OAUTH_CLIENT_ID.trim().length > 0;
 export const REQUESTED_SCOPE = 'read profile read:me';
 
 export const DASHBOARD_PAGE = '/dashboard.html';
+export const SETTINGS_PAGE = '/options.html';
 
 /** 作者署名：manifest、package.json 与「关于」面板共用同一份信息。 */
 export const AUTHOR = {

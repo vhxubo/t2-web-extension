@@ -26,14 +26,30 @@ export type Section =
   | { kind: 'parent'; slug: string }
   | { kind: 'node'; slug: string };
 
+/**
+ * 一个可配置视图（弹窗 Tab / 仪表盘卡片）的展示偏好。
+ * 顺序由数组顺序决定；两个界面分别控制显隐，所以「都为 false」就是完全隐藏。
+ */
+export interface ViewPreference {
+  /** 见 lib/viewIds.ts：board:<id> / section:all / section:p:<slug> / section:n:<slug>。 */
+  id: string;
+  /** 是否出现在弹窗 Tab 里（最多 6 个）。 */
+  popup: boolean;
+  /** 是否出现在仪表盘卡片里（不限数量）。 */
+  dashboard: boolean;
+}
+
 export interface ApiNode {
   id: string;
   slug: string;
   name: string;
+  description?: string | null;
   parent_id?: string | null;
   parent_slug?: string | null;
   post_count?: number;
   sort_order?: number;
+  /** 接口文档用单数 dimension，早期代码用复数；两个都兼容。 */
+  dimension?: string | null;
   dimensions?: string | null;
   require_login?: boolean;
   children?: ApiNode[];

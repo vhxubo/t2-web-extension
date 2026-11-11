@@ -21,7 +21,12 @@ export type IconName =
   | 'sun'
   | 'moon'
   | 'folder'
-  | 'bookmark';
+  | 'bookmark'
+  | 'plus'
+  | 'grip'
+  | 'trash'
+  | 'up'
+  | 'down';
 
 const PATHS: Record<IconName, ReactNode> = {
   refresh: (
@@ -148,6 +153,43 @@ const PATHS: Record<IconName, ReactNode> = {
   bookmark: (
     <>
       <path d="M7 4.5h10a1 1 0 0 1 1 1V20l-6-4-6 4V5.5a1 1 0 0 1 1-1Z" />
+    </>
+  ),
+  plus: (
+    <>
+      <path d="M12 5v14" />
+      <path d="M5 12h14" />
+    </>
+  ),
+  grip: (
+    <>
+      <circle cx="9" cy="7" r="1.2" fill="currentColor" stroke="none" />
+      <circle cx="15" cy="7" r="1.2" fill="currentColor" stroke="none" />
+      <circle cx="9" cy="12" r="1.2" fill="currentColor" stroke="none" />
+      <circle cx="15" cy="12" r="1.2" fill="currentColor" stroke="none" />
+      <circle cx="9" cy="17" r="1.2" fill="currentColor" stroke="none" />
+      <circle cx="15" cy="17" r="1.2" fill="currentColor" stroke="none" />
+    </>
+  ),
+  trash: (
+    <>
+      <path d="M4.5 7h15" />
+      <path d="M9.5 7V5.2A1.2 1.2 0 0 1 10.7 4h2.6a1.2 1.2 0 0 1 1.2 1.2V7" />
+      <path d="M6.5 7l.8 12a1.5 1.5 0 0 0 1.5 1.4h6.4a1.5 1.5 0 0 0 1.5-1.4l.8-12" />
+      <path d="M10.2 11v5.5" />
+      <path d="M13.8 11v5.5" />
+    </>
+  ),
+  up: (
+    <>
+      <path d="M12 19V5" />
+      <path d="m6 11 6-6 6 6" />
+    </>
+  ),
+  down: (
+    <>
+      <path d="M12 5v14" />
+      <path d="m6 13 6 6 6-6" />
     </>
   ),
 };

@@ -2,9 +2,11 @@ import { useCallback, useEffect, useState } from 'react';
 import { loadNodes } from '../lib/nodes';
 import type { ApiNode } from '../lib/types';
 
+export type NodesStatus = 'loading' | 'ready' | 'error';
+
 export function useNodes() {
   const [nodes, setNodes] = useState<ApiNode[]>([]);
-  const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
+  const [status, setStatus] = useState<NodesStatus>('loading');
   const [error, setError] = useState<unknown>(null);
 
   const reload = useCallback(async (force = false) => {

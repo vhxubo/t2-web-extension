@@ -142,13 +142,13 @@ body {
   padding: 0 12px 6px;
 }
 
-.popup .board-tabs {
+.popup .view-tabs {
   flex-wrap: nowrap;
   gap: 3px;
 }
 
-.popup .board-tab {
-  padding: 6px;
+.popup .view-tab {
+  padding: 6px 4px;
   border-radius: 999px;
   color: var(--ink-3);
   font-size: 12px;
@@ -158,25 +158,21 @@ body {
   transition: background 0.16s var(--ease), color 0.16s var(--ease);
 }
 
-.popup .board-tab:hover {
+.popup .view-tab:hover {
   background: var(--surface-2);
   color: var(--ink);
 }
 
-.popup .board-tab--active,
-.popup .board-tab--active:hover {
+.popup .view-tab--active,
+.popup .view-tab--active:hover {
   background: var(--leaf-wash);
   color: var(--leaf);
   font-weight: 600;
 }
 
 /* 选中态用柔和的药丸底色，不再画下划线。 */
-.popup .board-tab--active::after {
+.popup .view-tab--active::after {
   display: none;
-}
-
-.popup .board-tab__tag {
-  color: var(--leaf-3);
 }
 
 /* ---------- 列表 ---------- */
@@ -354,6 +350,47 @@ body {
 
 .popup .banner__title {
   font-size: 12.5px;
+}
+
+/* ---------- 空配置 ---------- */
+
+.popup__empty {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 18px 28px;
+  text-align: center;
+}
+
+.popup__empty-icon {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  margin-bottom: 4px;
+  border-radius: 12px;
+  background: var(--leaf-wash);
+  color: var(--leaf);
+}
+
+.popup__empty-title {
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.popup__empty-desc {
+  max-width: 26ch;
+  color: var(--ink-3);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.popup__empty .btn {
+  margin-top: 8px;
 }
 
 /* ---------- 底部固定 Dock ---------- */

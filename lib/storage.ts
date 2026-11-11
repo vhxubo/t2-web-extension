@@ -1,6 +1,12 @@
 import { browser, storage } from '#imports';
 import { isBoardId } from './boards';
-import type { ApiNode, BoardId, Profile } from './types';
+import {
+  DEFAULT_DEFAULT_VIEW,
+  boardViewId,
+  createDefaultViews,
+  normalizeViewPreferences,
+} from './viewIds';
+import type { ApiNode, Profile, ViewPreference } from './types';
 
 export interface TokenSet {
   accessToken: string;
@@ -16,12 +22,15 @@ export type ThemePreference = 'light' | 'dark' | 'system';
 
 export interface Settings {
   /**
-   * 弹窗默认进入的榜单。只有完整页面的设置弹窗能改；
-   * 在弹窗里切换榜单只影响当次浏览，不会写回这里。
+   * 弹窗默认进入的视图 id（见 lib/viewIds.ts）。
+   * 只决定打开弹窗时先显示哪一个；切换 Tab 不会写回这里。
    */
-  board: BoardId;
-  /** 默认展示的分区，见 lib/section.ts 的 key 规则。 */
-  section: string;
+  defaultView: string;
+  /**
+   * 可配置视图（榜单 / 节点）的顺序与展示位置。
+   * 顺序即弹窗 Tab 和仪表盘卡片的顺序；popup 最多 6 个，dashboard 不限。
+   */
+  views: ViewPreference[];
   /** 外观偏好，保存在 local:t2:settings，所有页面共用。 */
   theme: ThemePreference;
 }
@@ -40,6 +49,10 @@ export interface PendingAuth {
 export interface NodesCache {
   fetchedAt: number;
   nodes: ApiNode[];
+  /** 节点树结构版本；旧缓存没有子节点，需要重新拉取。 */
+  version?: number;
+  /** 是否有父节点的子节点没拉成功；这样的缓存不当作新鲜数据。 */
+  partial?: boolean;
 }
 
 /**
@@ -54,8 +67,8 @@ export interface ProfileCache {
 }
 
 export const DEFAULT_SETTINGS: Settings = {
-  board: 'home',
-  section: 'all',
+  defaultView: DEFAULT_DEFAULT_VIEW,
+  views: createDefaultViews(),
   theme: 'system',
 };
 
@@ -152,14 +165,34 @@ export const profileCacheItem = definePersistentItem<ProfileCache | null>(
   null,
 );
 
-/** 把存储里的值收敛成可用的设置：旧版本字段、已下线榜单都回落到默认值。 */
-export function normalizeSettings(stored: Partial<Settings> | null | undefined): Settings {
+/** 旧版本（0.2.x）把默认榜单存成 board，把分区存成 section。 */
+interface StoredSettings extends Partial<Settings> {
+  board?: unknown;
+  section?: unknown;
+}
+
+/** 把存储里的值收敛成可用的设置：旧版本字段、已下线视图都回落到合理值。 */
+export function normalizeSettings(stored: StoredSettings | null | undefined): Settings {
+  const views = normalizeViewPreferences(stored?.views);
+  const popupIds = views.filter((view) => view.popup).map((view) => view.id);
+
+  const legacyBoard =
+    typeof stored?.board === 'string' && isBoardId(stored.board)
+      ? boardViewId(stored.board)
+      : null;
+  const storedDefault =
+    typeof stored?.defaultView === 'string' ? stored.defaultView : null;
+
+  // 默认视图必须是一个「会出现在弹窗里」的视图，否则打开弹窗时无 Tab 可选。
+  const defaultView =
+    (storedDefault && popupIds.includes(storedDefault) ? storedDefault : null) ??
+    (legacyBoard && popupIds.includes(legacyBoard) ? legacyBoard : null) ??
+    popupIds[0] ??
+    '';
+
   return {
-    board:
-      typeof stored?.board === 'string' && isBoardId(stored.board)
-        ? stored.board
-        : DEFAULT_SETTINGS.board,
-    section: typeof stored?.section === 'string' ? stored.section : DEFAULT_SETTINGS.section,
+    defaultView,
+    views,
     theme: isThemePreference(stored?.theme) ? stored.theme : DEFAULT_SETTINGS.theme,
   };
 }

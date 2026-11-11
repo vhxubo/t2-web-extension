@@ -284,33 +284,70 @@ textarea {
   display: flex;
   flex: 1 1 auto;
   flex-direction: column;
-  height: 0;
   width: 100%;
   max-width: 1680px;
   min-height: 0;
   margin: 0 auto;
   padding: 16px 24px 20px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .board-grid {
   display: grid;
-  flex: 1 1 auto;
-  /* 五列：前三列各一张整高看板，第四列由「新发表 / 社区讨论」、第五列由「生活 / 工作」上下分割。 */
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  grid-template-rows: repeat(2, minmax(0, 1fr));
+  /* 卡片按可用宽度自动铺列，数量不设上限；超出视口时整个主区域滚动。 */
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 16px;
-  height: 0;
-  min-height: 0;
+  align-content: start;
+}
+
+/* ---------- 空仪表盘 ---------- */
+
+.dashboard-empty {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 48px 24px;
+  text-align: center;
+}
+
+.dashboard-empty__icon {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  margin-bottom: 4px;
+  border-radius: 14px;
+  background: var(--dash-accent-soft);
+  color: var(--dash-accent);
+}
+
+.dashboard-empty__title {
+  color: var(--dash-ink);
+  font-size: 19px;
+  font-weight: 600;
+}
+
+.dashboard-empty__desc {
+  max-width: 42ch;
+  color: var(--dash-muted);
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.dashboard-empty .btn {
+  margin-top: 8px;
 }
 
 /* ---------- 看板卡片 ---------- */
 
 .board-card {
   display: grid;
-  /* 默认纵向占满两行栅格；第四、五列的分割卡片只占其中一行。 */
-  grid-row: span 2;
   grid-template-rows: auto minmax(0, 1fr) auto;
-  height: 100%;
+  height: clamp(360px, 52vh, 540px);
   min-width: 0;
   min-height: 0;
   border: 1px solid var(--dash-line);
@@ -322,55 +359,13 @@ textarea {
   transition: border-color 0.18s var(--ease), box-shadow 0.18s var(--ease);
 }
 
-/* 第四列：新发表在上、社区讨论在下。 */
-.board-card[data-board='latest'] {
-  grid-column: 4;
-  grid-row: 1;
-}
-
-.board-card[data-board='community'] {
-  grid-column: 4;
-  grid-row: 2;
-}
-
-/* 第五列：生活在上、工作在下，各占半高。 */
-.board-card[data-board='life'] {
-  grid-column: 5;
-  grid-row: 1;
-}
-
-.board-card[data-board='work'] {
-  grid-column: 5;
-  grid-row: 2;
-}
-
 .board-card:hover {
   border-color: color-mix(in srgb, var(--dash-accent) 16%, var(--dash-line));
   box-shadow: var(--dash-shadow-hover);
 }
 
-.board-card:nth-child(2) {
-  animation-delay: 0.04s;
-}
-
-.board-card:nth-child(3) {
-  animation-delay: 0.08s;
-}
-
-.board-card:nth-child(4) {
-  animation-delay: 0.12s;
-}
-
-.board-card:nth-child(5) {
-  animation-delay: 0.16s;
-}
-
-.board-card:nth-child(6) {
-  animation-delay: 0.2s;
-}
-
-.board-card:nth-child(7) {
-  animation-delay: 0.24s;
+.board-card--missing {
+  border-style: dashed;
 }
 
 @keyframes t2-card-in {
@@ -415,6 +410,17 @@ textarea {
   line-height: 1.35;
   letter-spacing: -0.01em;
   color: var(--dash-ink);
+}
+
+.board-card__tag {
+  flex: none;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--dash-muted);
+  font-size: 9.5px;
+  font-weight: 500;
+  line-height: 1.7;
 }
 
 .board-card__refresh {

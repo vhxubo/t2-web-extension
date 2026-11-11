@@ -17,7 +17,8 @@ export interface FeedPage {
 }
 
 export interface LoadFeedOptions {
-  board: BoardId;
+  /** 内置榜单；为空时按 `section` 直接查 `/v1/topics`（节点视图）。 */
+  board?: BoardId;
   section: Section;
   nodes: ApiNode[];
   page: number;
@@ -38,7 +39,15 @@ export async function loadFeed(options: LoadFeedOptions): Promise<FeedPage> {
   const isFiltered = section.kind !== 'all';
   let data: TopicPage;
 
-  if (board === 'home') {
+  if (!board) {
+    // 节点视图：和站点节点页一致，按发布时间排序；父节点走 parent_slug，
+    // 子节点走 node_id，两者都由 sectionQuery 负责。
+    data = await apiGet<TopicPage>('/v1/topics', {
+      auth: true,
+      query: { page, limit: pageSize, ...filter },
+      signal,
+    });
+  } else if (board === 'home') {
     // 首页 = 站点首页 feed：全站（parent_slug=All）按价值排序。
     // `page` / `limit` 必填，limit 取榜单配置的 50 条。
     data = await apiGet<TopicPage>('/v1/topics', {
