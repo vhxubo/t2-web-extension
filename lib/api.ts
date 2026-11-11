@@ -1,5 +1,10 @@
 import { API_BASE } from './config';
 import { getAccessToken, refreshTokens } from './auth';
+import {
+  RateLimitError,
+  noteRateLimit,
+  withSlot,
+} from './rate-limit';
 import { tokensItem } from './storage';
 import type { Envelope, Profile } from './types';
 
@@ -55,24 +60,44 @@ async function send(
   init: SendInit = {},
 ): Promise<Response> {
   try {
-    return await fetch(url, {
-      method: init.method ?? 'GET',
-      signal,
-      credentials: 'omit',
-      headers: {
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        ...init.headers,
-      },
-      body: init.body,
-    });
+    // 所有普通请求都走全局队列：并发上限 + 启动间隔 + 429 冷却。
+    return await withSlot(signal, () =>
+      fetch(url, {
+        method: init.method ?? 'GET',
+        signal,
+        credentials: 'omit',
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          ...init.headers,
+        },
+        body: init.body,
+      }),
+    );
   } catch (error) {
+    if (error instanceof RateLimitError) {
+      // 冷却中不把请求发出去，但仍然按 429 报给上层，界面可以显示等待秒数。
+      throw new ApiError('请求太频繁，请稍后再试', 429, 'rate_limited', {
+        retry_after: Math.ceil(error.retryAfterMs / 1000),
+      });
+    }
     if (error instanceof DOMException && error.name === 'AbortError') throw error;
     throw new ApiError('连不上服务器，请检查网络后重试', 0, 'network');
   }
 }
 
+/** 429 的等待秒数：优先信封里的 `retry_after`，其次 HTTP 头。 */
+function retryAfterSeconds(
+  response: Response,
+  payload: Envelope<unknown> | null,
+): number | null {
+  const fromBody = payload?.retry_after;
+  if (typeof fromBody === 'number' && fromBody > 0) return fromBody;
+  const header = Number(response.headers.get('retry-after'));
+  return Number.isFinite(header) && header > 0 ? header : null;
+}
+
 /** 解信封并转成 ApiError；GET / POST 共用。 */
-async function readEnvelope<T>(response: Response): Promise<T> {
+async function readEnvelope<T>(response: Response, gateRateLimit = true): Promise<T> {
   let payload: Envelope<T> | null = null;
   try {
     payload = (await response.json()) as Envelope<T>;
@@ -80,7 +105,19 @@ async function readEnvelope<T>(response: Response): Promise<T> {
     payload = null;
   }
 
+  const retryAfter = retryAfterSeconds(response, payload);
+  // 撞到限流就让整个扩展安静一会儿，别让排队中的请求继续把 429 攒成一片。
+  // `/v1/search` 是独立配额桶，它的 429 不应该拖住其它接口，所以由调用方关掉。
+  if (gateRateLimit && (response.status === 429 || payload?.c === 429)) {
+    noteRateLimit(retryAfter);
+  }
+
   if (!payload || typeof payload.c !== 'number') {
+    if (response.status === 429) {
+      throw new ApiError('请求太频繁，请稍后再试', 429, 'rate_limited', {
+        retry_after: retryAfter ?? undefined,
+      });
+    }
     throw new ApiError(`服务器返回了无法解析的数据（HTTP ${response.status}）`, response.status);
   }
 
@@ -116,7 +153,8 @@ export async function apiGet<T>(path: string, options: RequestOptions = {}): Pro
   const url = buildUrl(path, query);
   const token = auth ? await getAccessToken() : null;
   const response = await withAuthRetry((next) => send(url, next, signal), token);
-  return readEnvelope<T>(response);
+  // 搜索单独限流，不能把它的 429 变成全扩展的冷却。
+  return readEnvelope<T>(response, !path.startsWith('/v1/search'));
 }
 
 /**

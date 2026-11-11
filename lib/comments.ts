@@ -28,8 +28,9 @@ export async function loadLatestComments(
 ): Promise<CommentPage> {
   const { page = 1, limit = 20, signal } = options;
   return apiGet<CommentPage>('/v1/comments/latest', {
-    // 只读端点；登录时走登录配额，匿名也能看。
-    auth: true,
+    // 公开只读端点：匿名读取（60 次/分）比登录配额（600 次/小时）宽松，
+    // 评论列表也没有需要令牌的个性化字段。
+    auth: false,
     // page 默认 1，且该端点实际只取最近的 N 条；只有显式翻页时才带上。
     query: { ...(page > 1 ? { page } : {}), limit },
     signal,

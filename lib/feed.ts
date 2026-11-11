@@ -94,11 +94,13 @@ export async function loadFeed(options: LoadFeedOptions): Promise<FeedPage> {
   const isFiltered = section.kind !== 'all';
   let data: TopicPage;
 
+  // 公开榜单一律匿名读取：令牌桶只有 600 次/小时（≈10 次/分），匿名是 60 次/分；
+  // 列表本身没有需要令牌的个性化字段（收藏态只在详情页用），不必占用登录配额。
   if (!board) {
     // 节点视图：和站点节点页一致，按发布时间排序；父节点走 parent_slug，
     // 子节点走 node_id，两者都由 sectionQuery 负责。
     data = await apiGet<TopicPage>('/v1/topics', {
-      auth: true,
+      auth: false,
       query: { page, limit: pageSize, ...filter },
       signal,
     });
@@ -106,7 +108,7 @@ export async function loadFeed(options: LoadFeedOptions): Promise<FeedPage> {
     // 首页 = 站点首页 feed：全站（parent_slug=All）按价值排序。
     // `page` / `limit` 必填，limit 取榜单配置的 50 条。
     data = await apiGet<TopicPage>('/v1/topics', {
-      auth: true,
+      auth: false,
       query: {
         page,
         limit: pageSize,
@@ -119,7 +121,7 @@ export async function loadFeed(options: LoadFeedOptions): Promise<FeedPage> {
     // hot 的 page 默认 1、limit 默认 50、period 默认 24h：
     // 只有翻页和 7d 这类非默认值才显式传。
     data = await apiGet<TopicPage>('/v1/topics/hot', {
-      auth: true,
+      auth: false,
       query: {
         ...(page > 1 ? { page } : {}),
         ...(board === 'hot7d' ? { period: '7d' } : {}),
@@ -129,14 +131,14 @@ export async function loadFeed(options: LoadFeedOptions): Promise<FeedPage> {
   } else if (board === 'latest' && !isFiltered) {
     // 新发表 = 站点最新帖子流：page 默认 1、limit 默认 50，只有第 2 页起才带 page。
     data = await apiGet<TopicPage>('/v1/topics/latest', {
-      auth: true,
+      auth: false,
       query: { ...(page > 1 ? { page } : {}) },
       signal,
     });
   } else {
     const { dimension, nodeId } = BOARD_MAP[board];
     data = await apiGet<TopicPage>('/v1/topics', {
-      auth: true,
+      auth: false,
       query: {
         // 这个端点 page / limit 必填；sort 默认 latest，不再显式传。
         page,

@@ -5,6 +5,11 @@ import type { ApiNode } from './types';
 const NODES_TTL = 10 * 60 * 1000;
 const NODES_CACHE_VERSION = 2;
 
+/** 进程内缓存：StrictMode 双挂载、重复 `useNodes` 不必重读 storage。 */
+let memo: { at: number; nodes: ApiNode[] } | null = null;
+/** 单飞：同一个页面里的并发调用共享同一次「顶层 + 子节点」请求。 */
+let inflight: Promise<ApiNode[]> | null = null;
+
 /**
  * 节点列表变化极少，缓存 10 分钟；请求失败时退回旧缓存。
  *
@@ -12,20 +17,33 @@ const NODES_CACHE_VERSION = 2;
  * 这里把所有顶层节点的子节点一并拉齐，`parent_slug` 过滤与「添加节点」面板
  * 都依赖这棵完整的两层树。
  */
-export async function loadNodes(force = false): Promise<ApiNode[]> {
+export function loadNodes(force = false): Promise<ApiNode[]> {
+  if (!force && memo && Date.now() - memo.at < NODES_TTL) {
+    return Promise.resolve(memo.nodes);
+  }
+  inflight ??= doLoadNodes(force).finally(() => {
+    inflight = null;
+  });
+  return inflight;
+}
+
+async function doLoadNodes(force: boolean): Promise<ApiNode[]> {
   const cache = await nodesCacheItem.getValue();
   const fresh =
     cache &&
     cache.version === NODES_CACHE_VERSION &&
     !cache.partial &&
     Date.now() - cache.fetchedAt < NODES_TTL;
-  if (!force && fresh && cache.nodes.length > 0) return cache.nodes;
+  if (!force && fresh && cache.nodes.length > 0) {
+    memo = { at: Date.now(), nodes: cache.nodes };
+    return cache.nodes;
+  }
 
   try {
     const raw = await apiGet<ApiNode[]>('/v1/nodes', { auth: false });
     const roots = Array.isArray(raw) ? raw.map(normalizeNode) : [];
 
-    // 顶级节点通常不多，但仍按 4 个并发读取子节点，避免一次性打满匿名配额。
+    // 顶级节点通常不多，但仍按 4 个并发读取子节点；全局队列会再统一限速。
     const children = await mapWithConcurrency(roots, 4, (node) =>
       apiGet<ApiNode[]>('/v1/nodes', { auth: false, query: { parent: node.slug } }),
     );
@@ -51,9 +69,14 @@ export async function loadNodes(force = false): Promise<ApiNode[]> {
       version: NODES_CACHE_VERSION,
       partial,
     });
+    // 部分子节点没拉到时下次还要重试，先不放进内存缓存。
+    if (!partial) memo = { at: Date.now(), nodes };
     return nodes;
   } catch (error) {
-    if (cache?.nodes.length) return cache.nodes;
+    if (cache?.nodes.length) {
+      memo = { at: Date.now(), nodes: cache.nodes };
+      return cache.nodes;
+    }
     throw error;
   }
 }

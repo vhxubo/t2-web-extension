@@ -305,6 +305,8 @@ https://1e3dfcf6f6cd76246e686cabdf2e53df06ab002f.extensions.allizom.org/cb
 - 表情映射来自 `GET /v1/emojis`（匿名请求），缓存在 `local:t2:emojis` 7 天；接口失败时退回旧缓存，没有缓存则保留 `:code:` 原文，不影响列表加载。
 - 请求参数优先用文档默认值：有默认值的参数不传（热议与新发表的 `page`、`limit`，24h 的 `period`，工作/生活的 `sort`，搜索的 `page`、`limit`）；`/v1/topics` 的 `page`、`limit` 是必填；首页另外显式传 `parent_slug=All&sort=value`，社区讨论显式传 `node_id`。
 - 当前用户资料（含头像）缓存在 `local:t2:profile`：精简快照没带头像时直接复用缓存里的头像，省掉一次公开资料请求；刷新失败时也还能显示上次的头像与昵称。退出登录会清掉缓存。
+- 所有开放 API 请求统一经 [`lib/rate-limit.ts`](lib/rate-limit.ts) 排队：最多 4 个并发、相邻请求至少间隔 120ms；遇到 `429` 进入冷却（优先按 `retry_after`），冷却期内不再发请求。
+- 公开榜单与最新评论改为匿名读取：令牌桶只有 600 次/小时（≈10 次/分），匿名是 60 次/分，列表也不需要令牌个性化的字段。
 - 遇到 `429 rate_limited` 会展示 `retry_after`；`401` 先刷新令牌再重试一次；`403 insufficient_scope` 会引导重新授权。
 - 写操作：通知已读（单条 `/api/notifications/mark-as-read`、全部 `POST /v1/me/notifications/read`）与帖子收藏（`POST /v1/topics/:short_id/favorite` / `DELETE` 同一路径）；发帖 / 评论等其它写操作仍必须经应用自己的服务端，扩展不提供。
 
