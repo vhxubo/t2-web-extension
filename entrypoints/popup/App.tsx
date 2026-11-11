@@ -2,17 +2,21 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Avatar } from '@/components/Avatar';
 import { Brand } from '@/components/Brand';
 import { Icon } from '@/components/Icon';
+import { NotificationList } from '@/components/NotificationList';
 import { PostList } from '@/components/PostList';
 import { SearchDialog } from '@/components/SearchDialog';
 import { ViewTabs } from '@/components/ViewTabs';
 import { useFeed } from '@/hooks/useFeed';
 import { useEmojiMap } from '@/hooks/useEmojis';
 import { useNodes } from '@/hooks/useNodes';
+import { useNotifications } from '@/hooks/useNotifications';
 import { useSearchHotkey } from '@/hooks/useSearch';
 import { useSession } from '@/hooks/useSession';
 import { useSettings } from '@/hooks/useSettings';
 import { useTheme } from '@/hooks/useTheme';
 import { useUnreadNotifications } from '@/hooks/useUnreadNotifications';
+import { LINKS } from '@/lib/config';
+import { describeError } from '@/lib/errors';
 import { openDashboard, openSettings } from '@/lib/nav';
 import { DEFAULT_SETTINGS, storageAvailable } from '@/lib/storage';
 import type { Section } from '@/lib/types';
@@ -20,6 +24,22 @@ import { POPUP_TAB_LIMIT, popupViewIds, viewDomId } from '@/lib/viewIds';
 import { buildViewEntries, popupEntries } from '@/lib/views';
 
 const ALL_SITES: Section = { kind: 'all' };
+
+function NotificationSkeleton() {
+  return (
+    <div className="notice-skeleton notice-skeleton--popup" aria-hidden="true">
+      {Array.from({ length: 3 }).map((_, index) => (
+        <div className="notice-skeleton__row" key={index}>
+          <span className="skeleton notice-skeleton__avatar" />
+          <div className="notice-skeleton__body">
+            <span className="skeleton skeleton--line" />
+            <span className="skeleton skeleton--line skeleton--short" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 /**
  * 方案 C：顶部 Header + 可配置的视图 Tab，中部单行标题列表，底部固定 Dock。
@@ -35,7 +55,16 @@ export default function Popup() {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [initialized, setInitialized] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
   const listRef = useRef<HTMLDivElement | null>(null);
+  const noticesRef = useRef<HTMLDivElement | null>(null);
+
+  const notifications = useNotifications({
+    enabled: notificationsOpen,
+    signedIn,
+    sessionLoading,
+    limit: 20,
+  });
 
   const entries = useMemo(
     () => buildViewEntries(settings?.views ?? DEFAULT_SETTINGS.views, nodeState.nodes),
@@ -63,9 +92,32 @@ export default function Popup() {
     enabled: initialized && Boolean(activeView) && !nodePending && !nodeMissing,
   });
 
-  const openSearch = useCallback(() => setSearchOpen(true), []);
+  const openSearch = useCallback(() => {
+    setNotificationsOpen(false);
+    setSearchOpen(true);
+  }, []);
   const closeSearch = useCallback(() => setSearchOpen(false), []);
   useSearchHotkey(openSearch);
+
+  // 通知预览是独立于榜单 Tab 的层级：打开时盖住 Tab + 列表，再点铃铛或 Esc 返回。
+  const toggleNotifications = useCallback(() => {
+    if (notificationsOpen) {
+      setNotificationsOpen(false);
+      return;
+    }
+    setSearchOpen(false);
+    setNotificationsOpen(true);
+    void unread.refresh();
+  }, [notificationsOpen, unread.refresh]);
+
+  useEffect(() => {
+    if (!notificationsOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setNotificationsOpen(false);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [notificationsOpen]);
 
   // 只在弹窗打开时读取一次默认视图；之后切换 Tab 只影响当次浏览。
   useEffect(() => {
@@ -99,8 +151,18 @@ export default function Popup() {
   }, [goDashboard, unread.count]);
 
   const handleQuick = useCallback(() => {
-    listRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
-  }, []);
+    const target = notificationsOpen ? noticesRef.current : listRef.current;
+    target?.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [notificationsOpen]);
+
+  const handleRefresh = useCallback(() => {
+    if (notificationsOpen) {
+      void notifications.reload();
+      void unread.refresh();
+      return;
+    }
+    void feed.reload();
+  }, [feed.reload, notifications.reload, notificationsOpen, unread.refresh]);
 
   const handleRetry = useCallback(() => {
     if (nodeMissing) {
@@ -128,6 +190,9 @@ export default function Popup() {
       )
     : null;
 
+  const notificationsError =
+    notifications.status === 'error' ? describeError(notifications.error) : null;
+
   return (
     <div className="popup">
       <h1 className="sr-only">T2 Web Extension</h1>
@@ -135,6 +200,35 @@ export default function Popup() {
       <header className="popup__head">
         <Brand compact />
         <div className="popup__head-actions">
+          <button
+            type="button"
+            className="popup__icon-btn popup__notice-btn"
+            onClick={toggleNotifications}
+            title={
+              notificationsOpen
+                ? '关闭通知预览，返回榜单'
+                : unread.count > 0
+                  ? `通知预览（${unread.count} 条未读）`
+                  : '通知预览'
+            }
+            aria-label={
+              notificationsOpen
+                ? '关闭通知预览'
+                : unread.count > 0
+                  ? `通知预览，${unread.count} 条未读`
+                  : '通知预览'
+            }
+            aria-expanded={notificationsOpen}
+            aria-controls="notifications-preview"
+            data-active={notificationsOpen}
+          >
+            <Icon name="bell" size={16} />
+            {unread.count > 0 && (
+              <span className="popup__notice-badge" aria-hidden="true">
+                {unread.count > 99 ? '99+' : unread.count}
+              </span>
+            )}
+          </button>
           <button
             type="button"
             className="popup__icon-btn"
@@ -149,11 +243,15 @@ export default function Popup() {
           <button
             type="button"
             className="popup__icon-btn"
-            onClick={() => void feed.reload()}
-            title="刷新列表"
-            aria-label="刷新列表"
-            data-spinning={feed.status === 'loading'}
-            disabled={!activeView}
+            onClick={handleRefresh}
+            title={notificationsOpen ? '刷新通知' : '刷新列表'}
+            aria-label={notificationsOpen ? '刷新通知' : '刷新列表'}
+            data-spinning={
+              notificationsOpen
+                ? notifications.status === 'loading'
+                : feed.status === 'loading'
+            }
+            disabled={!notificationsOpen && !activeView}
           >
             <Icon name="refresh" size={15} />
           </button>
@@ -194,7 +292,81 @@ export default function Popup() {
         </p>
       )}
 
-      {tabs.length > 0 ? (
+      {notificationsOpen ? (
+        <section className="popup__notices" id="notifications-preview" aria-label="通知预览">
+          <div className="popup__notices-head">
+            <span className="popup__notices-title">
+              <Icon name="bell" size={13} />
+              通知预览
+            </span>
+            <span className="popup__notices-count">
+              {unread.count > 0 ? `${unread.count} 条未读` : '最近通知'}
+            </span>
+            <a
+              className="popup__notices-link"
+              href={LINKS.notifications}
+              target="_blank"
+              rel="noreferrer"
+            >
+              在站点查看
+              <Icon name="external" size={11} />
+            </a>
+          </div>
+
+          <div className="popup__notices-body" ref={noticesRef}>
+            {sessionLoading ? (
+              <NotificationSkeleton />
+            ) : !signedIn ? (
+              <div className="empty notifications-empty">
+                <span className="empty__title">还没有登录</span>
+                <span className="empty__desc">登录后可以在弹窗里直接看回复、提及和表态。</span>
+                <div className="empty__actions">
+                  <button type="button" className="btn btn--primary btn--sm" onClick={goSettings}>
+                    登录
+                  </button>
+                </div>
+              </div>
+            ) : notifications.status === 'loading' || notifications.status === 'idle' ? (
+              <NotificationSkeleton />
+            ) : notificationsError ? (
+              <div className="banner banner--error" role="alert">
+                <Icon name="alert" size={16} className="banner__icon" />
+                <div className="banner__body">
+                  <strong className="banner__title">{notificationsError.title}</strong>
+                  {notificationsError.detail && <span>{notificationsError.detail}</span>}
+                  <div className="banner__actions">
+                    {notificationsError.action === 'login' && (
+                      <button type="button" className="btn btn--sm btn--primary" onClick={goSettings}>
+                        重新授权
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      className="btn btn--sm"
+                      onClick={() => void notifications.reload()}
+                    >
+                      重试
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ) : notifications.items.length === 0 ? (
+              <div className="empty notifications-empty">
+                <span className="empty__title">暂无通知</span>
+                <span className="empty__desc">收到回复、提及、表态或系统消息时会出现在这里。</span>
+              </div>
+            ) : (
+              <NotificationList items={notifications.items} variant="popup" />
+            )}
+          </div>
+
+          {signedIn && notifications.items.length > 0 && (
+            <p className="popup__notices-foot">
+              最近 {notifications.items.length} 条 · 扩展只读，标记已读请到站点
+            </p>
+          )}
+        </section>
+      ) : tabs.length > 0 ? (
         <>
           <div className="popup__tabs">
             <ViewTabs
@@ -260,7 +432,7 @@ export default function Popup() {
           onClick={handleQuick}
           aria-current="page"
           title="回到当前列表顶部"
-          disabled={tabs.length === 0}
+          disabled={tabs.length === 0 && !notificationsOpen}
         >
           <Icon name="flame" size={16} />
           <span>回到顶部</span>

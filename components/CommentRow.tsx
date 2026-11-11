@@ -77,7 +77,10 @@ export function CommentRow({
           title="打开这条回复"
           aria-label={replyDescription}
         >
-          <span className="comment-row__head">
+          <span
+            className="comment-row__head"
+            title={quote ? `被回复的评论：${quote}` : undefined}
+          >
             <span className="comment-row__identity">
               <span className="comment-row__author">@{author}</span>
               {replyTo ? (

@@ -1,7 +1,20 @@
 import { browser } from '#imports';
 import { ApiError } from '@/lib/api';
 import { AuthError } from '@/lib/auth';
+import {
+  NOTIFICATION_EVENT_MESSAGE,
+  STREAM_STATUS_MESSAGE,
+  UNREAD_COUNT_MESSAGE,
+  isStreamStatusQuery,
+  isUnreadReportMessage,
+  type NotificationBroadcast,
+} from '@/lib/messages';
 import { getUnreadNotificationCount } from '@/lib/notifications';
+import {
+  openNotificationStream,
+  type NotificationStream,
+  type NotificationStreamError,
+} from '@/lib/notification-stream';
 import { tokensItem } from '@/lib/storage';
 
 /**
@@ -15,7 +28,7 @@ import { tokensItem } from '@/lib/storage';
  */
 const RULE_ID = 1;
 
-/** 未读数轮询：`alarms` 的最小周期是 1 分钟，与接口文档建议的 60 秒一致。 */
+/** 未读数兜底轮询：`alarms` 的最小周期是 1 分钟，与接口文档建议的 60 秒一致。 */
 const UNREAD_ALARM = 't2:unread-count';
 const POLL_MINUTES = 1;
 
@@ -60,32 +73,128 @@ async function applyBadge(count: number): Promise<void> {
   }
 }
 
-/**
- * 只采纳最后一次抓取的结果：alarm、令牌变更、启动事件可能重叠。
- * 未登录 → 清空角标；网络 / 429 / 5xx → 保留上次角标，等下一轮；
- * 401 / 403 / 令牌失效 → 清空角标，不打扰用户。
- */
-let generation = 0;
+/* ------------------------------------------------------------------
+   通知：后台优先持有长连接
+   - SSE 负责「有新通知」的即时提醒（事件里没有正文，收到后只拉未读数）；
+   - 每分钟的 alarms 仍然保留，用来兜底（旧浏览器 / 长连接断开 / 站内已读）；
+   - 结果同时写进工具栏角标，并广播给打开着的弹窗与仪表盘；
+   - 后台没就绪时，页面会自己连一条 SSE 兜底（见 hooks/useUnreadNotifications）。
+------------------------------------------------------------------ */
 
+/** 整个扩展只允许一条 SSE 连接，避免弹窗、仪表盘各开一条撞上并发上限。 */
+let stream: NotificationStream | null = null;
+/** 握手成功（收到 ready）后才算就绪；页面据此停掉自己的兜底轮询。 */
+let streamReady = false;
+/** 授权类失败（403 / 刷新失败）后先不重连，等令牌变化后再试。 */
+let streamDisabled = false;
+
+/** 只采纳最后一次抓取：alarm、SSE 事件、令牌变更可能重叠。 */
+let generation = 0;
+/** 把连续的 notification_update 合并成一次未读数请求。 */
+let refreshTimer: ReturnType<typeof setTimeout> | null = null;
+/** 最近一次采纳的未读结果对应的请求开始时间；比它旧的回报直接丢弃。 */
+let countAppliedAt = 0;
+
+async function broadcast(message: NotificationBroadcast): Promise<void> {
+  try {
+    // 没有页面在监听（弹窗和仪表盘都没开）时 Chrome 会 reject，属于正常情况。
+    await browser.runtime.sendMessage(message);
+  } catch {
+    // 忽略：通知结果已经写进角标，页面下次打开会自己拉一次。
+  }
+}
+
+/** 未读数同时写角标与页面；两处始终显示同一份状态。 */
+async function publishUnread(count: number, at = Date.now()): Promise<void> {
+  if (at < countAppliedAt) return;
+  countAppliedAt = at;
+  await applyBadge(count);
+  await broadcast({ type: UNREAD_COUNT_MESSAGE, count });
+}
+
+function setStreamReady(next: boolean): void {
+  if (streamReady === next) return;
+  streamReady = next;
+  void broadcast({ type: STREAM_STATUS_MESSAGE, connected: next });
+}
+
+function stopNotificationStream(): void {
+  const current = stream;
+  stream = null;
+  setStreamReady(false);
+  current?.close();
+}
+
+function ensureNotificationStream(): void {
+  if (stream || streamDisabled) return;
+
+  stream = openNotificationStream({
+    onReady: () => {
+      setStreamReady(true);
+      // 断开期间可能漏掉事件；握手成功后立刻对一次未读数。
+      void syncUnreadBadge();
+    },
+    onNotification: () => {
+      // 让打开着的通知中心按需刷新列表；事件本身不带正文。
+      void broadcast({ type: NOTIFICATION_EVENT_MESSAGE });
+      scheduleUnreadRefresh();
+    },
+    onReconnect: () => {
+      // 服务端要主动断开（15 分钟寿命 / 令牌将过期），属于正常节奏。
+      setStreamReady(false);
+    },
+    onError: (error: NotificationStreamError) => {
+      setStreamReady(false);
+      if (error.kind === 'auth') {
+        // 令牌 / scope 问题：停止重连，隐藏角标，等重新授权；
+        // tokensItem.watch 会在令牌变化后重置 streamDisabled。
+        stream = null;
+        streamDisabled = true;
+        void publishUnread(0);
+        return;
+      }
+      console.debug('[T2] 通知长连接断开，稍后自动重连', error);
+    },
+  });
+}
+
+function scheduleUnreadRefresh(): void {
+  if (refreshTimer !== null) return;
+  refreshTimer = setTimeout(() => {
+    refreshTimer = null;
+    void syncUnreadBadge();
+  }, 300);
+}
+
+/**
+ * 拉一次未读数：未登录 → 清空角标；网络 / 429 / 5xx → 保留上次角标；
+ * 401 / 403 / 令牌失效 → 清空角标并停下长连接，等重新授权。
+ */
 async function syncUnreadBadge(): Promise<void> {
   const run = ++generation;
   const tokens = await tokensItem.getValue().catch(() => null);
 
   if (!tokens?.accessToken) {
-    if (run === generation) await applyBadge(0);
+    stopNotificationStream();
+    if (run === generation) await publishUnread(0);
     return;
   }
 
+  ensureNotificationStream();
+
   try {
+    const startedAt = Date.now();
     const count = await getUnreadNotificationCount();
-    if (run === generation) await applyBadge(count);
+    if (run === generation) await publishUnread(count, startedAt);
   } catch (error) {
     if (run !== generation) return;
     const authIssue =
       (error instanceof ApiError && (error.status === 401 || error.status === 403)) ||
       (error instanceof AuthError && (error.code === 'expired' || error.code === 'config'));
     if (authIssue) {
-      await applyBadge(0);
+      streamDisabled = true;
+      stopNotificationStream();
+      await publishUnread(0);
       return;
     }
     console.debug('[T2] 未读通知数抓取失败，保留上次角标', error);
@@ -154,6 +263,27 @@ export default defineBackground(() => {
     await syncUnreadBadge();
   };
 
+  /**
+   * 页面挂载时会问一次长连接状态，决定要不要保留 60 秒兜底轮询。
+   * 只回同步响应，避免 service worker 被额外的事件循环拖住。
+   */
+  browser.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+    if (isStreamStatusQuery(message)) {
+      sendResponse({ type: STREAM_STATUS_MESSAGE, connected: streamReady });
+      return;
+    }
+    // 页面自己拉到的最新未读数：立刻更新工具栏角标。
+    // 不在这里再广播一次，避免和页面自己的请求互相打断；
+    // 这条消息同时会唤醒被浏览器回收的 service worker（顺便重启长连接）。
+    if (isUnreadReportMessage(message)) {
+      // 只更新角标、不再广播：页面自己的小红点已经是最新值，
+      // 再广播一次反而可能打断页面正在进行的请求。
+      if (message.at < countAppliedAt) return;
+      countAppliedAt = message.at;
+      void applyBadge(Math.max(0, Math.floor(message.count)));
+    }
+  });
+
   void boot();
   void ensureUnreadAlarm(alarms);
 
@@ -171,6 +301,9 @@ export default defineBackground(() => {
     if (alarm.name === UNREAD_ALARM) void syncUnreadBadge();
   });
 
-  // 登录、退出、令牌刷新后立即更新角标，不用等下一轮闹钟。
-  tokensItem.watch(() => void syncUnreadBadge());
+  // 登录、退出、令牌刷新后立即更新角标与长连接，不用等下一轮闹钟。
+  tokensItem.watch(() => {
+    streamDisabled = false;
+    void syncUnreadBadge();
+  });
 });

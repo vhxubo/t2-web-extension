@@ -1231,8 +1231,8 @@
 /* ---------- 通知中心 ---------- */
 
 .notifications-dialog {
-  width: min(560px, calc(100vw - 28px));
-  max-height: min(82vh, 720px);
+  width: min(620px, calc(100vw - 28px));
+  max-height: min(82vh, 760px);
 }
 
 .notifications-dialog__body {
@@ -1252,12 +1252,18 @@
   border-bottom: none;
 }
 
+.notice-row--unread .notice-row__link {
+  background: color-mix(in srgb, var(--notice) 5%, transparent);
+}
+
 .notice-row__link {
   display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px 6px;
+  align-items: flex-start;
+  gap: 11px;
+  padding: 12px 8px;
   border-radius: 10px;
+  color: inherit;
+  text-decoration: none;
   transition: background 0.16s var(--ease);
 }
 
@@ -1265,18 +1271,88 @@
   background: var(--surface-2);
 }
 
+.notice-row__avatar {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 30px;
+  height: 30px;
+  margin-top: 1px;
+}
+
+.notice-row__avatar .avatar {
+  width: 30px;
+  height: 30px;
+  font-size: 12px;
+}
+
+.notice-row__avatar--icon {
+  border-radius: 50%;
+  background: var(--leaf-wash);
+  color: var(--leaf);
+}
+
 .notice-row__body {
   display: flex;
   flex: 1;
   flex-direction: column;
-  gap: 3px;
+  gap: 4px;
   min-width: 0;
+}
+
+.notice-row__meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px;
+  color: var(--ink-3);
+  font-size: 11.5px;
+  line-height: 1.4;
+}
+
+.notice-row__type {
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--ink-2);
+  font-size: 10.5px;
+  line-height: 1.75;
+}
+
+.notice-row__type--primary,
+.notice-row__type--success {
+  background: var(--leaf-wash);
+  color: var(--leaf);
+}
+
+.notice-row__type--warning {
+  background: var(--gold-wash);
+  color: var(--gold);
+}
+
+.notice-row__type--muted {
+  background: var(--surface-2);
+  color: var(--ink-3);
+}
+
+.notice-row__alias {
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--gold-wash);
+  color: var(--gold);
+  font-size: 10px;
+  line-height: 1.7;
+}
+
+.notice-row__unread {
+  color: var(--notice);
+  font-weight: 600;
 }
 
 .notice-row__title {
   display: flex;
   flex-wrap: wrap;
-  gap: 5px;
+  gap: 4px;
   color: var(--ink);
   font-size: 13px;
   line-height: 1.5;
@@ -1287,28 +1363,105 @@
   font-weight: 600;
 }
 
-.notice-row__meta {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  color: var(--ink-3);
-  font-size: 11.5px;
+.notice-row__target {
+  overflow: hidden;
+  color: var(--ink);
+  font-size: 12.5px;
+  font-weight: 500;
+  line-height: 1.5;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.notice-row__type {
-  padding: 0 6px;
-  border-radius: 999px;
-  background: var(--leaf-wash);
+.notice-row__link:hover .notice-row__target {
   color: var(--leaf);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.notice-row__excerpt {
+  display: -webkit-box;
+  overflow: hidden;
+  padding: 7px 9px;
+  border-left: 2px solid color-mix(in srgb, var(--leaf) 32%, var(--line));
+  border-radius: 0 8px 8px 0;
+  background: var(--paper-2);
+  color: var(--ink-2);
+  font-size: 12.5px;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+.notice-row__excerpt .comment-emoji {
+  width: auto;
+  height: 1.12em;
+  margin: 0 1px;
+  vertical-align: -0.16em;
+}
+
+.notice-row__reactions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.notice-reaction {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--ink-2);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.notice-reaction__count {
+  color: var(--ink-3);
+  font-family: var(--font-mono);
   font-size: 10.5px;
-  line-height: 1.75;
+  font-variant-numeric: tabular-nums;
+}
+
+.notice-row__detail {
+  font-size: 12.5px;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.notice-row__detail--success {
+  color: var(--leaf);
+}
+
+.notice-row__detail--warning {
+  color: var(--gold);
+}
+
+.notice-row__detail--danger {
+  color: var(--danger);
+}
+
+.notice-row__detail--muted {
+  color: var(--ink-3);
+}
+
+.notice-row__extra {
+  color: var(--ink-3);
+  font-size: 11px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
 }
 
 .notice-row__dot {
   flex: none;
   width: 7px;
   height: 7px;
-  margin-left: 4px;
+  margin: 7px 2px 0 0;
   border-radius: 50%;
   background: var(--notice);
 }

@@ -200,7 +200,11 @@ export default function Dashboard() {
               aria-label={unread.count > 0 ? `通知，${unread.count} 条未读` : '通知'}
             >
               <Icon name="bell" size={16} />
-              {unread.count > 0 && <span className="masthead__bell-dot" aria-hidden="true" />}
+              {unread.count > 0 && (
+                <span className="masthead__bell-badge" aria-hidden="true">
+                  {unread.count > 99 ? '99+' : unread.count}
+                </span>
+              )}
             </button>
             <AccountChip
               signedIn={signedIn}

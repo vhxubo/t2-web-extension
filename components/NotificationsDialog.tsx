@@ -1,15 +1,9 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { LINKS } from '../lib/config';
 import { describeError } from '../lib/errors';
-import { relativeTime } from '../lib/format';
-import {
-  getNotifications,
-  notificationSummary,
-  notificationTypeLabel,
-  type AppNotification,
-} from '../lib/notifications';
-import { Avatar } from './Avatar';
+import { useNotifications } from '../hooks/useNotifications';
 import { Icon } from './Icon';
+import { NotificationList } from './NotificationList';
 
 interface NotificationsDialogProps {
   open: boolean;
@@ -22,8 +16,6 @@ interface NotificationsDialogProps {
   onRefreshUnread: () => void;
 }
 
-type LoadStatus = 'idle' | 'loading' | 'ready' | 'error';
-
 /** 通知中心：只读展示，标记已读仍需回到站点内完成。 */
 export function NotificationsDialog({
   open,
@@ -35,18 +27,12 @@ export function NotificationsDialog({
   onRefreshUnread,
 }: NotificationsDialogProps) {
   const dialogRef = useRef<HTMLDialogElement | null>(null);
-  const [status, setStatus] = useState<LoadStatus>('idle');
-  const [items, setItems] = useState<AppNotification[]>([]);
-  const [total, setTotal] = useState(0);
-  const [error, setError] = useState<unknown>(null);
-  const alive = useRef(true);
-
-  useEffect(() => {
-    alive.current = true;
-    return () => {
-      alive.current = false;
-    };
-  }, []);
+  const { status, items, total, error, reload } = useNotifications({
+    enabled: open,
+    signedIn,
+    sessionLoading,
+    limit: 50,
+  });
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -55,33 +41,10 @@ export function NotificationsDialog({
     if (!open && dialog.open) dialog.close();
   }, [open]);
 
-  const load = useCallback(async () => {
-    if (sessionLoading) return;
-    if (!signedIn) {
-      setItems([]);
-      setStatus('idle');
-      return;
-    }
-    setStatus('loading');
-    setError(null);
-    try {
-      const page = await getNotifications({ page: 1, limit: 30 });
-      if (!alive.current) return;
-      setItems(page.list ?? []);
-      setTotal(page.total ?? page.list?.length ?? 0);
-      setStatus('ready');
-    } catch (cause) {
-      if (!alive.current) return;
-      setError(cause);
-      setStatus('error');
-    }
-  }, [signedIn, sessionLoading]);
-
   useEffect(() => {
     if (!open) return;
-    void load();
     onRefreshUnread();
-  }, [open, load, onRefreshUnread]);
+  }, [open, onRefreshUnread]);
 
   const errorInfo = status === 'error' ? describeError(error) : null;
   const unreadInList = items.filter((item) => !item.is_read).length;
@@ -109,8 +72,8 @@ export function NotificationsDialog({
               ? '正在读取登录状态…'
               : signedIn
                 ? unread > 0
-                  ? `未读 ${unread} 条 · 这里展示最近 30 条`
-                  : '暂无未读通知 · 这里展示最近 30 条'
+                  ? `未读 ${unread} 条 · 这里展示最近 50 条`
+                  : '暂无未读通知 · 这里展示最近 50 条'
                 : '登录后可以查看通知'}
           </p>
         </div>
@@ -168,7 +131,7 @@ export function NotificationsDialog({
                     重新授权
                   </button>
                 )}
-                <button type="button" className="btn btn--sm" onClick={() => void load()}>
+                <button type="button" className="btn btn--sm" onClick={() => void reload()}>
                   重试
                 </button>
               </div>
@@ -178,53 +141,12 @@ export function NotificationsDialog({
           <div className="empty notifications-empty">
             <span className="empty__title">没有通知</span>
             <span className="empty__desc">
-              收到回复、提及、打赏或系统消息时，会出现在这里。
+              收到回复、提及、表态、打赏或系统消息时，会出现在这里。
             </span>
           </div>
         ) : (
           <>
-            <ul className="notice-list">
-              {items.map((item) => {
-                const summary = notificationSummary(item);
-                return (
-                  <li
-                    key={item.id}
-                    className={`notice-row${item.is_read ? '' : ' notice-row--unread'}`}
-                  >
-                    <a
-                      className="notice-row__link"
-                      href={LINKS.notifications}
-                      target="_blank"
-                      rel="noreferrer"
-                      title="在站点查看这条通知"
-                    >
-                      <Avatar
-                        src={item.from_user?.avatar_url}
-                        name={item.from_user?.username ?? '通'}
-                      />
-                      <span className="notice-row__body">
-                        <span className="notice-row__title">
-                          {summary.actor && <b>@{summary.actor}</b>}
-                          <span>{summary.text}</span>
-                        </span>
-                        <span className="notice-row__meta">
-                          <span className="notice-row__type">
-                            {notificationTypeLabel(item.type)}
-                          </span>
-                          <span aria-hidden="true">·</span>
-                          <time className="t2-mono" dateTime={item.created_at}>
-                            {relativeTime(item.created_at)}
-                          </time>
-                        </span>
-                      </span>
-                      {item.is_read ? null : (
-                        <span className="notice-row__dot" title="未读" aria-label="未读" />
-                      )}
-                    </a>
-                  </li>
-                );
-              })}
-            </ul>
+            <NotificationList items={items} />
             {total > items.length && (
               <p className="notifications-dialog__more">
                 还有 {total - items.length} 条更早的通知，请到站点查看。

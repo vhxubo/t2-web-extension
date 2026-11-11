@@ -109,6 +109,7 @@ export function ViewCard({
           compact
           variant={isComments ? 'comment' : 'topic'}
           emojis={emojis}
+          skeletonRows={10}
           sectionFiltered={view.section.kind !== 'all'}
           sectionName={view.label}
           onRetry={handleRetry}

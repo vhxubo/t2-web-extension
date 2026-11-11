@@ -17,6 +17,7 @@
     "zip:firefox": "wxt zip -b firefox",
     "zip:all": "wxt zip -b chrome && wxt zip -b firefox",
     "compile": "tsc --noEmit",
+    "test": "bun test",
     "postinstall": "wxt prepare"
   },
   "dependencies": {

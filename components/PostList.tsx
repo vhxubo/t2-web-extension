@@ -21,6 +21,8 @@ interface PostListProps {
   variant?: 'topic' | 'comment';
   /** 评论正文的表情映射；页面级缓存，按需加载。 */
   emojis?: EmojiMap;
+  /** 加载态占位行数；仪表盘卡片更高，需要更多行。 */
+  skeletonRows?: number;
   sectionFiltered: boolean;
   sectionName?: string;
   onRetry?: () => void;
@@ -101,6 +103,7 @@ export function PostList({
   oneLine = false,
   variant = 'topic',
   emojis,
+  skeletonRows = 7,
   sectionFiltered,
   sectionName,
   onRetry,
@@ -115,7 +118,7 @@ export function PostList({
         titleOnly={titleOnly}
         oneLine={oneLine}
         variant={variant}
-        rows={7}
+        rows={skeletonRows}
       />
     );
   }

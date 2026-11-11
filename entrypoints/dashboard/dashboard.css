@@ -6,6 +6,13 @@
 :root {
   --masthead-height: 56px;
   --card-radius: 12px;
+  /* 页头瘦身后的固定高度：26px 按钮 + 上下各 6px 内边距 + 1px 分割线。 */
+  --card-head-height: 39px;
+  /*
+   * 卡片高度直接吃满看板可视区（留出页头与主区域内边距），
+   * 保证每张卡片一屏至少 10 条内容；再高也只到 1000px，避免大屏上过于夸张。
+   */
+  --card-height: clamp(700px, calc(100dvh - var(--masthead-height) - 36px), 1000px);
 }
 
 html,
@@ -234,25 +241,34 @@ textarea {
   padding: 0;
 }
 
-/* 未读小红点 */
+/* 未读数字：与扩展工具栏角标一致，直接显示真实条数。 */
 .masthead__bell {
   position: relative;
 }
 
-.masthead__bell-dot {
+.masthead__bell-badge {
   position: absolute;
-  top: 6px;
-  right: 6px;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
+  top: -5px;
+  right: -5px;
+  display: grid;
+  place-items: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
   background: var(--notice);
+  color: #fff;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
   box-shadow: 0 0 0 2px var(--masthead-btn-bg);
   pointer-events: none;
   transition: box-shadow 0.2s var(--ease);
 }
 
-.masthead__bell:hover .masthead__bell-dot {
+.masthead__bell:hover .masthead__bell-badge {
   box-shadow: 0 0 0 2px var(--masthead-hover);
 }
 
@@ -347,7 +363,7 @@ textarea {
 .board-card {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;
-  height: clamp(360px, 52vh, 540px);
+  height: var(--card-height);
   min-width: 0;
   min-height: 0;
   border: 1px solid var(--dash-line);
@@ -379,11 +395,13 @@ textarea {
   }
 }
 
+/* 卡片页头只占 39px：图标缩到 24px，标题单行，刷新按钮贴右侧。 */
 .board-card__head {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 13px 12px 12px 14px;
+  gap: 8px;
+  min-height: var(--card-head-height);
+  padding: 6px 10px 6px 12px;
   border-bottom: 1px solid var(--dash-line);
 }
 
@@ -391,11 +409,11 @@ textarea {
   display: grid;
   place-items: center;
   flex: none;
-  width: 29px;
-  height: 29px;
-  border-radius: 8px;
+  width: 24px;
+  height: 24px;
+  border-radius: 7px;
   background: var(--dash-accent-soft);
-  font-size: 14px;
+  font-size: 12.5px;
   line-height: 1;
 }
 
@@ -405,27 +423,27 @@ textarea {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 14px;
+  font-size: 13.5px;
   font-weight: 600;
-  line-height: 1.35;
+  line-height: 1.25;
   letter-spacing: -0.01em;
   color: var(--dash-ink);
 }
 
 .board-card__tag {
   flex: none;
-  padding: 1px 6px;
+  padding: 0 6px;
   border-radius: 999px;
   background: var(--surface-2);
   color: var(--dash-muted);
-  font-size: 9.5px;
+  font-size: 9px;
   font-weight: 500;
-  line-height: 1.7;
+  line-height: 1.6;
 }
 
 .board-card__refresh {
-  width: 28px;
-  height: 28px;
+  width: 26px;
+  height: 26px;
   flex: none;
   border-color: transparent;
   background: transparent;
@@ -529,14 +547,14 @@ textarea {
   grid-template-columns: 26px minmax(0, 1fr);
   align-items: start;
   gap: 8px;
-  padding: 9px 8px 9px 4px;
+  padding: 7px 8px 7px 4px;
   border-radius: 8px;
 }
 
 .board-card .feed-row__link::before {
   left: 0;
-  top: 9px;
-  bottom: 9px;
+  top: 7px;
+  bottom: 7px;
   width: 2px;
 }
 
@@ -552,7 +570,7 @@ textarea {
   padding-top: 1px;
   color: var(--dash-faint);
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 10.5px;
   font-weight: 400;
   line-height: 1.5;
   letter-spacing: 0;
@@ -569,7 +587,7 @@ textarea {
 }
 
 .board-card .feed-row__body {
-  gap: 3px;
+  gap: 2px;
   min-width: 0;
 }
 
@@ -582,7 +600,7 @@ textarea {
   font-family: var(--font-ui);
   font-size: 13px;
   font-weight: 500;
-  line-height: 1.5;
+  line-height: 1.45;
   color: var(--dash-ink);
 }
 
@@ -606,7 +624,7 @@ textarea {
   flex-wrap: nowrap;
   white-space: nowrap;
   font-size: 11px;
-  line-height: 1.45;
+  line-height: 1.4;
   color: var(--dash-muted);
 }
 
@@ -650,25 +668,82 @@ textarea {
   font-variant-numeric: tabular-nums;
 }
 
+/* ---------- 最新评论行（卡片内） ---------- */
+
+/*
+ * 评论行天然比帖子行高（头部 / 正文 / 引用 / 原帖四行），
+ * 卡片里收成「头部 + 单行正文 + 单行引用 + 单行原帖」，
+ * 这样一屏也能放下 10 条。
+ */
+.board-card .comment-row {
+  grid-template-columns: 22px minmax(0, 1fr);
+  gap: 8px;
+  padding: 6px 8px 6px 4px;
+}
+
+.board-card .comment-row::before {
+  left: 0;
+  top: 6px;
+  bottom: 6px;
+}
+
+.board-card .comment-row__avatar .avatar {
+  width: 22px;
+  height: 22px;
+  font-size: 9px;
+}
+
+.board-card .comment-row__main,
+.board-card .comment-row__reply {
+  gap: 3px;
+}
+
+.board-card .comment-row__head {
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.board-card .comment-row__time,
+.board-card .comment-row__floor {
+  font-size: 9.5px;
+}
+
+.board-card .comment-row__content {
+  -webkit-line-clamp: 1;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.board-card .comment-row__quote {
+  padding: 2px 6px;
+  font-size: 10.5px;
+  line-height: 1.4;
+}
+
+.board-card .comment-row__foot {
+  font-size: 10px;
+  line-height: 1.4;
+}
+
 /* ---------- 卡片底部 ---------- */
 
 .board-card__foot {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 8px 12px 10px;
+  padding: 6px 10px 7px;
   border-top: 1px solid var(--dash-line);
 }
 
 .board-card__more {
   width: 100%;
-  height: 32px;
+  height: 28px;
   padding: 0 10px;
   border-color: var(--dash-line);
   border-radius: 8px;
   background: var(--surface-2);
   color: var(--dash-ink-2);
-  font-size: 11.5px;
+  font-size: 11px;
   font-weight: 500;
 }
 
@@ -703,7 +778,7 @@ textarea {
 .board-card .feed-skeleton__row {
   grid-template-columns: 26px minmax(0, 1fr);
   gap: 8px;
-  padding: 10px 8px 10px 4px;
+  padding: 8px 8px 8px 4px;
   border-bottom-color: var(--dash-line-soft);
 }
 
@@ -713,7 +788,7 @@ textarea {
 }
 
 .board-card .feed-skeleton__body {
-  gap: 7px;
+  gap: 6px;
 }
 
 .board-card .skeleton--title {
@@ -724,6 +799,23 @@ textarea {
 .board-card .feed-skeleton__meta {
   height: 8px;
   width: 56%;
+}
+
+/* 评论骨架跟真实评论行一样收紧。 */
+.board-card .feed-skeleton--comment .comment-skeleton {
+  grid-template-columns: 22px minmax(0, 1fr);
+  gap: 8px;
+  padding: 8px 8px 8px 4px;
+  border-bottom-color: var(--dash-line-soft);
+}
+
+.board-card .comment-skeleton__avatar {
+  width: 22px;
+  height: 22px;
+}
+
+.board-card .comment-skeleton__body {
+  gap: 5px;
 }
 
 /* ---------- 响应式 ---------- */
@@ -759,10 +851,6 @@ textarea {
     grid-column: auto;
     grid-row: auto;
   }
-
-  .board-card {
-    height: clamp(420px, 56vh, 580px);
-  }
 }
 
 @media (max-width: 1020px) {
@@ -784,11 +872,6 @@ textarea {
   .board-grid {
     grid-template-columns: minmax(0, 1fr);
     gap: 14px;
-  }
-
-  .board-card {
-    height: min(72vh, 580px);
-    min-height: 400px;
   }
 }
 
@@ -820,6 +903,31 @@ textarea {
 
   .masthead .account__name,
   .masthead .account__level {
+    display: none;
+  }
+}
+
+/*
+ * 视口高度不足 1060px 时，评论卡片显示不下「引用 + 正文」两行，
+ * 收起引用（原标题上仍能在悬停时看到被回复内容），
+ * 保证矮屏一屏也能看到 10 条评论。
+ */
+@media (max-height: 1060px) {
+  .board-card .comment-row {
+    padding: 4px 8px 4px 4px;
+  }
+
+  .board-card .comment-row::before {
+    top: 4px;
+    bottom: 4px;
+  }
+
+  .board-card .comment-row__main,
+  .board-card .comment-row__reply {
+    gap: 2px;
+  }
+
+  .board-card .comment-row__quote {
     display: none;
   }
 }

@@ -18,7 +18,7 @@ T2 Web Extension 让你在工具栏弹窗里快速扫一眼帖子，或者在新
 - **节点配置**：设置页里新增「节点配置」。现有视图（默认是八个内置榜单）都能分别开关「弹窗」与「仪表盘」；默认 8 个内置榜单全部进仪表盘，前 6 个进弹窗，工作 / 生活默认只在仪表盘；拖动左侧手柄或上下箭头调整顺序；「添加节点」会弹出一个选择弹窗，可按名称 / slug 筛选全站、父节点（含全部子节点）和具体子节点。弹窗硬上限 6 个 Tab，仪表盘不限；设置里会实时显示两边各放了多少个。父节点用 `parent_slug` 查询，子节点用 `node_id` 查询。
 - **8 个内置榜单**：首页（全站按价值排序）、今日热议（24h）、近期热议（7d）、新发表（最新帖子流）、最新评论（全站评论时间线）、社区讨论（论坛节点）、工作维度、生活维度。它们只是默认配置，可以隐藏、排序，也可以被自定义节点 Tab 替代。
 - **默认进入**：在独立设置页的「节点配置」卡片底部设置，选择弹窗打开时先显示哪个视图；候选是「弹窗」开关打开的视图。在弹窗里切换 Tab 只影响当次浏览，不会改写默认值，也不会影响下次打开。列表每页条数固定：内置榜单沿用各自配置（首页 / 社区讨论 50 条，工作 / 生活 20 条，最新评论 20 条，热议 / 新发表走接口默认 50 条）；自定义节点视图每页 50 条。
-- **未读通知**：登录后读取 `GET /v1/me/notifications/unread-count`，在工具栏扩展图标、弹窗 Dock 的「数据仪表盘」和仪表盘顶栏铃铛三处显示同一状态；通知中心展示最近 30 条。扩展图标角标由后台 `alarms` 每分钟抓取一次，弹窗关闭也会更新；页面可见时另外每 60 秒刷新一次。
+- **未读通知**：登录后由后台接一条 SSE 长连接（`GET /v1/me/notifications/stream`）接收 `notification_update`，收到后立刻拉一次未读数；工具栏扩展图标、弹窗 Dock 的「数据仪表盘」和仪表盘顶栏铃铛三处共享同一份状态并即时更新。长连接正常由后台持有；后台没就绪时页面会等 2 秒再自己连一条 SSE 兜底，所以小红点是事件驱动、秒级更新，不依赖 service worker 是否存活。两条长连接都没就绪时每 15 秒兜底刷新，切回页面 / 窗口重新聚焦时立即校准。仪表盘通知中心展示最近 50 条，弹窗右上角铃铛（搜索左侧，数字角标直接显示未读数）可打开独立的通知预览，不占榜单 Tab；两处都会跟随新事件和切回页面静默刷新。
 - **登录**：OAuth 授权码 + PKCE（公开客户端，无 `client_secret`），令牌过期自动刷新（单飞），401 自动重试一次。登录成功后立即解析当前用户资料：`GET /v1/me/summary` 只用来取身份，**缺头像时**再用公开的 `GET /v1/users/:username` 补齐（不需要额外 scope），结果写入 `storage.local`，退出登录一并清除。
 - **外观**：设置页的「外观」支持 `☀️ 浅色 / 🌙 深色 / 💻 跟随系统`，选择保存在 `chrome.storage.local` 的 `t2:settings`，弹窗、仪表盘与设置页共用同一份偏好。弹窗 Header 另外提供 `☀️ / 🌙` 按钮一键切换浅色 / 深色；当前为「跟随系统」时会提示实际主题，想恢复跟随系统回到设置页即可。选「跟随系统」时会监听 `prefers-color-scheme`，系统切换后所有已打开页面实时跟着变。
 - **视觉**：所有页面共用同一套 CSS 变量主题（`--bg-base` / `--bg-card` / `--text-main` / `--primary` 等），由 `<html class="dark">` 切换深色令牌。无衬线字体、等宽数字、键盘可操作、`prefers-reduced-motion` 生效。
@@ -59,6 +59,7 @@ bun install        # 或 npm install
 bun run dev        # 开发模式，产物在 .output/chrome-mv3-dev
 bun run build      # 生产构建（Chrome），产物在 .output/chrome-mv3
 bun run compile    # tsc 类型检查
+bun run test       # SSE 帧解析与长连接重连的单元测试（Bun）
 ```
 
 ## 多浏览器构建
@@ -170,19 +171,26 @@ https://1e3dfcf6f6cd76246e686cabdf2e53df06ab002f.extensions.allizom.org/cb
 
 ## 未读通知
 
-登录后扩展会读取两个只读端点：
+通知走开放 API 的只读端点与 SSE 长连接（`GET /v1/me/notifications/stream`，scope 都是 `read:me`；正常情况下只有后台一条，后台不可用时页面自己兜底一条）：
 
-| 用途 | 端点 | scope |
-| --- | --- | --- |
-| 工具栏角标 / Dock / 铃铛上的未读数 | `GET /v1/me/notifications/unread-count` | `read:me` |
-| 通知中心列表 | `GET /v1/me/notifications?page=1&limit=30` | `read:me` |
+| 用途 | 端点 |
+| --- | --- |
+| 实时提醒 | `GET /v1/me/notifications/stream`（`text/event-stream`） |
+| 工具栏角标 / Dock / 铃铛上的未读数 | `GET /v1/me/notifications/unread-count` |
+| 通知中心列表 | `GET /v1/me/notifications?page=1&limit=50` |
 
-- 弹窗 Dock 的「数据仪表盘」与完整页面顶栏铃铛共享同一份未读数；页面可见时每 60 秒轮询一次，弹窗关闭后自动停止。
-- 工具栏图标右下角的数字角标由后台 service worker 维护：`browser.alarms` 每分钟抓一次未读数（与接口文档建议的 60 秒一致），用 `action.setBadgeText` **直接显示真实个数**，底色与界面小红点一致（`#c4554b`）、文字白色。未读为 0 时不显示角标。登录 / 退出 / 令牌刷新会立即触发一次，不必等下一轮；浏览器重启或扩展更新后会自动重建定时器。
+- **正常情况下长连接由后台 service worker 独占**：弹窗和仪表盘只接收广播，避免多个页面各开一条。后台没就绪（service worker 被回收 / 建连失败）时，页面会等 2 秒后自己连一条 SSE 兜底；`localStorage` 把页面侧的建连间隔限制在 10 秒，配合页面侧退避，避免撞上「同一用户最多 10 条并发、每分钟最多建连 6 次」的限制。
+- 浏览器 `EventSource` 不能设置 `Authorization`，而端点只认请求头，所以用 `fetch()` 读流：实现见 [`lib/notification-stream.ts`](lib/notification-stream.ts)，增量帧解析见 [`lib/sse.ts`](lib/sse.ts)。
+- 收到 `ready` 表示握手成功；之后的 `notification_update` 只代表「有新通知」，事件里没有正文。后台会立即拉一次未读数（连续事件合并成 300ms 内一次），写角标并广播给页面；通知中心打开时会顺带静默刷新列表。
+- `reconnect` 是服务端 15 分钟寿命或令牌将过期时的正常节奏，不是错误：带刷新后的令牌重连。异常断线按 5s → 10s → 20s → 40s → 60s 退避，`429` 优先按 `retry_after` 等待。
+- 连接 45 秒没有收到任何字节（心跳是 25 秒一次）就主动断开重连；`401` 先刷新令牌重试一次，刷新失败清掉登录态；`403`（缺 `read:me`）停止重连并隐藏角标，等重新授权。
+- **兜底刷新保留**：后台 `browser.alarms` 每分钟抓一次未读数（文档对「没有长连接 / 在后台」的建议就是轮询未读数），既用于 service worker 被浏览器回收后的恢复，也用于纠正站内已读这类不会推送的变化。页面在任意一条长连接就绪时都不轮询；两条都未就绪时每 15 秒兜底刷新。页面重新可见或窗口重新获得焦点时会立即刷新一次，并把结果回报给后台同步角标——站内读掉通知不会产生 `notification_update`，这一步保证切回扩展页面时小红点已经是最新值。
+- 工具栏图标右下角的数字角标由后台维护：用 `action.setBadgeText` **直接显示真实个数**，底色与界面小红点一致（`#c4554b`）、文字白色。未读为 0 时不显示角标。登录 / 退出 / 令牌刷新会立即触发一次，不必等下一轮；浏览器重启或扩展更新后会自动重建定时器。
 - 未读数请求失败时：未登录、令牌缺少 `read:me`、`401` / `403` 会**静默隐藏**图标角标与界面小红点；断网或 `429` 等临时故障保留上一次的角标，不影响榜单浏览。在通知中心里会显示可操作的重试 / 重新授权提示。
-- 通知列表的字段名是 `list`（不是 `items`）。扩展只展示通知类型、来源用户和时间，不猜测 `payload` 的内部结构。
+- 通知列表的字段名是 `list`（不是 `items`）。展示层从 `payload` 中读取回复 / 提及的 `commentText`、`postTitle`、`commentLevel`、`target`，表态的 `reactionType` / `reactions` / `relations`，打赏的 `amount` / `rewardType`，以及系统消息、内容检定、徽章、升级等字段（映射见 [`lib/notification-view.ts`](lib/notification-view.ts)）。匿名回复用 `alias_name` / `alias_avatar_url`，帖子链接优先用 `path`，其次用 `postNodeSlug` + `postShortId` 拼详情页；无法识别的字段一律忽略并退回「一条新通知」。
+- 通知内容只随列表请求临时展示，不写入 storage；`notification_update` 事件本身仍然不带正文，页面收到后再拉列表。
 - **标记已读仍需到站点内完成**：`/api/v1/*` 的跨域策略只放行 `GET` / `HEAD` / `OPTIONS`，扩展发不了 `POST /v1/me/notifications/read`。
-- 本次改动把授权 scope 从 `read profile` 扩到 `read profile read:me`；旧令牌需要重新授权一次才会出现通知角标。同时新增了 `alarms` 权限，升级后需要在 `chrome://extensions` 重新加载一次扩展。
+- 授权 scope 是 `read profile read:me`；旧令牌需要重新授权一次才会出现通知角标。SSE 复用同一套 `declarativeNetRequest` 规则（移除 `Origin` 头），没有新增权限。
 
 ## 榜单与接口映射
 
@@ -249,8 +257,8 @@ https://1e3dfcf6f6cd76246e686cabdf2e53df06ab002f.extensions.allizom.org/cb
 
 ```
 entrypoints/
-  background.ts   跨域请求规则 + 未读通知图标角标的定时抓取
-  popup/          弹窗页面（Header + 可配置视图 Tab + 单行列表 + 底部固定 Dock）
+  background.ts   跨域请求规则 + 通知 SSE 长连接 + 未读角标与页面广播
+  popup/          弹窗页面（Header + 可配置视图 Tab + 单行列表 + 通知预览 + 底部固定 Dock）
   dashboard/      完整页面（可配置卡片看板 + 通知中心）
   options/        独立设置页（同时是扩展的 options_ui）
 lib/
@@ -264,13 +272,18 @@ lib/
   comments.ts     最新评论的取数、帖子 / 回复链接、正文摘要
   emojis.ts       表情短码 → 图片地址（内存 + storage 缓存）
   notifications.ts 未读通知数 / 通知列表（只读）
+  notification-view.ts 通知 payload → 操作、正文、目标链接与附加信息
+  notification-stream.ts 通知 SSE 长连接（fetch 读流、刷新令牌、退避重连）
+  sse.ts          text/event-stream 增量帧解析
+  messages.ts     后台 ↔ 页面的通知广播协议
   search.ts       全站搜索的类型、结果归一化与站点链接
   profile.ts      用户资料与头像字段归一化、分层取数（快照 → 缓存 → 公开资料）
   nodes.ts        节点树加载（含子节点并发拉取）、分组与查找
   section.ts      分区的 key、标签、接口参数
   errors.ts       错误 → 用户可读文案
 components/       共用组件（视图 Tab / 卡片、节点配置、设置面板、搜索弹窗、列表行、评论行、通知中心…）
-hooks/            useFeed / useNodes / useEmojis / useSearch / useSession / useSettings / useTheme / useUnreadNotifications
+hooks/            useFeed / useNodes / useEmojis / useSearch / useSession / useSettings / useTheme / useUnreadNotifications / useNotifications
+lib/*.test.ts     SSE 帧解析与长连接的单元测试（bun test）
 styles/           设计令牌与基础样式
 ```
 
@@ -278,6 +291,7 @@ styles/           设计令牌与基础样式
 
 - 登录依赖开发者已经申请并通过审核的 OAuth 应用（`lib/config.ts` 里的 `OAUTH_CLIENT_ID`）；未配置时所有内容仍可匿名浏览，登录按钮禁用。
 - 通知角标依赖授权时勾选 `read:me`；应用审核未开通该 scope 时，角标与通知中心会提示重新授权。
+- 通知长连接优先由后台 service worker 维持；被浏览器回收后，下一轮 `alarms` 会重建连接（每分钟一次，仍在文档的建连限额内）。后台连续 75 秒没有任何广播时，页面会先问一次状态，确认断开后自己连一条 SSE，并退回 15 秒兜底刷新。
 - 扩展不能标记通知已读，也不能在扩展内完成写操作；请到站点内处理。
 - 搜索接口单独限流（匿名 5 次/分、登录 20 次/分），扩展只展示第一页；需要查看更多结果时请到站点内搜索。
 - 节点视图依赖 `/v1/nodes`。首次打开会额外请求每个顶层节点的子节点（4 个并发），之后缓存 10 分钟；接口失败时回退旧缓存，缓存里没有的节点会标「未找到」。
