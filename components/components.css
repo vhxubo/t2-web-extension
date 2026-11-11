@@ -333,6 +333,20 @@
   color: var(--ink-3);
 }
 
+/* 表情表态 + 打赏：跟在正文 / 标题下面，没有数据时不渲染。 */
+.feed-social {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  margin-top: 2px;
+}
+
+.feed-social .chip {
+  padding: 0 6px;
+  font-size: 10px;
+}
+
 .feed-row__stats {
   display: flex;
   gap: 16px;

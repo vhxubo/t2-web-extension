@@ -1,6 +1,10 @@
 import { relativeTime, rankLabel } from '../lib/format';
 import { topicHref } from '../lib/feed';
+import { commentExcerpt } from '../lib/comments';
+import type { EmojiMap } from '../lib/emojis';
 import type { Topic } from '../lib/types';
+import { CommentText } from './CommentText';
+import { FeedSocial } from './FeedSocial';
 import { Icon } from './Icon';
 
 interface PostRowProps {
@@ -19,6 +23,8 @@ interface PostRowProps {
   /** 行尾是否显示「查看详情」按钮（弹窗用）。 */
   expandable?: boolean;
   onExpand?: () => void;
+  /** 正文里的表情短码渲染用；关注流会把正文平铺出来。 */
+  emojis?: EmojiMap;
 }
 
 export function PostRow({
@@ -32,6 +38,7 @@ export function PostRow({
   onRead,
   expandable = false,
   onExpand,
+  emojis = {},
 }: PostRowProps) {
   const author = topic.author?.username ?? '匿名';
   const nodeName = topic.node?.name ?? topic.node?.slug ?? '未分区';
@@ -39,6 +46,8 @@ export function PostRow({
   const hot = typeof topic.hotScore === 'number' ? Math.round(topic.hotScore) : null;
   const typeLabel =
     topic.type === 'anonymous' ? '匿名' : topic.type === 'moment' ? '动态' : null;
+  // 关注流会带正文，其它列表没有；有就平铺一行摘要，没有就不占位。
+  const excerpt = titleOnly ? '' : commentExcerpt(topic.content);
 
   return (
     <li
@@ -96,6 +105,13 @@ export function PostRow({
                 )}
               </span>
             )}
+
+            {!titleOnly && excerpt && (
+              <span className="feed-row__excerpt">
+                <CommentText text={excerpt} emojis={emojis} />
+              </span>
+            )}
+            {!titleOnly && <FeedSocial reactions={topic.reactions_summary} rewards={topic.rewards} />}
           </span>
 
           {titleOnly ? (

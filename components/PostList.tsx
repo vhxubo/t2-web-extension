@@ -264,6 +264,7 @@ export function PostList({
             isRead={readKeys.has(item.key)}
             onRead={() => markRead(item.key)}
             expandable={expandable}
+            emojis={emojis}
             onExpand={
               expandable
                 ? () => {

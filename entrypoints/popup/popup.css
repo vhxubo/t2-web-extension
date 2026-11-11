@@ -528,12 +528,17 @@ body {
   color: var(--leaf);
 }
 
+/* 关注流平铺：正文摘要最多 3 行。 */
+.popup .feed-row__excerpt {
+  -webkit-line-clamp: 3;
+  font-size: 11.5px;
+  color: var(--ink-2);
+}
+
 /* 行尾只留等宽数字。 */
 .popup .feed-row__stats {
   padding-top: 0;
-}
-
-.popup .feed-row__stat {
+}.popup .feed-row__stat {
   min-width: 18px;
   gap: 0;
   padding-left: 2px;

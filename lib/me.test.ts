@@ -107,6 +107,40 @@ describe('normalizeMePage', () => {
     expect(page.items.map((item) => item.kind)).toEqual(['topic', 'comment']);
   });
 
+  test('关注流带正文、表情表态与打赏时一并归一化', () => {
+    const page = normalizeMePage(follows, {
+      items: [
+        {
+          type: 'post',
+          created_at: '2026-11-11T08:00:00.000Z',
+          post: {
+            short_id: 't9',
+            title: '带正文的帖子',
+            content: '正文 **markdown**',
+            reactions_summary: [{ emoji: '👍', count: 3 }],
+            rewards: [{ id: 'r1', amount: 5, user: { username: 'amy' } }],
+          },
+        },
+        {
+          type: 'comment',
+          comment: {
+            id: 'c9',
+            content: '评论正文',
+            rewards: [{ amount: 2, user: { username: 'bob' } }],
+          },
+        },
+      ],
+    });
+
+    const [topicItem, commentItem] = page.items;
+    expect(topicItem?.kind === 'topic' && topicItem.topic.content).toBe('正文 **markdown**');
+    expect(topicItem?.kind === 'topic' && topicItem.topic.reactions_summary).toEqual([
+      { emoji: '👍', count: 3 },
+    ]);
+    expect(topicItem?.kind === 'topic' && topicItem.topic.rewards?.[0]?.amount).toBe(5);
+    expect(commentItem?.kind === 'comment' && commentItem.comment.rewards?.[0]?.amount).toBe(2);
+  });
+
   test('认不出的条目跳过，不抛错', () => {
     const page = normalizeMePage(favorites, { posts: [{ title: '没有 short_id' }, null, 42] });
     expect(page.items).toEqual([]);

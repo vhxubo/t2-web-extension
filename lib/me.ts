@@ -16,6 +16,8 @@ import type {
   CommentPostRef,
   FeedItem,
   LatestComment,
+  ReactionSummary,
+  RewardSummary,
   Topic,
   TopicNodeRef,
 } from './types';
@@ -207,6 +209,58 @@ function normalizeTags(raw: unknown): { name?: string }[] | undefined {
   return tags.length ? tags : undefined;
 }
 
+/** 关注流条目会带表情表态与打赏；只在有数据时保留，别的视图不受影响。 */
+function normalizeReactions(raw: unknown): ReactionSummary[] | undefined {
+  if (!Array.isArray(raw)) return undefined;
+  const reactions: ReactionSummary[] = [];
+  for (const value of raw) {
+    const record = asRecord(value);
+    const emoji = readText(record?.emoji);
+    const count = readNumber(record?.count);
+    if (emoji && typeof count === 'number' && count > 0) reactions.push({ emoji, count });
+  }
+  return reactions.length ? reactions : undefined;
+}
+
+function normalizeRewards(raw: unknown): RewardSummary[] | undefined {
+  if (!Array.isArray(raw)) return undefined;
+  const rewards: RewardSummary[] = [];
+  for (const value of raw) {
+    const record = asRecord(value);
+    if (!record) continue;
+    const amount = readNumber(record.amount);
+    if (typeof amount !== 'number' || amount <= 0) continue;
+    rewards.push({
+      id: readText(record.id) ?? undefined,
+      amount,
+      user: normalizeAuthor(record.user),
+      created_at: readText(record.created_at) ?? undefined,
+    });
+  }
+  return rewards.length ? rewards : undefined;
+}
+
+/** 没拿到 markdown 时，把 `content_html` 粗略退化成纯文本，不注入 HTML。 */
+function htmlToText(html: string): string {
+  return html
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function readContent(record: UnknownRecord | null): string | undefined {
+  const markdown = readText(record?.content, record?.content_text);
+  if (markdown) return markdown;
+  const html = readText(record?.content_html);
+  return html ? htmlToText(html) : undefined;
+}
+
 /**
  * 帖子归一化。兼容：
  * - 帖子对象直接平铺；
@@ -229,7 +283,7 @@ export function normalizeMeTopic(raw: unknown): Topic | null {
     is_pinned: readBool(source.is_pinned),
     comment_count: readNumber(source.comment_count, source.comments_count),
     views: readNumber(source.views),
-    created_at: readText(source.created_at, source.createdAt) ?? undefined,
+    created_at: readText(source.created_at, source.createdAt, record.created_at) ?? undefined,
     latest_commented_at:
       readText(
         source.latest_commented_at,
@@ -241,6 +295,11 @@ export function normalizeMeTopic(raw: unknown): Topic | null {
     tags: normalizeTags(source.tags),
     hotScore: readNumber(source.hotScore),
     status: readText(source.status) ?? undefined,
+    // 关注流会带正文、表态与打赏；没有就留空，普通列表照常。
+    content: readContent(source) ?? undefined,
+    content_html: readText(source.content_html) ?? undefined,
+    reactions_summary: normalizeReactions(source.reactions_summary),
+    rewards: normalizeRewards(source.rewards),
   };
 }
 
@@ -300,8 +359,9 @@ export function normalizeMeComment(raw: unknown): LatestComment | null {
     id,
     floor: readNumber(source.floor) ?? null,
     flat_floor: readNumber(source.flat_floor) ?? null,
-    content: readText(source.content, source.content_text) ?? null,
-    created_at: readText(source.created_at, source.createdAt) ?? undefined,
+    content: readContent(source) ?? null,
+    content_html: readText(source.content_html) ?? undefined,
+    created_at: readText(source.created_at, source.createdAt, record.created_at) ?? undefined,
     updated_at: readText(source.updated_at) ?? undefined,
     is_deleted: readBool(source.is_deleted),
     author: normalizeAuthor(source.author ?? record.author),
@@ -312,6 +372,8 @@ export function normalizeMeComment(raw: unknown): LatestComment | null {
     ),
     parent,
     post,
+    reactions_summary: normalizeReactions(source.reactions_summary),
+    rewards: normalizeRewards(source.rewards),
   };
 }
 

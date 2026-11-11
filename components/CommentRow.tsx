@@ -12,6 +12,7 @@ import { relativeTime } from '../lib/format';
 import type { LatestComment } from '../lib/types';
 import { Avatar } from './Avatar';
 import { CommentText } from './CommentText';
+import { FeedSocial } from './FeedSocial';
 import { Icon } from './Icon';
 
 interface CommentRowProps {
@@ -159,6 +160,8 @@ export function CommentRow({
             </span>
           )}
         </span>
+
+        <FeedSocial reactions={comment.reactions_summary} rewards={comment.rewards} />
       </div>
     </li>
   );

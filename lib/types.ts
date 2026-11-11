@@ -79,6 +79,20 @@ export interface TopicNodeRef {
   parent_slug?: string | null;
 }
 
+/** 表情表态聚合：一个 emoji 加人数。 */
+export interface ReactionSummary {
+  emoji: string;
+  count: number;
+}
+
+/** 打赏记录；列表里通常只需要金额与打赏人。 */
+export interface RewardSummary {
+  id?: string;
+  amount?: number;
+  user?: Author | null;
+  created_at?: string;
+}
+
 export interface Topic {
   id?: string;
   short_id: string;
@@ -94,6 +108,12 @@ export interface Topic {
   tags?: { name?: string }[];
   hotScore?: number;
   status?: string;
+  /** 关注流等富列表会带正文；普通列表没有。 */
+  content?: string | null;
+  /** 正文的 HTML 版本；仅在没有 markdown 时兜底取纯文本。 */
+  content_html?: string | null;
+  rewards?: RewardSummary[];
+  reactions_summary?: ReactionSummary[];
 }
 
 /** `/v1/comments/latest` 里被回复的那条评论（可能只有摘要字段）。 */
@@ -130,6 +150,7 @@ export interface LatestComment {
   floor?: number | null;
   flat_floor?: number | null;
   content?: string | null;
+  content_html?: string | null;
   created_at?: string;
   updated_at?: string;
   is_deleted?: boolean;
@@ -139,6 +160,8 @@ export interface LatestComment {
   reply_to_is_alias?: boolean;
   parent?: CommentParentRef | null;
   post: CommentPostRef;
+  rewards?: RewardSummary[];
+  reactions_summary?: ReactionSummary[];
 }
 
 export interface CommentPage {

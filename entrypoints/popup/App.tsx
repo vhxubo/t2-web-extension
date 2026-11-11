@@ -139,8 +139,11 @@ export default function Popup() {
       : activeView?.me?.kind === 'collections'
         ? 'collection'
         : 'topic';
+  // 关注流把取回的条目直接平铺（标题 + 分区 / 作者 / 时间 / 回复数），
+  // 不再挂行尾箭头进二级详情。其它视图保持原来的详情入口。
+  const followsView = activeView?.me?.id === 'builtin:me_follows';
   // 详情正文或评论列表里的表情短码也要渲染成图片，所以提前把映射拉好。
-  const emojis = useEmojiMap(feedVariant === 'comment' || detailTopic !== null);
+  const emojis = useEmojiMap(feedVariant === 'comment' || detailTopic !== null || followsView);
 
   const needsNodes =
     activeView?.kind === 'section' && activeView.section.kind !== 'all';
@@ -622,8 +625,8 @@ export default function Popup() {
                 error={nodeError ?? feed.error}
                 compact
                 showRank={false}
-                titleOnly
-                oneLine
+                titleOnly={!followsView}
+                oneLine={!followsView}
                 variant={feedVariant}
                 emojis={emojis}
                 collectionOwner={profile?.username}
@@ -633,7 +636,7 @@ export default function Popup() {
                 sectionName={activeView?.label}
                 onRetry={handleRetry}
                 onLogin={goSettings}
-                expandable={feedVariant === 'topic'}
+                expandable={feedVariant === 'topic' && !followsView}
                 onExpand={openDetail}
               />
             </div>
