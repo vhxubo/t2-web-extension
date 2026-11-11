@@ -696,14 +696,6 @@ body {
   min-height: 0;
 }
 
-.popup__notices-head {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  flex: none;
-  padding: 0 12px 6px;
-}
-
 .popup__notices-title {
   display: inline-flex;
   align-items: center;
@@ -720,20 +712,6 @@ body {
   color: var(--leaf);
   font-size: 10.5px;
   line-height: 1.7;
-}
-
-.popup__notices-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  margin-left: auto;
-  color: var(--leaf);
-  font-size: 11px;
-}
-
-.popup__notices-link:hover {
-  text-decoration: underline;
-  text-underline-offset: 2px;
 }
 
 .popup__notices-read {
@@ -763,9 +741,18 @@ body {
   cursor: default;
 }
 
+/* 筛选与「全部已读」同一行：筛选占满剩余宽度，按钮固定在右侧。 */
 .popup__notices-filters {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   flex: none;
   padding: 0 12px 5px;
+}
+
+.popup__notices-filters .notice-filters {
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .popup .notice-filters--popup {
