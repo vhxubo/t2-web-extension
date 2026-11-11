@@ -91,6 +91,28 @@ Safari 需要 macOS 上的 Safari 转换工具，当前不提供构建。
 加载未打包扩展：Chrome 打开 `chrome://extensions` → 打开「开发者模式」→「加载已解压的扩展程序」→ 选择 `.output/chrome-mv3` 目录。
 Firefox 可用 `bun run dev:firefox`。
 
+### 商店上架包（Chrome Web Store / Edge Add-ons）
+
+两个商店都**不接受 manifest 里的 `key` 字段**，Edge 的校验会直接报
+`The manifest shouldn't contain the key field.`。所以上架要用 keyless 包，和本地开发用的包分开打：
+
+```bash
+bun run zip:store   # → .output/store/t2-web-extension-<version>-chrome-store.zip
+```
+
+- 同一个包可以同时上传 Chrome Web Store 和 Edge Add-ons，两者都由商店生成条目 ID。
+- 产物单独放在 `.output/store/`，不会覆盖 `.output/` 下带 `key` 的本地开发包。
+- 需要本地先验一遍 keyless 包时用 `bun run build:store`，解压目录是 `.output/store/chrome-mv3`。
+
+> **商店包的扩展 ID 是商店分配的**，不等于本地钉死的 `lbjdmldgngjjdpgadblpgneglbmgblfd`，
+> 于是运行时回调地址变成 `https://<商店分配的 ID>.chromiumapp.org/cb`：
+>
+> 1. 上传后在商店后台确认条目的扩展 ID（Edge 在 Partner Center，Chrome 在开发者面板）；
+> 2. 到 2libra 设置 → OAuth 应用里补登记这条回调（一个应用可登记多条，共用同一个 `client_id`）；
+> 3. 想让本地解压加载与商店版共用同一个 ID（同一份 `storage`、同一条回调），把商店后台给出的公钥回填到
+>    `wxt.config.ts` 的 `PINNED_KEY`、同步 `PINNED_EXTENSION_ID`，再 `bun run build:chrome`；
+>    上架包仍必须用 `zip:store` 打（带 key 会再次被拒）。
+
 ### 本地加载（不发布）
 
 扩展 ID 已经用 manifest 的 `key` 固定住（见「登录配置 → 扩展 ID」），所以**解压到哪个目录、版本号改不改都不影响**，

@@ -2,7 +2,7 @@
   "name": "t2-web-extension",
   "description": "浏览帖子榜单的浏览器扩展（弹窗 + 新标签页）",
   "private": true,
-  "version": "0.3.0",
+  "version": "0.4.0",
   "author": "vhxubo <vhxubo@gmail.com>",
   "type": "module",
   "scripts": {
@@ -16,6 +16,8 @@
     "zip:chrome": "wxt zip -b chrome",
     "zip:firefox": "wxt zip -b firefox",
     "zip:all": "wxt zip -b chrome && wxt zip -b firefox",
+    "build:store": "T2_STORE_BUILD=1 wxt build -b chrome",
+    "zip:store": "T2_STORE_BUILD=1 wxt zip -b chrome",
     "compile": "tsc --noEmit",
     "test": "bun test",
     "postinstall": "wxt prepare"

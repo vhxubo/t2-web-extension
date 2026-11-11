@@ -22,6 +22,17 @@ const AUTHOR_LABEL = `${AUTHOR.name} <${AUTHOR.email}>`;
  */
 const USE_PINNED_KEY = true;
 
+/**
+ * 商店上架包（Chrome Web Store / Edge Add-ons）必须**不带** `key`：
+ * Edge 的校验直接报 `The manifest shouldn't contain the key field.`，
+ * Chrome 商店也由自己管理条目的公钥。用 `bun run zip:store` 触发，
+ * 走 keyless 分支并单独输出到 `.output/store/`，不覆盖本地开发用的包。
+ *
+ * 代价：商店条目的 ID 由商店生成，不等于 `PINNED_EXTENSION_ID`，
+ * 回调地址要按商店给出的 ID 再登记一条，详见 README「商店上架包」。
+ */
+const STORE_BUILD = process.env.T2_STORE_BUILD === '1';
+
 const PINNED_KEY =
   'MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAtHNZsfczB1eLZDcTlZRCTLBM2WxNAV8mi+odr80YLIb90S4T2gawnZsshXJ0MlUzXm8WU/yMJ5zKiGUvVyyZPGoo6dFaHH5uZx/gfV6iTf0roM7mhOrDejqJgEx3EaSK6MxicZohNgC/y0aVLaiHJy7yrU7l8iMx53/B6dv3MTpOMHz6E6qu6vhjwe+c6L8+y4UP1l5UfGpGynQX+0ynyev11aMFiRtNgIkO53wUarg9bhJsqP2opnyy692eKFVj5Xuw0lKBduqr28mtVB48OENEybKkEf8PlkFmiKQbfXJs8MaL1a8gy/NiuFtRWraisu7PZyAGrjrb4iIqGzwG6wIDAQAB';
 
@@ -107,10 +118,21 @@ export default defineConfig({
     }
 
     // Chromium 系（Chrome / Edge 等）：author 已被官方标记为废弃，保留以兼容旧版。
-    return {
+    const chromium = {
       ...manifest,
-      ...(USE_PINNED_KEY ? { key: PINNED_KEY } : {}),
       author: { email: AUTHOR.email },
+      // 商店上架包不能带 key，否则 Edge 校验直接失败；本地/自托管包才写死 ID。
+      ...(USE_PINNED_KEY && !STORE_BUILD ? { key: PINNED_KEY } : {}),
     } as unknown as UserManifest;
+    return chromium;
   },
+  // 商店包单独放一个目录，避免和本地开发包互相覆盖、混淆上传对象。
+  ...(STORE_BUILD
+    ? {
+        outDir: '.output/store',
+        zip: {
+          artifactTemplate: '{{name}}-{{packageVersion}}-{{browser}}-store{{modeSuffix}}.zip',
+        },
+      }
+    : {}),
 });
