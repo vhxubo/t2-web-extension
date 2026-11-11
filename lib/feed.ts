@@ -23,7 +23,7 @@ export interface LoadFeedOptions {
   section: Section;
   nodes: ApiNode[];
   page: number;
-  /** 仅 `/v1/topics` 使用；hot / latest 端点不传 limit，走接口默认值。 */
+  /** `/v1/topics` 必填；hot / latest 走接口默认值，最新评论用它作为条数上限。 */
   pageSize: number;
   signal?: AbortSignal;
 }
