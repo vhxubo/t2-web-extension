@@ -228,7 +228,7 @@ https://1e3dfcf6f6cd76246e686cabdf2e53df06ab002f.extensions.allizom.org/cb
 - 收到 `ready` 表示握手成功；之后的 `notification_update` 只代表「有新消息」，事件里没有正文。**如果帧里带了 `unread_count` / `count`，扩展直接采用，不再请求 `unread-count`**；只有帧里没带时才补拉一次（连续事件合并成 300ms 内一次），写角标并广播给页面；消息中心打开时会顺带静默刷新列表。
 - `reconnect` 是服务端 15 分钟寿命或令牌将过期时的正常节奏，不是错误：带刷新后的令牌重连。异常断线按 5s → 10s → 20s → 40s → 60s 退避，`429` 优先按 `retry_after` 等待。
 - 连接 45 秒没有收到任何字节（心跳是 25 秒一次）就主动断开重连；`401` 先刷新令牌重试一次，刷新失败清掉登录态；`403`（缺 `read:me`）停止重连并隐藏角标，等重新授权。
-- **不再定时轮询未读数**：`browser.alarms` 只做长连接保活——service worker 被浏览器回收后由它唤醒并重建 SSE，不发未读数请求。未读数的唯一主动请求是握手 / 事件帧没带 `unread_count` 时的补拉，以及登录、退出、令牌刷新后的校准。站内读掉消息不会产生 `notification_update`，所以页面重新可见或窗口重新获得焦点时会校准一次并把结果回报给后台，保证切回扩展页面时小红点已经是最新值。
+- **不再定时轮询未读数**：`browser.alarms` 只做长连接保活——service worker 被浏览器回收后由它唤醒并重建 SSE，不发未读数请求。页面打开时先问一次后台状态，回复里带已知未读数就直接用，省掉一次 `unread-count`；后台没有时才自己补拉。此外只有握手 / 事件帧没带 `unread_count` 时会补拉，以及登录、退出、令牌刷新后的校准。站内读掉消息不会产生 `notification_update`，所以页面重新可见或窗口重新获得焦点时会校准一次并把结果回报给后台，保证切回扩展页面时小红点已经是最新值。
 - 工具栏图标右下角的数字角标由后台维护：用 `action.setBadgeText` **直接显示真实个数**，底色与界面小红点一致（`#c4554b`）、文字白色。未读为 0 时不显示角标。登录 / 退出 / 令牌刷新会立即触发一次；浏览器重启或扩展更新后会自动重建保活定时器。
 - 未读数请求失败时：未登录、令牌缺少 `read:me`、`401` / `403` 会**静默隐藏**图标角标与界面小红点；断网或 `429` 等临时故障保留上一次的角标，不影响榜单浏览。在消息中心里会显示可操作的重试 / 重新授权提示。
 - 消息列表的字段名是 `list`（不是 `items`）。展示层从 `payload` 中读取回复 / 提及的 `commentText`、`postTitle`、`commentLevel`、`target`，表态的 `reactionType` / `reactions` / `relations`（按 emoji 分组显示表态 username），打赏的 `amount` / `rewardType`，以及系统消息、内容检定、徽章、升级等字段（映射见 [`lib/notification-view.ts`](lib/notification-view.ts)）。匿名回复用 `alias_name` / `alias_avatar_url`，帖子链接优先用 `path`，其次用 `postNodeSlug` + `postShortId` 拼详情页；无法识别的字段一律忽略并退回「一条新消息」。
@@ -305,8 +305,9 @@ https://1e3dfcf6f6cd76246e686cabdf2e53df06ab002f.extensions.allizom.org/cb
   `[T2] 跨域请求规则安装失败` 的警告。
 
 扩展的权限：`storage`（保存设置与令牌）、`identity`（OAuth 授权窗口）、
-`alarms`（每分钟抓取未读数以更新图标角标）、`declarativeNetRequestWithHostAccess`
-（上面的请求头规则），host 权限为服务端域名与头像 CDN 域名。
+`alarms`（service worker 回收后唤醒并重建消息长连接）、`declarativeNetRequestWithHostAccess`
+（上面的请求头规则），host 权限只有服务端域名。头像 CDN 走 `<img>`、文档链接走标签页，
+都不需要 host 权限，因此不再申请。
 
 ## 数据、缓存与限流
 

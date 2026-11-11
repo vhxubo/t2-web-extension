@@ -98,6 +98,8 @@ let generation = 0;
 let refreshTimer: ReturnType<typeof setTimeout> | null = null;
 /** 最近一次采纳的未读结果对应的请求开始时间；比它旧的回报直接丢弃。 */
 let countAppliedAt = 0;
+/** 最近一次已知的未读数，随状态查询回给新打开的页面，省掉一次请求。 */
+let lastUnread: number | null = null;
 
 async function broadcast(message: NotificationBroadcast): Promise<void> {
   try {
@@ -112,8 +114,9 @@ async function broadcast(message: NotificationBroadcast): Promise<void> {
 async function publishUnread(count: number, at = Date.now()): Promise<void> {
   if (at < countAppliedAt) return;
   countAppliedAt = at;
-  await applyBadge(count);
-  await broadcast({ type: UNREAD_COUNT_MESSAGE, count });
+  lastUnread = Math.max(0, Math.floor(count));
+  await applyBadge(lastUnread);
+  await broadcast({ type: UNREAD_COUNT_MESSAGE, count: lastUnread });
 }
 
 function setStreamReady(next: boolean): void {
@@ -291,7 +294,12 @@ export default defineBackground(() => {
    */
   browser.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     if (isStreamStatusQuery(message)) {
-      sendResponse({ type: STREAM_STATUS_MESSAGE, connected: streamReady });
+      // 顺带回一份已知未读数：新开的页面据此直接点亮小红点，不用再拉一次。
+      sendResponse({
+        type: STREAM_STATUS_MESSAGE,
+        connected: streamReady,
+        count: lastUnread,
+      });
       return;
     }
     // 页面自己拉到的最新未读数：立刻更新工具栏角标。
@@ -302,21 +310,18 @@ export default defineBackground(() => {
       // 再广播一次反而可能打断页面正在进行的请求。
       if (message.at < countAppliedAt) return;
       countAppliedAt = message.at;
-      void applyBadge(Math.max(0, Math.floor(message.count)));
+      lastUnread = Math.max(0, Math.floor(message.count));
+      void applyBadge(lastUnread);
     }
   });
 
   void boot();
   void ensureStreamAlarm(alarms);
 
+  // 安装 / 更新后强刷一次规则，让新版本的规则条件立即生效；未读数与长连接
+  // 已由上面的 boot() 负责，这里不再重复请求。
   browser.runtime.onInstalled.addListener(() => {
-    // 扩展安装 / 更新后强刷一次，让新版本的规则条件立即生效。
-    void installRule().then(() => syncUnreadBadge());
-    void ensureStreamAlarm(alarms);
-  });
-  browser.runtime.onStartup.addListener(() => {
-    void boot();
-    void ensureStreamAlarm(alarms);
+    void installRule();
   });
 
   alarms?.onAlarm.addListener((alarm) => {

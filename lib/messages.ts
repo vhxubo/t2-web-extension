@@ -47,6 +47,11 @@ export interface UnreadReportMessage {
 export interface StreamStatusMessage {
   type: typeof STREAM_STATUS_MESSAGE;
   connected: boolean;
+  /**
+   * 后台最近一次已知的未读数；`null` 表示后台还没拉到，页面自己补一次请求。
+   * 页面挂载时用它做种子，省掉一次 `unread-count`。
+   */
+  count?: number | null;
 }
 
 export interface StreamStatusQuery {

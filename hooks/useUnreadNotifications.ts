@@ -139,12 +139,11 @@ export function useUnreadNotifications(enabled: boolean) {
     };
   }, []);
 
-  // 登录态变化：先归零再拉一次，避免退出登录后还留着上一个人的未读数。
+  // 登录态变化：先归零；随后由状态查询复用后台的未读数，后台没有才自己拉一次。
   useEffect(() => {
     setCount(0);
     setError(null);
-    void refresh();
-  }, [enabled, refresh]);
+  }, [enabled]);
 
   // 订阅后台推送：未读数与长连接状态都由同一个 service worker 广播。
   useEffect(() => {
@@ -176,19 +175,28 @@ export function useUnreadNotifications(enabled: boolean) {
     void browser.runtime
       .sendMessage({ type: STREAM_STATUS_QUERY })
       .then((reply: unknown) => {
-        if (!alive || statusPushed || !isStreamStatusMessage(reply)) return;
+        if (!alive) return;
+        if (!isStreamStatusMessage(reply)) {
+          void refresh();
+          return;
+        }
         lastPushAt.current = Date.now();
-        setStreamLive(reply.connected);
+        // 广播可能比这次查询更新，别用旧状态覆盖它。
+        if (!statusPushed) setStreamLive(reply.connected);
+        // 后台已经有未读数就直接用，省掉一次 `unread-count`；没有才自己拉。
+        if (typeof reply.count === 'number') acceptPush(reply.count);
+        else void refresh();
       })
       .catch(() => {
-        // 后台还没醒或不可用：当作没有长连接，稍后由页面自己建连兜底。
+        // 后台还没醒或不可用：当作没有长连接，自己拉一次兜底。
+        if (alive) void refresh();
       });
 
     return () => {
       alive = false;
       browser.runtime.onMessage.removeListener(listener);
     };
-  }, [enabled]);
+  }, [enabled, refresh, acceptPush]);
 
   // 切回页面 / 窗口重新聚焦时立刻校准一次。SSE 只推送「有新消息」，
   // 在站内读掉消息不会产生事件，这一步是小红点跟随减少的关键。
