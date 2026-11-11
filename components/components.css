@@ -13,6 +13,10 @@
   width: 28px;
   height: 28px;
   flex: none;
+  display: block;
+  object-fit: contain;
+  user-select: none;
+  -webkit-user-drag: none;
 }
 
 .brand__text {
