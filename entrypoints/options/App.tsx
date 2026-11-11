@@ -8,7 +8,7 @@ import { useNodes } from '@/hooks/useNodes';
 import { useSession } from '@/hooks/useSession';
 import { useSettings } from '@/hooks/useSettings';
 import { useTheme } from '@/hooks/useTheme';
-import { AUTHOR } from '@/lib/config';
+import { AUTHOR, DISCLAIMER, REVOKE_HINT } from '@/lib/config';
 import { dashboardUrl, profileHref } from '@/lib/nav';
 import { storageAvailable } from '@/lib/storage';
 
@@ -235,7 +235,8 @@ export default function SettingsPage() {
           )}
 
           <footer className="settings-foot-note">
-            <span>T2 Web Extension</span>
+            <span>{DISCLAIMER}</span>
+            <span>{REVOKE_HINT}</span>
             <span>设置仅保存在本地设备</span>
           </footer>
         </main>

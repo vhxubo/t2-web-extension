@@ -12,7 +12,7 @@ import { useSession } from '@/hooks/useSession';
 import { useSettings } from '@/hooks/useSettings';
 import { useTheme } from '@/hooks/useTheme';
 import { useUnreadNotifications } from '@/hooks/useUnreadNotifications';
-import { LINKS } from '@/lib/config';
+import { ATTRIBUTION, LINKS } from '@/lib/config';
 import { openSettings } from '@/lib/nav';
 import { DEFAULT_SETTINGS, storageAvailable } from '@/lib/storage';
 import { POPUP_TAB_LIMIT } from '@/lib/viewIds';
@@ -267,6 +267,8 @@ export default function Dashboard() {
           </div>
         )}
       </main>
+
+      <p className="dashboard-attribution">{ATTRIBUTION}</p>
 
       <NotificationsDialog
         open={notificationsOpen}

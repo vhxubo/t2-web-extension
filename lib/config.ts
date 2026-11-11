@@ -52,6 +52,18 @@ export const AUTHOR = {
   email: 'vhxubo@gmail.com',
 } as const;
 
+/**
+ * 依据 2Libra《第三方应用接入说明》第二部分三.1 与附录模板，下面这些文案
+ * 必须出现在用户可见的位置：开发者声明（设置页 / 账号区）与内容来源声明（列表附近）。
+ */
+export const DISCLAIMER = `本应用由 ${AUTHOR.name} 独立开发运营，与 2Libra 无隶属或合作关系。`;
+export const REVOKE_HINT = '你可以随时在 2Libra 的「授权应用」页面撤销本应用的授权。';
+export const LIABILITY_NOTE =
+  '2Libra 仅提供账号授权与接口，不对本应用的可用性、内容与数据处理负责。';
+export const PERMISSION_NOTE =
+  '本应用申请的权限：read（浏览公开内容）、profile（读取公开资料）、read:me（未读通知与通知列表）、interact（帖子收藏）。';
+export const ATTRIBUTION = '内容来自 2Libra 用户，版权归原作者所有。原文链接：点击标题打开原帖。';
+
 export const LINKS = {
   docs: 'https://r2.2libra.com/openapi/v1/index.md',
   oauth: 'https://r2.2libra.com/openapi/v1/oauth.md',

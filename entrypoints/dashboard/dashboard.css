@@ -931,3 +931,13 @@ textarea {
     display: none;
   }
 }
+
+/* 2Libra《第三方应用接入说明》附录：内容来源声明 */
+.dashboard-attribution {
+  margin: 0;
+  padding: 0 0 18px;
+  color: var(--ink-3);
+  font-size: 11px;
+  line-height: 1.5;
+  text-align: center;
+}

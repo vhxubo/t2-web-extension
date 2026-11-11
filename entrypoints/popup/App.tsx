@@ -18,7 +18,7 @@ import { useSession } from '@/hooks/useSession';
 import { useSettings } from '@/hooks/useSettings';
 import { useTheme } from '@/hooks/useTheme';
 import { useUnreadNotifications } from '@/hooks/useUnreadNotifications';
-import { LINKS } from '@/lib/config';
+import { ATTRIBUTION, LINKS } from '@/lib/config';
 import { describeError } from '@/lib/errors';
 import { openDashboard, openSettings } from '@/lib/nav';
 import { notificationFilterMeta } from '@/lib/notification-filter';
@@ -640,6 +640,7 @@ export default function Popup() {
                 onExpand={openDetail}
               />
             </div>
+            <p className="popup__attribution">{ATTRIBUTION}</p>
           </section>
         </>
       ) : (

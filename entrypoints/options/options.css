@@ -1220,6 +1220,25 @@ html.dark .settings-page .node-config__thumb {
   line-height: 1.6;
 }
 
+/* ---------- 合规声明（第三方应用接入说明要求） ---------- */
+
+.settings-legal {
+  margin-top: 16px;
+  padding-top: 13px;
+  border-top: 1px solid var(--stg-border);
+  color: var(--stg-text-3);
+  font-size: 11px;
+  line-height: 1.65;
+}
+
+.settings-legal p {
+  margin: 0 0 3px;
+}
+
+.settings-legal p:last-child {
+  margin-bottom: 0;
+}
+
 /* ---------- 页脚 ---------- */
 
 .settings-foot-note {

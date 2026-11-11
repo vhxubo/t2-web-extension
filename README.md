@@ -7,6 +7,19 @@ T2 Web Extension 让你在工具栏弹窗里快速扫一眼帖子，或者在新
 
 基于 [开放 API v1](https://r2.2libra.com/openapi/v1/index.md)，以只读浏览为主；写操作仅限通知已读（单条 / 全部）与帖子收藏。
 
+## 合规（[第三方应用接入说明](https://r2.2libra.com/openapi/v1/terms.md)）
+
+| 条款 | 落实方式 |
+| --- | --- |
+| 权限最小化（二·一.3） | 仅申请 `read` / `profile` / `read:me` / `interact`，与功能一一对应；不申请 `write:*`、`write:economy`、`upload` |
+| 公开客户端，无 secret（四·1） | 授权码 + PKCE，代码中不存在 `client_secret` |
+| 令牌不入日志（四·2） | 仅记录 `redirect_uri` 与回调路径（去掉 query），不打印令牌 |
+| 内容保留署名与原链（二·一.1、附录） | 列表每行展示作者、标题链到原帖；列表底部固定「内容来自 2Libra 用户…原文链接」声明 |
+| 开发者声明（三·1） | 设置页账号区与页脚常驻「本应用由 vhxubo 独立开发运营，与 2Libra 无隶属或合作关系」 |
+| 撤销授权（四·5） | 收到 401/403 即清除本地令牌；退出登录清令牌与资料缓存 |
+| 配额与自动化（五） | 全局并发/间隔限流 + 429 冷却；仅用户驱动读写，不批量抓取、不刷量 |
+| 不镜像、不训练 AI（二·一.1） | 仅做展示型摘要，不落库、不提供全量导出 |
+
 ## 功能
 
 - **弹窗（方案 C）**：未登录时 Header 是 🍃「T2 Web Extension」+ 右侧快捷图标（通知 / 搜索 / 刷新 / 深浅色 / 账号）；登录后标题位置换成一级 Tab `帖子 | 我的`，图标栏原样保留。二级 Filter Bar 跟着一级 Tab 换：`帖子` 是原来的可配置视图（首页 / 今日热议 / 近期热议 / 新发表 / 最新评论 / 社区讨论，最多 6 个）；`我的` 固定 5 个系统视图（关注流 / 收藏 / 书签 / 我的帖子 / 我的合集）。标题单行截断，回复数用等宽数字固定在右侧，点帖子在新标签页打开原帖。
@@ -143,7 +156,7 @@ bun run build     # 产物在 .output/chrome-mv3
 3. 回调地址填 **`https://lbjdmldgngjjdpgadblpgneglbmgblfd.chromiumapp.org/cb`**，**必须完全一致**（逐字符，区分大小写，结尾没有斜杠）。
    这个 ID 由 manifest 里的 `key` 钉死，见下面的「扩展 ID」。Firefox 是另一条地址，见下面「Firefox 的回调地址」；
    两条都登记在**同一个应用**下（一个应用可以填多条重定向 URI，`client_id` 共用），不要为 Firefox 另开应用。
-4. 权限勾选 `read`、`profile` 与 `read:me`（`read:me` 只用于未读通知角标与通知列表）。
+4. 权限勾选 `read`、`profile`、`read:me` 与 `interact`（`read:me` 只用于未读通知角标与通知列表，`interact` 只用于帖子收藏）。
 5. 审核通过后，把 `client_id` 填到 [`lib/config.ts`](lib/config.ts) 的 `OAUTH_CLIENT_ID`，再重新构建。
 
 ### 扩展 ID 已固定为 `lbjdmldgngjjdpgadblpgneglbmgblfd`

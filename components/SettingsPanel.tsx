@@ -1,6 +1,12 @@
 import { useState } from 'react';
 import { startLogin } from '../lib/auth';
-import { OAUTH_CONFIGURED } from '../lib/config';
+import {
+  DISCLAIMER,
+  LIABILITY_NOTE,
+  OAUTH_CONFIGURED,
+  PERMISSION_NOTE,
+  REVOKE_HINT,
+} from '../lib/config';
 import { describeError } from '../lib/errors';
 import { type Settings, type ThemePreference } from '../lib/storage';
 import type { NodesStatus } from '../hooks/useNodes';
@@ -160,6 +166,14 @@ export function SettingsPanel({
               <div className="banner__body">{loginError}</div>
             </div>
           )}
+
+          {/* 2Libra《第三方应用接入说明》part 2 §3.1 + 附录：用户可见的开发者声明与权限说明。 */}
+          <div className="settings-legal" role="note">
+            <p>{DISCLAIMER}</p>
+            <p>{LIABILITY_NOTE}</p>
+            <p>{REVOKE_HINT}</p>
+            <p>{PERMISSION_NOTE}</p>
+          </div>
         </div>
       </section>
 
