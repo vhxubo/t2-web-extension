@@ -1,6 +1,11 @@
 import { createHash } from 'node:crypto';
 import { defineConfig, type UserManifest } from 'wxt';
-import { AUTHOR } from './lib/config';
+import {
+  AUTHOR,
+  FIREFOX_EXTENSION_ID,
+  FIREFOX_REDIRECT_HASH,
+  FIREFOX_REDIRECT_URI,
+} from './lib/config';
 
 /** Firefox 的 author 是「姓名 <邮箱>」字符串，Chromium 系则是 { email } 对象。 */
 const AUTHOR_LABEL = `${AUTHOR.name} <${AUTHOR.email}>`;
@@ -44,8 +49,23 @@ if (USE_PINNED_KEY && idFromPinnedKey(PINNED_KEY) !== PINNED_EXTENSION_ID) {
   );
 }
 
-/** Firefox 的附加组件 ID，正式签名后保持不变；临时载入也建议用同一个值。 */
-const FIREFOX_EXTENSION_ID = 't2-web-extension@vhxubo.dev';
+/**
+ * Firefox 的 `identity.getRedirectURL('cb')` 由 gecko id 的 SHA-1 推导（见 lib/config.ts）。
+ * 这里把「ID」和「站点里登记的回调」也钉死：改了 ID 却忘了改回调，构建直接失败，
+ * 而不是等登录时才发现跳到了一个没登记的地址。
+ */
+function sha1Hex(value: string): string {
+  return createHash('sha1').update(value, 'utf8').digest('hex');
+}
+
+if (sha1Hex(FIREFOX_EXTENSION_ID) !== FIREFOX_REDIRECT_HASH) {
+  throw new Error(
+    `[T2] Firefox 附加组件 ID 与登记的回调地址不一致：算出来是 ` +
+      `https://${sha1Hex(FIREFOX_EXTENSION_ID)}.extensions.allizom.org/cb，` +
+      `期望 ${FIREFOX_REDIRECT_URI}。改 FIREFOX_EXTENSION_ID 后必须同步更新 ` +
+      `FIREFOX_REDIRECT_HASH 与 2libra 的 OAuth 回调登记。`,
+  );
+}
 
 export default defineConfig({
   modules: ['@wxt-dev/module-react'],

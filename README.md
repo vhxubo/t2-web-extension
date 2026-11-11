@@ -111,7 +111,8 @@ bun run build     # 产物在 .output/chrome-mv3
 1. 打开站点 → 设置 → OAuth 应用，新建应用。
 2. 客户端形态选「无服务端（公开客户端）」。
 3. 回调地址填 **`https://lbjdmldgngjjdpgadblpgneglbmgblfd.chromiumapp.org/cb`**，**必须完全一致**（逐字符，区分大小写，结尾没有斜杠）。
-   这个 ID 由 manifest 里的 `key` 钉死，见下面的「扩展 ID」。
+   这个 ID 由 manifest 里的 `key` 钉死，见下面的「扩展 ID」。Firefox 是另一条地址，见下面「Firefox 的回调地址」；
+   两条都登记在**同一个应用**下（一个应用可以填多条重定向 URI，`client_id` 共用），不要为 Firefox 另开应用。
 4. 权限勾选 `read`、`profile` 与 `read:me`（`read:me` 只用于未读通知角标与通知列表）。
 5. 审核通过后，把 `client_id` 填到 [`lib/config.ts`](lib/config.ts) 的 `OAUTH_CLIENT_ID`，再重新构建。
 
@@ -132,11 +133,34 @@ Chromium 的 manifest 里写了 `key`（**公钥**，可公开，不是 `client_
   避免换错钥匙后要等到登录才发现回调地址对不上。
 - 私钥 `.keys/t2-dev.pem` 建议备份：只做解压加载用不到它，但打 .crx（或上传自带 key 的包）必须用它，
   否则产出的 ID 会和这里不一致；丢了只能重新生成密钥对，ID 与回调地址要跟着换一次。
-- Firefox 不用 `key`，靠 `browser_specific_settings.gecko.id`（`t2-web-extension@vhxubo.dev`）。它的
-  `identity.getRedirectURL('cb')` 是 `https://<uuid>.extensions.allizom.org/cb`，与 Chrome 不是同一个地址，
-  要在 Firefox 里调登录得单独登记一条。
-- 核对（5 秒）：打开扩展的仪表盘或设置页 → 右键「检查」→ 控制台运行 `chrome.identity.getRedirectURL('cb')`，
-  必须正好等于上面那条回调地址。
+- 核对（5 秒）：在 Chrome 打开扩展的仪表盘或设置页 → 右键「检查」→ 控制台运行
+  `chrome.identity.getRedirectURL('cb')`，必须正好等于上面那条回调地址。
+
+### Firefox 的回调地址
+
+Firefox 不用 manifest 的 `key`，改用 `browser_specific_settings.gecko.id`（`t2-web-extension@vhxubo.com`）。
+它的 `identity.getRedirectURL('cb')` 不是随机 UUID：Firefox 把 **gecko id** 做 SHA-1，再拼到
+`extensions.allizom.org` 上（`https://<sha1(extension.id)>.extensions.allizom.org/<path>`）。所以只要 id 不变：
+
+```
+https://1e3dfcf6f6cd76246e686cabdf2e53df06ab002f.extensions.allizom.org/cb
+```
+
+- 临时载入（about:debugging）、重启浏览器、重新载入附加组件、换机器、换 profile，这条地址都不变；
+  临时附加组件本身会在重启后消失，重新载入后回调 URL 还是这一条。
+- 改 [`lib/config.ts`](lib/config.ts) 里的 `FIREFOX_EXTENSION_ID`（`wxt.config.ts` 从这里读）会换掉这条地址，
+  必须同步改同文件的 `FIREFOX_REDIRECT_HASH` 和站点登记；ID 是开发者自选的字符串（形如邮箱即可，
+  AMO 只校验全局唯一、不验证域名归属），选了以后正式签名就不要再改。
+- 和 Chromium 共用同一个 OAuth 应用 / `client_id`，只是多登记一条重定向 URI。
+- 核对：Firefox 打开 `about:debugging#/runtime/this-firefox` → 本扩展的「检查」→ 控制台运行
+  `browser.identity.getRedirectURL('cb')`，返回值必须与站点里登记的那条一字不差。
+- 两道自检，保证「跳的确实是这条」：构建期 `wxt.config.ts` 会断言
+  `sha1(FIREFOX_EXTENSION_ID) == FIREFOX_REDIRECT_HASH`（改 ID 忘改回调直接构建失败）；
+  登录前 [`lib/auth.ts`](lib/auth.ts) 再把运行时地址与 `FIREFOX_REDIRECT_URI` 逐字比一次，
+  不一致就报错、不打开授权窗口。控制台会打印 `[T2] OAuth redirect_uri:`（发起时）和
+  `[T2] OAuth callback:`（回调后实际落到的地址），可直接对照。
+- 若站点表单不接受 `*.allizom.org` 这个主机（正常 https 表单不会拦），Firefox 还允许 loopback 回调
+  `http://127.0.0.1/mozoauth2/<sha1>`；那需要改 [`lib/auth.ts`](lib/auth.ts) 的 `getRedirectUri()` 为 Firefox 返回该地址。
 
 > `OAUTH_CLIENT_ID` 留空时扩展仍可匿名使用，登录按钮会被禁用。
 

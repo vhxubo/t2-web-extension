@@ -8,14 +8,33 @@ export const TOKEN_URL = `${APP_ORIGIN}/api/oauth/token`;
  * OAuth 公开客户端的 client_id。
  *
  * 由应用开发者在打包前直接填写，扩展不向用户提供任何授权配置入口。
- * 回调地址需要用 `browser.identity.getRedirectURL('cb')` 的值，并在授权
- * 应用里登记为 `https://<扩展 ID>.chromiumapp.org/cb`。
+ * 回调地址用 `browser.identity.getRedirectURL('cb')` 的值：Chromium 系是
+ * `https://<扩展 ID>.chromiumapp.org/cb`，Firefox 是下面的 `FIREFOX_REDIRECT_URI`。
  * 留空时扩展仍可匿名使用，只是登录会被禁用。
  */
 export const OAUTH_CLIENT_ID = 'e471281af4d84ecfae77c39f94bcf372';
 
 /** client_id 是否已由开发者配置。 */
 export const OAUTH_CONFIGURED = OAUTH_CLIENT_ID.trim().length > 0;
+
+/**
+ * Firefox 的附加组件 ID（manifest 的 `browser_specific_settings.gecko.id`）。
+ *
+ * Firefox 的 `browser.identity.getRedirectURL('cb')` 不是随机 UUID，而是取这串 ID 的
+ * SHA-1，拼成 `https://<sha1(id)>.extensions.allizom.org/cb`。所以临时载入、重启、
+ * 换机器都不会变；改这里等于换回调地址，必须同步改 `FIREFOX_REDIRECT_HASH`
+ * 和 2libra 里登记的回调。
+ */
+export const FIREFOX_EXTENSION_ID = 't2-web-extension@vhxubo.com';
+
+/**
+ * `sha1(FIREFOX_EXTENSION_ID)`。
+ * 构建期由 wxt.config.ts 校验；登录前还会与浏览器实际返回的地址再比一次。
+ */
+export const FIREFOX_REDIRECT_HASH = '1e3dfcf6f6cd76246e686cabdf2e53df06ab002f';
+
+/** Firefox 实际会用的回调地址，须与 2libra OAuth 应用里登记的地址逐字一致。 */
+export const FIREFOX_REDIRECT_URI = `https://${FIREFOX_REDIRECT_HASH}.extensions.allizom.org/cb`;
 
 /**
  * 只读浏览 + 未读通知角标所需的最小 scope。

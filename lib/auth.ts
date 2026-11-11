@@ -1,5 +1,12 @@
 import { browser } from '#imports';
-import { AUTHORIZE_URL, OAUTH_CLIENT_ID, REQUESTED_SCOPE, TOKEN_URL } from './config';
+import {
+  AUTHORIZE_URL,
+  FIREFOX_EXTENSION_ID,
+  FIREFOX_REDIRECT_URI,
+  OAUTH_CLIENT_ID,
+  REQUESTED_SCOPE,
+  TOKEN_URL,
+} from './config';
 import {
   pendingAuthItem,
   profileCacheItem,
@@ -136,6 +143,18 @@ export async function startLogin(): Promise<TokenSet> {
     throw new AuthError('当前浏览器不支持扩展授权回调（缺少 identity 能力）', 'config');
   }
 
+  // Firefox 的回调由 gecko id 推导。万一扩展被以另一个 ID 载入（换了构建、被别的
+  // 包装器改过 manifest），这里直接拦下，而不是打开授权窗口后才发现 redirect_uri
+  // 没登记；顺便把实际值打出来，方便和站点里登记的那条逐字比对。
+  if (import.meta.env.FIREFOX && redirectUri !== FIREFOX_REDIRECT_URI) {
+    throw new AuthError(
+      `Firefox 回调地址不一致：实际是 ${redirectUri}，登记值是 ${FIREFOX_REDIRECT_URI}。` +
+        `请在 about:debugging 里确认扩展 ID 为 ${FIREFOX_EXTENSION_ID}。`,
+      'config',
+    );
+  }
+  console.info('[T2] OAuth redirect_uri:', redirectUri);
+
   const verifier = randomToken(48);
   const challenge = await codeChallenge(verifier);
   const state = randomToken(16);
@@ -180,6 +199,9 @@ export async function startLogin(): Promise<TokenSet> {
     } catch {
       throw new AuthError('授权回调地址无法解析', 'token');
     }
+
+    // 浏览器实际跳回来的地址（去掉 query，避免把一次性的 code 写进日志）。
+    console.info('[T2] OAuth callback:', `${returned.origin}${returned.pathname}`);
 
     const errorCode = returned.searchParams.get('error');
     if (errorCode) {
