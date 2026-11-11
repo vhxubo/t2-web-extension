@@ -1,6 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
+import { ReadItemsProvider } from '@/components/ReadItems';
 import { bootstrapTheme } from '@/lib/theme';
 import '@/styles/theme.css';
 import '@/components/components.css';
@@ -11,7 +12,9 @@ async function mount() {
   await bootstrapTheme();
   ReactDOM.createRoot(document.getElementById('root')!).render(
     <React.StrictMode>
-      <App />
+      <ReadItemsProvider>
+        <App />
+      </ReadItemsProvider>
     </React.StrictMode>,
   );
 }

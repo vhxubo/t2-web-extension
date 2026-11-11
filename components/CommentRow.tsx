@@ -22,6 +22,10 @@ interface CommentRowProps {
   dense?: boolean;
   /** 页面上缓存的表情映射；为空时正文保留 `:code:` 原文。 */
   emojis?: EmojiMap;
+  /** 已经点开过：整行置灰。 */
+  isRead?: boolean;
+  /** 点开这条评论（或它所属的帖子）时记录已读。 */
+  onRead?: () => void;
 }
 
 /**
@@ -37,6 +41,8 @@ export function CommentRow({
   compact = false,
   dense = false,
   emojis = {},
+  isRead = false,
+  onRead,
 }: CommentRowProps) {
   const author = comment.author?.username?.trim() || '匿名';
   const replyTo = commentReplyTo(comment);
@@ -62,7 +68,7 @@ export function CommentRow({
     <li
       className={`comment-row${compact ? ' comment-row--compact' : ''}${
         dense ? ' comment-row--dense' : ''
-      }`}
+      }${isRead ? ' comment-row--read' : ''}`}
     >
       <span className="comment-row__avatar">
         <Avatar src={comment.author?.avatar_url} name={author} />
@@ -76,6 +82,10 @@ export function CommentRow({
           rel="noreferrer"
           title="打开这条回复"
           aria-label={replyDescription}
+          onClick={onRead}
+          onAuxClick={(event) => {
+            if (event.button === 1) onRead?.();
+          }}
         >
           <span
             className="comment-row__head"
@@ -135,6 +145,10 @@ export function CommentRow({
             target="_blank"
             rel="noreferrer"
             title={`打开原帖：${postTitle}`}
+            onClick={onRead}
+            onAuxClick={(event) => {
+              if (event.button === 1) onRead?.();
+            }}
           >
             <span className="comment-row__post-title">{postTitle}</span>
             <Icon name="external" size={10} className="comment-row__post-icon" />

@@ -167,3 +167,19 @@ export interface TopicPage {
   limit?: number;
   total_pages?: number;
 }
+
+/** `/v1/me/collections` 里的一条合集。 */
+export interface CollectionSummary {
+  id?: string;
+  name: string;
+  description?: string | null;
+  post_count?: number;
+  created_at?: string;
+  updated_at?: string;
+}
+
+/** 列表里的一行：普通帖子、「最新评论 / 书签」里的一条评论，或一个合集。 */
+export type FeedItem =
+  | { key: string; kind: 'topic'; topic: Topic }
+  | { key: string; kind: 'comment'; comment: LatestComment }
+  | { key: string; kind: 'collection'; collection: CollectionSummary };

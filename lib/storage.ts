@@ -67,6 +67,14 @@ export interface EmojisCache {
 }
 
 /**
+ * 已经点开过的列表条目：`topic:<short_id>` / `comment:<id>` → 点击时间。
+ * 只存条目 id，不存标题或正文；用于列表置灰，过期条目会定期裁掉。
+ */
+export interface ReadItemsCache {
+  items: Record<string, number>;
+}
+
+/**
  * 上一次解析成功的用户资料。本地缓存只用于两件事：
  * 1. 精简快照没带头像时，直接复用上次的头像，省掉一次公开资料请求；
  * 2. 刷新资料失败时仍能显示头像和昵称，而不是退回「已登录」。
@@ -175,6 +183,11 @@ export const nodesCacheItem = definePersistentItem<NodesCache | null>(`local:${P
 export const emojisCacheItem = definePersistentItem<EmojisCache | null>(
   `local:${PREFIX}:emojis`,
   null,
+);
+
+export const readItemsCacheItem = definePersistentItem<ReadItemsCache>(
+  `local:${PREFIX}:read-items`,
+  { items: {} },
 );
 
 export const profileCacheItem = definePersistentItem<ProfileCache | null>(

@@ -58,6 +58,58 @@ body {
   letter-spacing: 0.01em;
 }
 
+/* 登录后：品牌只留图标，标题位置让给一级 Tab。 */
+.popup__head--signed {
+  gap: 6px;
+}
+
+.popup__head--signed .brand {
+  flex: none;
+}
+
+.popup__head--signed .brand__mark {
+  width: 24px;
+  height: 24px;
+  border-radius: 7px;
+}
+
+.primary-tabs {
+  display: flex;
+  flex: 0 1 auto;
+  align-items: center;
+  gap: 1px;
+  min-width: 0;
+  padding: 2px;
+  border-radius: 999px;
+  background: var(--surface-2);
+}
+
+.primary-tab {
+  padding: 4px 12px;
+  border: none;
+  border-radius: 999px;
+  background: none;
+  color: var(--ink-3);
+  font-family: var(--font-ui);
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1.35;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.16s var(--ease), color 0.16s var(--ease);
+}
+
+.primary-tab:hover {
+  color: var(--ink);
+}
+
+.primary-tab--active,
+.primary-tab--active:hover {
+  background: var(--surface);
+  color: var(--leaf);
+  box-shadow: var(--shadow-sm);
+}
+
 .popup__head-actions {
   display: flex;
   align-items: center;
@@ -229,12 +281,189 @@ body {
   scrollbar-gutter: stable;
 }
 
+/* ---------- 我的合集 ---------- */
+
+.feed-list--collections {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.collection-row {
+  margin: 0;
+}
+
+.collection-row__link {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 8px;
+  border-radius: 9px;
+  transition: background 0.16s var(--ease);
+}
+
+.collection-row__link:hover {
+  background: var(--surface-2);
+}
+
+.collection-row__icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  background: var(--leaf-wash);
+  font-size: 14px;
+}
+
+.collection-row__body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  gap: 1px;
+}
+
+.collection-row__name {
+  overflow: hidden;
+  color: var(--ink);
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.collection-row__desc {
+  overflow: hidden;
+  color: var(--ink-3);
+  font-size: 10.5px;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.collection-row__meta {
+  color: var(--ink-3);
+  font-size: 10px;
+  line-height: 1.3;
+}
+
+.collection-row__count {
+  flex: none;
+  color: var(--ink-3);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+.collection-row__go {
+  flex: none;
+  color: var(--ink-3);
+}
+
+.collection-skeleton {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 8px;
+}
+
+.collection-skeleton__icon {
+  flex: none;
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+}
+
+.collection-skeleton__body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.collection-skeleton__title {
+  width: 44%;
+}
+
+/* ---------- 二级帖子详情 ---------- */
+
+.popup__detail {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.popup__detail-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 9px 4px 6px;
+  border: none;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--ink-2);
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 600;
+  line-height: 1.3;
+  cursor: pointer;
+  transition:
+    background 0.16s var(--ease),
+    color 0.16s var(--ease);
+}
+
+.popup__detail-back svg {
+  transform: rotate(180deg);
+}
+
+.popup__detail-back:hover,
+.popup__detail-back:focus-visible {
+  background: var(--leaf-wash);
+  color: var(--leaf);
+}
+
+.popup__detail-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0 12px 10px;
+  scrollbar-gutter: stable;
+}
+
+/* 二级页本身就是容器：去掉卡片边框和额外留白，把宽度全部留给正文。 */
+.popup__detail-body .topic-detail {
+  gap: 9px;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.popup__detail-body .topic-detail__title {
+  font-size: 15px;
+}
+
 .popup .feed-list {
   gap: 0;
 }
 
 .popup .feed-row {
   border-bottom: none;
+}
+
+.popup .feed-row__main {
+  border-radius: 8px;
+}
+
+.popup .feed-row__expand {
+  width: 24px;
+  height: 24px;
+  margin-right: 0;
 }
 
 .popup .feed-list .feed-row__link {

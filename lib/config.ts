@@ -37,10 +37,11 @@ export const FIREFOX_REDIRECT_HASH = '1e3dfcf6f6cd76246e686cabdf2e53df06ab002f';
 export const FIREFOX_REDIRECT_URI = `https://${FIREFOX_REDIRECT_HASH}.extensions.allizom.org/cb`;
 
 /**
- * 只读浏览 + 未读通知角标所需的最小 scope。
- * `read:me` 只用于读取未读数 / 通知列表；扩展仍然不做任何写操作。
+ * 浏览 + 未读通知 + 帖子收藏所需的最小 scope。
+ * `read:me` 用于读取未读数 / 通知列表，以及通知的单条 / 全部标记已读；
+ * `interact` 用于帖子详情的收藏 / 取消收藏（`/v1/topics/:short_id/favorite`）。
  */
-export const REQUESTED_SCOPE = 'read profile read:me';
+export const REQUESTED_SCOPE = 'read profile read:me interact';
 
 export const DASHBOARD_PAGE = '/dashboard.html';
 export const SETTINGS_PAGE = '/options.html';

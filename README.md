@@ -5,11 +5,12 @@
 T2 Web Extension 让你在工具栏弹窗里快速扫一眼帖子，或者在新标签页里把关注的榜单和节点铺成可配置的看板。
 弹窗最多放 6 个 Tab，仪表盘不限数量；每个视图都能单独控制显隐、拖动排序，并随时添加全站、父节点或具体子节点。
 
-基于 [开放 API v1](https://r2.2libra.com/openapi/v1/index.md)，以只读浏览为主；写操作仅限通知已读（单条 / 全部）。
+基于 [开放 API v1](https://r2.2libra.com/openapi/v1/index.md)，以只读浏览为主；写操作仅限通知已读（单条 / 全部）与帖子收藏。
 
 ## 功能
 
-- **弹窗（方案 C）**：🍃「T2 Web Extension」Header + 可配置视图 Tab（最多 6 个）+ 单行标题列表 + 底部固定 Dock。每个 Tab 可以是内置榜单、全站最新、某个父节点（含全部子节点）或某个具体子节点；标题单行截断，回复数用等宽数字固定在右侧，点帖子在新标签页打开原帖。
+- **弹窗（方案 C）**：未登录时 Header 是 🍃「T2 Web Extension」+ 右侧快捷图标（通知 / 搜索 / 刷新 / 深浅色 / 账号）；登录后标题位置换成一级 Tab `帖子 | 我的`，图标栏原样保留。二级 Filter Bar 跟着一级 Tab 换：`帖子` 是原来的可配置视图（首页 / 今日热议 / 近期热议 / 新发表 / 最新评论 / 社区讨论，最多 6 个）；`我的` 固定 5 个系统视图（关注流 / 收藏 / 书签 / 我的帖子 / 我的合集）。标题单行截断，回复数用等宽数字固定在右侧，点帖子在新标签页打开原帖。
+- **帖子详情（二级页）**：弹窗每行末尾的箭头进入独立详情页，展示完整标题、类型、分区、作者、发布时间、浏览量与正文（markdown 安全渲染，支持标题 / 列表 / 引用 / 代码 / 图片 / 链接 / 表情）。「返回列表」或 `Esc` 回到原来的滚动位置。详情不请求评论，底部「到原帖看评论」直达站点原帖；登录后可在详情页直接收藏 / 取消收藏，未登录或旧令牌缺少 `interact` scope 时会引导重新授权。
 - **底部 Dock**：`🔥 回到顶部`（回到当前列表顶部）、`📊 数据仪表盘`（打开完整页面；登录后有未读通知时显示小红点）、`⚙️ 设置`（在新标签页打开独立设置页）。
 - **完整页面**：可配置卡片按可用宽度自动铺列，数量不限；每张卡片独立滚动、独立刷新，也可以一次刷新全部。顶栏铃铛打开通知中心。
 - **最新评论**：默认新增的 `💬 最新评论` 视图读取 `GET /v1/comments/latest`，用专门的评论行展示「谁回复了谁、回复正文、被引用的父评论、所属节点与原帖」。点正文跳到站点的这条回复（`?commentId=`，跨页自动带 `p=`；嵌套回复走 `/post-flat/` 精确定位），点底部的帖子标题跳到原帖。评论正文里的 `:code:` 表情会用 `/v1/emojis` 的映射渲染成图片。
@@ -33,6 +34,11 @@ T2 Web Extension 让你在工具栏弹窗里快速扫一眼帖子，或者在新
 | `section:all` | 全站（所有节点）最新 | `GET /v1/topics?page=&limit=` |
 | `section:p:<slug>` | 父节点（含全部子节点） | `GET /v1/topics?page=&limit=&parent_slug=<slug>` |
 | `section:n:<slug>` | 具体子节点 | `GET /v1/topics?page=&limit=&node_id=<uuid>` |
+| `builtin:me_follows` | 关注流 | `GET /v1/me/follows/timeline?page=&limit=`（`items`） |
+| `builtin:me_favorites` | 收藏 | `GET /v1/me/favorites?page=&limit=`（`posts`） |
+| `builtin:me_bookmarks` | 书签 | `GET /v1/me/bookmarks?page=&limit=`（`items`） |
+| `builtin:me_topics` | 我的帖子 | `GET /v1/me/topics`（不分页） |
+| `builtin:me_collections` | 我的合集 | `GET /v1/me/collections`（不分页） |
 
 设置存储在 `local:t2:settings` 的 `views` 数组里，数组顺序就是展示顺序：
 
@@ -44,6 +50,7 @@ interface ViewPreference {
 }
 ```
 
+- **「我的」是系统视图**：`builtin:me_*` 不写进 `views` 配置，也不占弹窗 6 个 Tab 的名额；登录后固定出现在一级 Tab「我的」下，退出登录自动回到「帖子」。字段名差异（`posts` / `items` / 直接数组）与包装形态在 [`lib/me.ts`](lib/me.ts) 里统一收敛。
 - **分别显隐**：弹窗和仪表盘各有一个开关。两个都关掉就是完全隐藏；关掉某一项不会删除顺序和配置。
 - **排序**：拖动行手柄，或用行尾的上下箭头；键盘也能操作。
 - **添加**：内置榜单始终在配置里，只能隐藏不能删除；`全站` / 父节点 / 子节点是追加项，可以随时移除。父节点条目读取它下面的全部子节点，子节点条目只读取该节点。
@@ -217,8 +224,8 @@ https://1e3dfcf6f6cd76246e686cabdf2e53df06ab002f.extensions.allizom.org/cb
 - **单条「已读」会调用接口**：未读通知右侧的「已读」按钮调用站点通知中心使用的 `POST /api/notifications/mark-as-read`（body `{ id: [id] }`）。开放 API 文档只列出「全部标记已读」，没有逐条端点，所以这里沿用站点接口；成功后该条不再显示未读按钮，并刷新未读数；失败时底部显示「操作失败」。
 - **「全部已读」会写服务端**：`POST /v1/me/notifications/read` 使用 `read:me` scope，成功返回 `{ ok: true }`；前端立即把当前列表全部置读，并调用未读数刷新，把工具栏角标与界面小红点归零。
 - 通知行本身**不置灰**；单条 / 全部已读的结果只表现为未读按钮消失。
-- 这两条是扩展仅有的写请求；`apiPost` 复用同一套信封解析、401 刷新重试和 DNR 去 `Origin` 规则（见 [`lib/api.ts`](lib/api.ts)）。
-- 授权 scope 是 `read profile read:me`；旧令牌需要重新授权一次才会出现通知角标。SSE 复用同一套 `declarativeNetRequest` 规则（移除 `Origin` 头），没有新增权限。
+- 写请求只有通知单条 / 全部已读与帖子收藏；`apiPost` / `apiDelete` 复用同一套信封解析、401 刷新重试和 DNR 去 `Origin` 规则（见 [`lib/api.ts`](lib/api.ts)）。
+- 授权 scope 是 `read profile read:me interact`；旧令牌需要重新授权一次才会出现通知角标、才能收藏帖子（设置页账号卡片提供「重新授权」）。SSE 复用同一套 `declarativeNetRequest` 规则（移除 `Origin` 头），没有新增权限。
 
 ## 榜单与接口映射
 
@@ -252,6 +259,23 @@ https://1e3dfcf6f6cd76246e686cabdf2e53df06ab002f.extensions.allizom.org/cb
 - 搜索额度用完后显示等待秒数，倒计时结束自动重试；服务端返回 `429` 时按 `retry_after` 处理。
 - 搜索只读，不写数据；结果在新标签页打开原帖、用户主页、节点页或标签页。
 
+## 帖子详情与收藏
+
+弹窗列表每行末尾的箭头进入二级详情页，而不是在列表里内联展开，这样正文有完整宽度和高度。
+
+| 用途 | 端点 |
+| --- | --- |
+| 帖子详情 | `GET /v1/topics/:short_id`（标题、正文 markdown、类型、节点、作者、发布时间、浏览量、附言；带令牌时含 `favorited`） |
+| 收藏 | `POST /v1/topics/:short_id/favorite`（需要 `interact` scope，无请求体） |
+| 取消收藏 | `DELETE /v1/topics/:short_id/favorite` |
+
+- **不请求评论**：详情页只拉正文和元信息，评论区始终到原帖看；底部的「到原帖看评论」带当前评论数，直接打开站点帖子。
+- **类型与分区**：线上普通帖的 `type` 是 `default`（文档写的 `normal` 也兼容），两者都属于普通帖、不显示类型标签；只有 `anonymous` / `moment` 等特殊类型标「匿名 / 动态」，未知类型原样展示。分区链接到 `/node/<slug>`（有父节点时 `/node/<parent>/<slug>`）。
+- **正文渲染**：`content` 是 markdown，扩展用 [`components/TopicMarkdown.tsx`](components/TopicMarkdown.tsx) 解析成 React 节点，支持标题、段落、列表、引用、围栏代码、行内代码、链接、图片、粗体 / 斜体 / 删除线与裸链接；HTML 不会注入页面。正文里的 `:code:` 表情沿用 `/v1/emojis` 映射。
+- **返回与滚动**：进入详情前记住列表 `scrollTop`，返回列表或按 `Esc` 时恢复；详情自身从顶部开始，Header 的刷新按钮在详情页刷新的是详情。
+- **收藏状态**：按钮读取详情返回的 `favorited`；重复收藏 / 取消收藏收到 `409` 时按目标状态处理。未登录点收藏会打开设置页登录；旧令牌缺少 `interact` 时显示「重新授权」。
+- **已读**：从行尾进入详情也记为已读，返回列表后该行置灰，与其他条目一致。
+
 ## 跨域说明（为什么需要 declarativeNetRequest）
 
 服务端的 `/api/*` 对 `Origin` 做白名单，只放行它自己站点的来源；未知来源会直接返回
@@ -262,8 +286,8 @@ https://1e3dfcf6f6cd76246e686cabdf2e53df06ab002f.extensions.allizom.org/cb
 浏览器自动附加的 `Origin` 头，让请求表现得像 `curl` 这样的普通客户端。
 
 - 规则条件带 `initiatorDomains: [扩展 ID]`，**不会**影响站点页面自身的请求，也不影响其它网站。
-- CORS 不是鉴权：读接口本来就是公开的，登录后的令牌仍然按标准的 `Authorization: Bearer` 传递；通知已读的两条写请求也走这条规则，写权限由令牌 / scope 控制。
-- 唯一写请求（`POST /v1/me/notifications/read`）也走这条规则；它需要 `read:me` scope，写权限仍由令牌和 scope 控制，DNR 只处理浏览器的 `Origin` 头。
+- CORS 不是鉴权：读接口本来就是公开的，登录后的令牌仍然按标准的 `Authorization: Bearer` 传递；写请求的权限由令牌 / scope 控制。
+- 通知已读、收藏 / 取消收藏这类写请求也走这条规则；写权限仍由令牌和 scope 控制，DNR 只处理浏览器的 `Origin` 头。
 - 规则在扩展启动 / 安装时安装一次（幂等）。如果安装失败，控制台会有
   `[T2] 跨域请求规则安装失败` 的警告。
 
@@ -274,13 +298,15 @@ https://1e3dfcf6f6cd76246e686cabdf2e53df06ab002f.extensions.allizom.org/cb
 ## 数据、缓存与限流
 
 - 列表按页加载（内置榜单沿用各自条数，自定义节点视图每页 50 条）；完整页面每张卡片底部有「加载更多」，翻页结果按 `short_id` / 评论 `id` 去重（接口不承诺不重不漏）。
+- 新闻列表的已读记录保存在 `local:t2:read-items`：只存 `topic:<short_id>` / `comment:<id>` 与点击时间，保留最近 30 天、最多 3000 条，不含标题或正文；点开后整行置灰，悬停 / 键盘聚焦时恢复。
+- 帖子详情在进入二级页时按需拉取一次，不请求评论、不写入 storage；重新进入或点刷新会重新拉取，收藏状态以服务端返回为准。
 - 最新评论是一次快照：`/v1/comments/latest` 的 `page` 实际被忽略（传 `page=2` 仍返回同一批），因此只展示最近 20 条，卡片底部显示「仅展示最近 N 条」而不提供「加载更多」。
 - 评论正文按站点约定拼接回复链接：顶层楼层用 `/post/<节点>/<短 id>?commentId=<评论 id>&p=<floor/30 向上取整>`；`floor` 为 null 的嵌套回复改用 `/post-flat/...`，按 `flat_floor` 分页。站点每页 30 条评论，页码只在 >1 时才带上。
 - 表情映射来自 `GET /v1/emojis`（匿名请求），缓存在 `local:t2:emojis` 7 天；接口失败时退回旧缓存，没有缓存则保留 `:code:` 原文，不影响列表加载。
 - 请求参数优先用文档默认值：有默认值的参数不传（热议与新发表的 `page`、`limit`，24h 的 `period`，工作/生活的 `sort`，搜索的 `page`、`limit`）；`/v1/topics` 的 `page`、`limit` 是必填；首页另外显式传 `parent_slug=All&sort=value`，社区讨论显式传 `node_id`。
 - 当前用户资料（含头像）缓存在 `local:t2:profile`：精简快照没带头像时直接复用缓存里的头像，省掉一次公开资料请求；刷新失败时也还能显示上次的头像与昵称。退出登录会清掉缓存。
 - 遇到 `429 rate_limited` 会展示 `retry_after`；`401` 先刷新令牌再重试一次；`403 insufficient_scope` 会引导重新授权。
-- 写操作：扩展只调用通知已读接口（单条 `/api/notifications/mark-as-read`、全部 `POST /v1/me/notifications/read`）；发帖 / 评论等其它写操作仍必须经应用自己的服务端，扩展不提供。
+- 写操作：通知已读（单条 `/api/notifications/mark-as-read`、全部 `POST /v1/me/notifications/read`）与帖子收藏（`POST /v1/topics/:short_id/favorite` / `DELETE` 同一路径）；发帖 / 评论等其它写操作仍必须经应用自己的服务端，扩展不提供。
 
 ## 项目结构
 
@@ -296,8 +322,10 @@ lib/
   storage.ts      令牌 / 设置 / 节点缓存的 storage 定义
   theme.ts        主题偏好解析、<html> 类名切换、系统深浅色监听
   viewIds.ts      视图 id、默认配置、6 个弹窗 Tab 上限
+  me.ts           「我的」5 个内置视图、/v1/me/* 响应归一化与取数
   views.ts        视图解析（名称 / 图标 / 查询）、节点候选列表
   feed.ts         内置榜单与节点视图的取数与归一化、去重
+  topics.ts       帖子详情取数、类型标签与收藏 / 取消收藏
   comments.ts     最新评论的取数、帖子 / 回复链接、正文摘要
   emojis.ts       表情短码 → 图片地址（内存 + storage 缓存）
   notifications.ts 未读通知数 / 通知列表 / 单条与全部标记已读
@@ -311,9 +339,9 @@ lib/
   nodes.ts        节点树加载（含子节点并发拉取）、分组与查找
   section.ts      分区的 key、标签、接口参数
   errors.ts       错误 → 用户可读文案
-components/       共用组件（视图 Tab / 卡片、节点配置、设置面板、搜索弹窗、列表行、评论行、通知中心…）
-hooks/            useFeed / useNodes / useEmojis / useSearch / useSession / useSettings / useTheme / useUnreadNotifications / useNotifications
-lib/*.test.ts     SSE 帧解析与长连接的单元测试（bun test）
+components/       共用组件（视图 Tab / 卡片、节点配置、设置面板、搜索弹窗、列表行、帖子详情、markdown 正文、评论行、通知中心、已读上下文…）
+hooks/            useFeed / useNodes / useEmojis / useSearch / useSession / useSettings / useTheme / useUnreadNotifications / useNotifications / useReadItems
+lib/*.test.ts     SSE 帧解析、通知字段映射与分段参数映射的单元测试（bun test）
 styles/           设计令牌与基础样式
 ```
 
@@ -325,5 +353,5 @@ styles/           设计令牌与基础样式
 - 单条通知已读沿用站点接口 `/api/notifications/mark-as-read`（不属于开放 API 的稳定契约），全部已读走开放 API `POST /v1/me/notifications/read`；任一请求失败时通知中心 / 弹窗底部都会提示。其它写操作仍请到站点内处理。
 - 搜索接口单独限流（匿名 5 次/分、登录 20 次/分），扩展只展示第一页；需要查看更多结果时请到站点内搜索。
 - 节点视图依赖 `/v1/nodes`。首次打开会额外请求每个顶层节点的子节点（4 个并发），之后缓存 10 分钟；接口失败时回退旧缓存，缓存里没有的节点会标「未找到」。
-- 帖子列表仍然只展示标题与元信息，不渲染正文；只有「最新评论」会展示评论正文（纯文本 + 表情图片），并且不会把 HTML 直接注入页面。
+- 列表只展示标题与元信息；正文只在弹窗的二级详情页按需拉取并渲染成 React 节点，不会把 HTML 直接注入页面。「最新评论」展示的是评论文本 + 表情图片，同样不解析 HTML。
 - 评论永久链接依赖站点的 `?commentId=` 查询参数与每页 30 条的楼层分页；如果站点改版调整了评论分页规则，跳转页码可能需要在 `lib/comments.ts` 的 `SITE_COMMENT_PAGE_SIZE` 同步更新。

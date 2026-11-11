@@ -2,13 +2,18 @@
 import { apiGet } from './api';
 import { BOARD_MAP } from './boards';
 import { loadLatestComments } from './comments';
+import { isMeViewId, ME_VIEW_MAP, normalizeMePage, type MeViewMeta } from './me';
 import { sectionQuery, sectionResolved } from './section';
-import type { BoardId, LatestComment, Section, Topic, TopicPage, ApiNode } from './types';
+import type {
+  BoardId,
+  FeedItem,
+  Section,
+  Topic,
+  TopicPage,
+  ApiNode,
+} from './types';
 
-/** 一张卡片 / 一个 Tab 里的一行：普通帖子，或「最新评论」里的一条评论。 */
-export type FeedItem =
-  | { key: string; kind: 'topic'; topic: Topic }
-  | { key: string; kind: 'comment'; comment: LatestComment };
+export type { FeedItem } from './types';
 
 export interface FeedPage {
   items: FeedItem[];
@@ -17,9 +22,30 @@ export interface FeedPage {
   totalPages: number;
 }
 
+/**
+ * 读取一个「我的」视图。
+ * 列表字段名不统一（收藏 `posts`、书签 / 关注流 `items`、合集直接是数组），
+ * 归一化交给 lib/me.ts；`me/topics` 与 `me/collections` 按文档不传分页参数。
+ */
+async function loadMePage(
+  meta: MeViewMeta,
+  page: number,
+  pageSize: number,
+  signal?: AbortSignal,
+): Promise<FeedPage> {
+  const data = await apiGet<unknown>(`/v1/${meta.endpoint}`, {
+    auth: true,
+    query: meta.paginated ? { page, limit: pageSize } : undefined,
+    signal,
+  });
+  return normalizeMePage(meta, data, page);
+}
+
 export interface LoadFeedOptions {
   /** 内置榜单；为空时按 `section` 直接查 `/v1/topics`（节点视图）。 */
   board?: BoardId;
+  /** 「我的」系统视图 id；设置后忽略 board / section。 */
+  me?: string;
   section: Section;
   nodes: ApiNode[];
   page: number;
@@ -29,7 +55,18 @@ export interface LoadFeedOptions {
 }
 
 export async function loadFeed(options: LoadFeedOptions): Promise<FeedPage> {
-  const { board, section, nodes, page, pageSize, signal } = options;
+  const { board, me, section, nodes, page, pageSize, signal } = options;
+
+  if (me) {
+    if (!isMeViewId(me)) return { items: [], total: 0, page, totalPages: 0 };
+    const result = await loadMePage(ME_VIEW_MAP[me], page, pageSize, signal);
+    return {
+      items: result.items,
+      total: result.total,
+      page: result.page,
+      totalPages: result.totalPages,
+    };
+  }
 
   if (section.kind !== 'all' && !sectionResolved(section, nodes)) {
     // 节点数据还没到，先给空页，避免把全站内容误当成分区内容。
@@ -138,6 +175,7 @@ export function mergeItems(current: FeedItem[], incoming: FeedItem[]): FeedItem[
 }
 
 export function topicHref(topic: Topic): string {
-  const slug = topic.node?.slug ?? '';
+  // 站点自己的兜底：没有节点 slug 时用 `_` 占位，链接仍能打开帖子。
+  const slug = topic.node?.slug || '_';
   return `https://2libra.com/post/${encodeURIComponent(slug)}/${encodeURIComponent(topic.short_id)}`;
 }

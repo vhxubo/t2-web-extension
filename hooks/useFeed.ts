@@ -1,11 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { loadFeed, mergeItems, type FeedItem } from '../lib/feed';
+import type { MeViewId } from '../lib/me';
 import { sectionKey } from '../lib/section';
 import type { ApiNode, BoardId, Section } from '../lib/types';
 
 interface UseFeedOptions {
   /** 内置榜单；节点视图不传，由 section 决定查询。 */
   board?: BoardId;
+  /** 「我的」系统视图；传了就只查 `/v1/me/*`，忽略 board / section。 */
+  me?: MeViewId;
   section: Section;
   nodes: ApiNode[];
   /** 节点数据是否可以参与请求（加载中时先不发分区请求）。 */
@@ -18,6 +21,7 @@ export type FeedStatus = 'idle' | 'loading' | 'ready' | 'error';
 
 export function useFeed({
   board,
+  me,
   section,
   nodes,
   nodesReady,
@@ -44,7 +48,7 @@ export function useFeed({
   sectionRef.current = section;
 
   const sectionId = sectionKey(section);
-  const key = `${board ?? 'section'}|${sectionId}|${limit}`;
+  const key = `${me ?? board ?? 'section'}|${sectionId}|${limit}`;
 
   const loadFirstPage = useCallback(async () => {
     if (!enabled || !nodesReady) return;
@@ -65,6 +69,7 @@ export function useFeed({
     try {
       const result = await loadFeed({
         board,
+        me,
         section: sectionRef.current,
         nodes: nodesRef.current,
         page: 1,
@@ -84,7 +89,7 @@ export function useFeed({
       setError(cause);
       setStatus('error');
     }
-  }, [board, sectionId, limit, enabled, nodesReady]);
+  }, [board, me, sectionId, limit, enabled, nodesReady]);
 
   useEffect(() => {
     void loadFirstPage();
@@ -107,6 +112,7 @@ export function useFeed({
     try {
       const result = await loadFeed({
         board,
+        me,
         section: sectionRef.current,
         nodes: nodesRef.current,
         page: page + 1,
@@ -124,7 +130,7 @@ export function useFeed({
     } finally {
       if (run === generation.current) setLoadingMore(false);
     }
-  }, [board, sectionId, page, totalPages, loadingMore, status, limit]);
+  }, [board, me, sectionId, page, totalPages, loadingMore, status, limit]);
 
   return {
     items,

@@ -2,9 +2,14 @@ import type { FeedItem } from '../lib/feed';
 import type { FeedStatus } from '../hooks/useFeed';
 import type { EmojiMap } from '../lib/emojis';
 import { describeError } from '../lib/errors';
+import type { Topic } from '../lib/types';
+import { CollectionRow } from './CollectionRow';
 import { CommentRow } from './CommentRow';
 import { Icon } from './Icon';
 import { PostRow } from './PostRow';
+import { useReadItemsContext } from './ReadItems';
+
+type FeedVariant = 'topic' | 'comment' | 'collection';
 
 interface PostListProps {
   items: FeedItem[];
@@ -17,10 +22,15 @@ interface PostListProps {
   titleOnly?: boolean;
   /** 标题强制单行截断（弹窗 Dock 布局用）。 */
   oneLine?: boolean;
-  /** 列表内容：普通帖子，或「最新评论」时间线。 */
-  variant?: 'topic' | 'comment';
+  /** 列表内容：普通帖子、「最新评论」时间线，或「我的合集」。 */
+  variant?: FeedVariant;
   /** 评论正文的表情映射；页面级缓存，按需加载。 */
   emojis?: EmojiMap;
+  /** 合集所属用户名；「我的合集」用它拼站点入口。 */
+  collectionOwner?: string | null;
+  /** 列表为空时的文案；「我的」各视图用各自的人话。 */
+  emptyTitle?: string;
+  emptyDesc?: string;
   /** 加载态占位行数；仪表盘卡片更高，需要更多行。 */
   skeletonRows?: number;
   sectionFiltered: boolean;
@@ -28,6 +38,9 @@ interface PostListProps {
   onRetry?: () => void;
   onLogin?: () => void;
   onResetSection?: () => void;
+  /** 是否允许从行尾进入帖子详情（弹窗用）。 */
+  expandable?: boolean;
+  onExpand?: (topic: Topic) => void;
 }
 
 export function FeedSkeleton({
@@ -43,8 +56,24 @@ export function FeedSkeleton({
   showRank?: boolean;
   titleOnly?: boolean;
   oneLine?: boolean;
-  variant?: 'topic' | 'comment';
+  variant?: FeedVariant;
 }) {
+  if (variant === 'collection') {
+    return (
+      <div className="feed-skeleton feed-skeleton--collection" aria-hidden="true">
+        {Array.from({ length: rows }).map((_, index) => (
+          <div className="collection-skeleton" key={index}>
+            <span className="skeleton collection-skeleton__icon" />
+            <div className="collection-skeleton__body">
+              <span className="skeleton skeleton--line collection-skeleton__title" />
+              <span className="skeleton skeleton--line skeleton--short" />
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
   if (variant === 'comment') {
     return (
       <div
@@ -103,13 +132,20 @@ export function PostList({
   oneLine = false,
   variant = 'topic',
   emojis,
+  collectionOwner,
+  emptyTitle: emptyTitleProp,
+  emptyDesc: emptyDescProp,
   skeletonRows = 7,
   sectionFiltered,
   sectionName,
   onRetry,
   onLogin,
   onResetSection,
+  expandable = false,
+  onExpand,
 }: PostListProps) {
+  const { readKeys, markRead } = useReadItemsContext();
+
   if (status === 'loading' || status === 'idle') {
     return (
       <FeedSkeleton
@@ -151,18 +187,24 @@ export function PostList({
   }
 
   if (items.length === 0) {
-    const emptyTitle =
+    const defaultTitle =
       variant === 'comment'
         ? '还没有最新评论'
-        : sectionFiltered
-          ? '这个分区暂时没有帖子'
-          : '没有拿到帖子';
-    const emptyDesc =
+        : variant === 'collection'
+          ? '还没有合集'
+          : sectionFiltered
+            ? '这个分区暂时没有帖子'
+            : '没有拿到帖子';
+    const defaultDesc =
       variant === 'comment'
         ? '全站暂时没有新评论，刷新一次试试。'
-        : sectionFiltered
-          ? `「${sectionName ?? '当前分区'}」还没有可展示的内容，换个分区或看看全站。`
-          : '可能刚好没有内容，刷新一次试试。';
+        : variant === 'collection'
+          ? '创建合集后，会出现在这里。'
+          : sectionFiltered
+            ? `「${sectionName ?? '当前分区'}」还没有可展示的内容，换个分区或看看全站。`
+            : '可能刚好没有内容，刷新一次试试。';
+    const emptyTitle = emptyTitleProp ?? defaultTitle;
+    const emptyDesc = emptyDescProp ?? defaultDesc;
 
     return (
       <div className="empty">
@@ -190,18 +232,27 @@ export function PostList({
         showRank ? '' : ' feed-list--no-rank'
       }${titleOnly ? ' feed-list--title-only' : ''}${oneLine ? ' feed-list--one-line' : ''}${
         variant === 'comment' ? ' feed-list--comments' : ''
-      }`}
+      }${variant === 'collection' ? ' feed-list--collections' : ''}`}
     >
       {items.map((item, index) =>
-        item.kind === 'comment' ? (
+        item.kind === 'collection' ? (
+          <CollectionRow
+            key={item.key}
+            collection={item.collection}
+            owner={collectionOwner}
+            compact={compact}
+          />
+        ) : item.kind === 'comment' ? (
           <CommentRow
             key={item.key}
             comment={item.comment}
             compact={compact}
             dense={titleOnly || oneLine}
             emojis={emojis}
+            isRead={readKeys.has(item.key)}
+            onRead={() => markRead(item.key)}
           />
-        ) : (
+        ) : item.kind === 'topic' ? (
           <PostRow
             key={item.key}
             topic={item.topic}
@@ -210,8 +261,19 @@ export function PostList({
             showRank={showRank}
             titleOnly={titleOnly}
             oneLine={oneLine}
+            isRead={readKeys.has(item.key)}
+            onRead={() => markRead(item.key)}
+            expandable={expandable}
+            onExpand={
+              expandable
+                ? () => {
+                    markRead(item.key);
+                    onExpand?.(item.topic);
+                  }
+                : undefined
+            }
           />
-        ),
+        ) : null,
       )}
     </ol>
   );

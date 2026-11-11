@@ -5,7 +5,9 @@ import { Icon } from '@/components/Icon';
 import { NotificationFilters } from '@/components/NotificationFilters';
 import { NotificationList } from '@/components/NotificationList';
 import { PostList } from '@/components/PostList';
+import { PrimaryTabs, type PrimaryTabItem } from '@/components/PrimaryTabs';
 import { SearchDialog } from '@/components/SearchDialog';
+import { TopicDetail } from '@/components/TopicDetail';
 import { ViewTabs } from '@/components/ViewTabs';
 import { useFeed } from '@/hooks/useFeed';
 import { useEmojiMap } from '@/hooks/useEmojis';
@@ -20,12 +22,26 @@ import { LINKS } from '@/lib/config';
 import { describeError } from '@/lib/errors';
 import { openDashboard, openSettings } from '@/lib/nav';
 import { notificationFilterMeta } from '@/lib/notification-filter';
+import { BUILTIN_ME_VIEWS } from '@/lib/me';
 import { DEFAULT_SETTINGS, storageAvailable } from '@/lib/storage';
-import type { Section } from '@/lib/types';
-import { POPUP_TAB_LIMIT, popupViewIds, viewDomId } from '@/lib/viewIds';
+import type { Section, Topic } from '@/lib/types';
+import {
+  POPUP_TAB_LIMIT,
+  boardViewId,
+  popupViewIds,
+  viewDomId,
+} from '@/lib/viewIds';
 import { buildViewEntries, popupEntries } from '@/lib/views';
 
 const ALL_SITES: Section = { kind: 'all' };
+
+/** 登录后的一级 Tab：帖子沿用原来的可配置视图，我的固定 5 个系统视图。 */
+const PRIMARY_TABS: PrimaryTabItem[] = [
+  { id: 'posts', label: '帖子' },
+  { id: 'me', label: '我的' },
+];
+
+type PrimaryMode = 'posts' | 'me';
 
 function NotificationSkeleton() {
   return (
@@ -54,12 +70,22 @@ export default function Popup() {
   const unread = useUnreadNotifications(signedIn);
   const nodeState = useNodes();
 
+  const [mode, setMode] = useState<PrimaryMode>('posts');
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [activeMeId, setActiveMeId] = useState<string>(
+    BUILTIN_ME_VIEWS[0]?.id ?? '',
+  );
   const [initialized, setInitialized] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  // 非空时进入二级详情页：盖住 Tab 与列表，返回后回到原来的列表位置。
+  const [detailTopic, setDetailTopic] = useState<Topic | null>(null);
+  const [detailRefreshToken, setDetailRefreshToken] = useState(0);
+  const [detailLoading, setDetailLoading] = useState(false);
   const listRef = useRef<HTMLDivElement | null>(null);
   const noticesRef = useRef<HTMLDivElement | null>(null);
+  const detailRef = useRef<HTMLDivElement | null>(null);
+  const listScroll = useRef(0);
 
   const notifications = useNotifications({
     enabled: notificationsOpen,
@@ -72,13 +98,49 @@ export default function Popup() {
     () => buildViewEntries(settings?.views ?? DEFAULT_SETTINGS.views, nodeState.nodes),
     [settings?.views, nodeState.nodes],
   );
-  const tabs = useMemo(() => popupEntries(entries), [entries]);
+
+  // 「帖子」沿用原来的可配置视图；登录后保证首页固定作为第一个二级项。
+  const tabs = useMemo(() => {
+    const configured = popupEntries(entries);
+    if (!signedIn) return configured;
+    if (configured.some((entry) => entry.id === boardViewId('home'))) return configured;
+    // 只在还有空位时补首页，别挤掉用户自己挑的 Tab。
+    if (configured.length >= POPUP_TAB_LIMIT) return configured;
+    const home = entries.find((entry) => entry.id === boardViewId('home'));
+    return home ? [{ ...home, popup: true }, ...configured] : configured;
+  }, [entries, signedIn]);
+
+  // 「我的」是 5 个系统视图，不走设置里的节点配置。
+  const meEntries = useMemo(() => {
+    const prefs = BUILTIN_ME_VIEWS.map((view) => ({
+      id: view.id,
+      popup: true,
+      dashboard: false,
+    }));
+    return buildViewEntries(prefs, nodeState.nodes);
+  }, [nodeState.nodes]);
+
+  const activeMeEntry = useMemo(
+    () => meEntries.find((entry) => entry.id === activeMeId) ?? meEntries[0] ?? null,
+    [meEntries, activeMeId],
+  );
+  const secondaryEntries = mode === 'me' ? meEntries : tabs;
   const activeEntry = useMemo(
-    () => tabs.find((entry) => entry.id === activeId) ?? tabs[0] ?? null,
-    [tabs, activeId],
+    () =>
+      mode === 'me'
+        ? activeMeEntry
+        : (tabs.find((entry) => entry.id === activeId) ?? tabs[0] ?? null),
+    [activeId, activeMeEntry, mode, tabs],
   );
   const activeView = activeEntry?.view ?? null;
-  const emojis = useEmojiMap(activeView?.board === 'comments');
+  const feedVariant =
+    activeView?.me?.kind === 'comments' || activeView?.board === 'comments'
+      ? 'comment'
+      : activeView?.me?.kind === 'collections'
+        ? 'collection'
+        : 'topic';
+  // 详情正文或评论列表里的表情短码也要渲染成图片，所以提前把映射拉好。
+  const emojis = useEmojiMap(feedVariant === 'comment' || detailTopic !== null);
 
   const needsNodes =
     activeView?.kind === 'section' && activeView.section.kind !== 'all';
@@ -87,11 +149,18 @@ export default function Popup() {
 
   const feed = useFeed({
     board: activeView?.kind === 'board' ? activeView.board : undefined,
+    me: activeView?.kind === 'me' ? activeView.me?.id : undefined,
     section: activeView?.section ?? ALL_SITES,
     nodes: nodeState.nodes,
     nodesReady: !needsNodes || nodeState.status !== 'loading',
     limit: activeView?.pageSize ?? 50,
-    enabled: initialized && Boolean(activeView) && !nodePending && !nodeMissing,
+    // 「我的」必须登录后才能读取；退出登录时不要拿匿名请求去碰 /v1/me。
+    enabled:
+      initialized &&
+      Boolean(activeView) &&
+      !nodePending &&
+      !nodeMissing &&
+      (activeView?.kind !== 'me' || signedIn),
   });
 
   const openSearch = useCallback(() => {
@@ -100,6 +169,39 @@ export default function Popup() {
   }, []);
   const closeSearch = useCallback(() => setSearchOpen(false), []);
   useSearchHotkey(openSearch);
+
+  // 二级详情：先记住列表滚动位置，返回时原样恢复。
+  const openDetail = useCallback((topic: Topic) => {
+    listScroll.current = listRef.current?.scrollTop ?? 0;
+    setSearchOpen(false);
+    setNotificationsOpen(false);
+    setDetailTopic(topic);
+  }, []);
+
+  const closeDetail = useCallback(() => {
+    setDetailTopic(null);
+    setDetailLoading(false);
+  }, []);
+
+  useEffect(() => {
+    if (detailTopic) return;
+    const element = listRef.current;
+    if (element) element.scrollTop = listScroll.current;
+  }, [detailTopic]);
+
+  // 进入详情后从顶部开始读，不继承列表的滚动位置。
+  useEffect(() => {
+    if (detailTopic) detailRef.current?.scrollTo({ top: 0 });
+  }, [detailTopic]);
+
+  useEffect(() => {
+    if (!detailTopic || searchOpen || notificationsOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') closeDetail();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [closeDetail, detailTopic, notificationsOpen, searchOpen]);
 
   // 通知预览是独立于榜单 Tab 的层级：打开时盖住 Tab + 列表，再点铃铛或 Esc 返回。
   const toggleNotifications = useCallback(() => {
@@ -129,9 +231,31 @@ export default function Popup() {
     setInitialized(true);
   }, [settings, initialized]);
 
-  const handleActive = useCallback((id: string) => {
-    setActiveId(id);
-  }, []);
+  const handleActive = useCallback(
+    (id: string) => {
+      if (mode === 'me') setActiveMeId(id);
+      else setActiveId(id);
+    },
+    [mode],
+  );
+
+  // 切换一级 Tab 时收起通知 / 搜索 / 详情，回到对应模式的列表。
+  const handleMode = useCallback(
+    (id: string) => {
+      const next: PrimaryMode = id === 'me' ? 'me' : 'posts';
+      if (next === 'me' && !signedIn) return;
+      setMode(next);
+      setNotificationsOpen(false);
+      setSearchOpen(false);
+      setDetailTopic(null);
+    },
+    [signedIn],
+  );
+
+  // 退出登录 / 令牌失效后「我的」不可用，自动回到帖子。
+  useEffect(() => {
+    if (!signedIn && mode === 'me') setMode('posts');
+  }, [mode, signedIn]);
 
   // Header 快捷键：在浅色 / 深色之间直接切换（想恢复跟随系统仍可到设置弹窗里选）。
   const toggleTheme = useCallback(() => {
@@ -153,9 +277,13 @@ export default function Popup() {
   }, [goDashboard, unread.count]);
 
   const handleQuick = useCallback(() => {
-    const target = notificationsOpen ? noticesRef.current : listRef.current;
+    const target = notificationsOpen
+      ? noticesRef.current
+      : detailTopic
+        ? detailRef.current
+        : listRef.current;
     target?.scrollTo({ top: 0, behavior: 'smooth' });
-  }, [notificationsOpen]);
+  }, [detailTopic, notificationsOpen]);
 
   const handleRefresh = useCallback(() => {
     if (notificationsOpen) {
@@ -163,8 +291,12 @@ export default function Popup() {
       void unread.refresh();
       return;
     }
+    if (detailTopic) {
+      setDetailRefreshToken((value) => value + 1);
+      return;
+    }
     void feed.reload();
-  }, [feed.reload, notifications.reload, notificationsOpen, unread.refresh]);
+  }, [detailTopic, feed.reload, notifications.reload, notificationsOpen, unread.refresh]);
 
   const handleRead = useCallback(
     async (id: string) => {
@@ -217,8 +349,26 @@ export default function Popup() {
     <div className="popup">
       <h1 className="sr-only">T2 Web Extension</h1>
 
-      <header className="popup__head">
-        <Brand compact />
+      <header className={`popup__head${signedIn ? ' popup__head--signed' : ''}`}>
+        {detailTopic && !notificationsOpen ? (
+          <button
+            type="button"
+            className="popup__detail-back"
+            onClick={closeDetail}
+            title="返回列表"
+            aria-label="返回列表"
+          >
+            <Icon name="chevron" size={13} />
+            <span>返回列表</span>
+          </button>
+        ) : signedIn ? (
+          <>
+            <Brand markOnly />
+            <PrimaryTabs tabs={PRIMARY_TABS} value={mode} onChange={handleMode} />
+          </>
+        ) : (
+          <Brand compact />
+        )}
         <div className="popup__head-actions">
           <button
             type="button"
@@ -264,14 +414,20 @@ export default function Popup() {
             type="button"
             className="popup__icon-btn"
             onClick={handleRefresh}
-            title={notificationsOpen ? '刷新通知' : '刷新列表'}
-            aria-label={notificationsOpen ? '刷新通知' : '刷新列表'}
+            title={
+              notificationsOpen ? '刷新通知' : detailTopic ? '刷新详情' : '刷新列表'
+            }
+            aria-label={
+              notificationsOpen ? '刷新通知' : detailTopic ? '刷新详情' : '刷新列表'
+            }
             data-spinning={
               notificationsOpen
                 ? notifications.status === 'loading'
-                : feed.status === 'loading'
+                : detailTopic
+                  ? detailLoading
+                  : feed.status === 'loading'
             }
-            disabled={!notificationsOpen && !activeView}
+            disabled={!notificationsOpen && !detailTopic && !activeView}
           >
             <Icon name="refresh" size={15} />
           </button>
@@ -423,18 +579,31 @@ export default function Popup() {
             </p>
           )}
         </section>
-      ) : tabs.length > 0 ? (
+      ) : detailTopic ? (
+        <section className="popup__detail" id="topic-detail-panel" aria-label="帖子详情">
+          <div className="popup__detail-body" ref={detailRef}>
+            <TopicDetail
+              topic={detailTopic}
+              emojis={emojis}
+              signedIn={signedIn}
+              onLogin={goSettings}
+              refreshToken={detailRefreshToken}
+              onLoadingChange={setDetailLoading}
+            />
+          </div>
+        </section>
+      ) : secondaryEntries.length > 0 ? (
         <>
           <div className="popup__tabs">
             <ViewTabs
-              tabs={tabs.map((entry) => ({
+              tabs={secondaryEntries.map((entry) => ({
                 id: entry.id,
                 label: entry.view.shortLabel,
                 title: entry.view.hint,
               }))}
               value={activeEntry?.id ?? null}
               onChange={handleActive}
-              ariaLabel="视图"
+              ariaLabel={mode === 'me' ? '我的视图' : '帖子视图'}
               stretch
             />
           </div>
@@ -455,12 +624,17 @@ export default function Popup() {
                 showRank={false}
                 titleOnly
                 oneLine
-                variant={activeView?.board === 'comments' ? 'comment' : 'topic'}
+                variant={feedVariant}
                 emojis={emojis}
-                sectionFiltered={Boolean(activeView?.section.kind !== 'all')}
+                collectionOwner={profile?.username}
+                emptyTitle={activeView?.me?.emptyTitle}
+                emptyDesc={activeView?.me?.emptyDesc}
+                sectionFiltered={activeView?.kind === 'section' && activeView.section.kind !== 'all'}
                 sectionName={activeView?.label}
                 onRetry={handleRetry}
                 onLogin={goSettings}
+                expandable={feedVariant === 'topic'}
+                onExpand={openDetail}
               />
             </div>
           </section>
@@ -489,7 +663,7 @@ export default function Popup() {
           onClick={handleQuick}
           aria-current="page"
           title="回到当前列表顶部"
-          disabled={tabs.length === 0 && !notificationsOpen}
+          disabled={secondaryEntries.length === 0 && !notificationsOpen}
         >
           <Icon name="flame" size={16} />
           <span>回到顶部</span>

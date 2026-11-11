@@ -5,12 +5,14 @@
  * - `board:<id>`：八个内置榜单；
  * - `section:all`：全站最新；
  * - `section:p:<slug>`：某个父节点（含全部子节点）；
- * - `section:n:<slug>`：某个具体子节点。
+ * - `section:n:<slug>`：某个具体子节点；
+ * - `builtin:me_*`：「我的」5 个系统视图（见 lib/me.ts）。
  *
  * 设置里只保存 id 和「在哪些界面展示」，节点名称等展示信息在运行时从
  * `/v1/nodes` 解析（见 lib/views.ts），这样接口改名后不需要迁移旧配置。
  */
 import { isBoardId } from './boards';
+import { findMeView, type MeViewMeta } from './me';
 import type { BoardId, Section, ViewPreference } from './types';
 
 /** 弹窗最多展示的 Tab 数；仪表盘不限。 */
@@ -28,12 +30,18 @@ export function boardViewId(board: BoardId): string {
 
 export type ParsedViewId =
   | { kind: 'board'; board: BoardId }
-  | { kind: 'section'; section: Section };
+  | { kind: 'section'; section: Section }
+  | { kind: 'me'; me: MeViewMeta };
 
 export function parseViewId(id: string): ParsedViewId | null {
   if (id.startsWith('board:')) {
     const board = id.slice('board:'.length);
     return isBoardId(board) ? { kind: 'board', board } : null;
+  }
+
+  if (id.startsWith('builtin:')) {
+    const me = findMeView(id);
+    return me ? { kind: 'me', me } : null;
   }
 
   if (id === 'section:all') return { kind: 'section', section: { kind: 'all' } };

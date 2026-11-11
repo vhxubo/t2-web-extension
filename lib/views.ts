@@ -5,6 +5,7 @@
  * 节点数据还没到 / 节点已下线时退回 slug，界面仍能正确显示与操作。
  */
 import { BOARD_MAP } from './boards';
+import type { MeViewMeta } from './me';
 import { findNode, findParent, groupNodes } from './nodes';
 import { POPUP_TAB_LIMIT, parseViewId } from './viewIds';
 import type { ApiNode, BoardId, Section, ViewPreference } from './types';
@@ -13,17 +14,19 @@ const ALL_SECTION: Section = { kind: 'all' };
 
 export interface ResolvedView {
   id: string;
-  kind: 'board' | 'section';
+  kind: 'board' | 'section' | 'me';
   board?: BoardId;
   section: Section;
+  /** 「我的」系统视图的元信息；其它视图为 undefined。 */
+  me?: MeViewMeta;
   label: string;
   shortLabel: string;
   hint: string;
   icon: string;
   pageSize: number;
-  /** 节点视图是否能在节点数据里找到；内置榜单与全站始终可用。 */
+  /** 节点视图是否能在节点数据里找到；内置榜单、全站与「我的」始终可用。 */
   available: boolean;
-  /** 卡片 / 设置行里的小标签：榜单 / 全站 / 父节点 / 子节点。 */
+  /** 卡片 / 设置行里的小标签：榜单 / 全站 / 父节点 / 子节点 / 我的。 */
   sourceLabel: string;
 }
 
@@ -63,6 +66,23 @@ export function resolveView(id: string, nodes: ApiNode[]): ResolvedView {
       pageSize: meta.pageSize,
       available: true,
       sourceLabel: '榜单',
+    };
+  }
+
+  if (parsed.kind === 'me') {
+    const meta = parsed.me;
+    return {
+      id,
+      kind: 'me',
+      me: meta,
+      section: ALL_SECTION,
+      label: meta.label,
+      shortLabel: meta.shortLabel ?? meta.label,
+      hint: `${meta.icon} ${meta.hint}`,
+      icon: meta.icon,
+      pageSize: meta.pageSize,
+      available: true,
+      sourceLabel: '我的',
     };
   }
 

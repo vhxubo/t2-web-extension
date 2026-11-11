@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, type ReactNode } from 'react';
 import { Avatar } from './Avatar';
 import { Icon } from './Icon';
 import { PostRow } from './PostRow';
+import { useReadItemsContext } from './ReadItems';
 import { useSearch } from '../hooks/useSearch';
 import { describeError } from '../lib/errors';
 import { compactNumber, relativeTime } from '../lib/format';
@@ -216,6 +217,7 @@ export function SearchDialog({
   const dialogRef = useRef<HTMLDialogElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const { readKeys, markRead } = useReadItemsContext();
 
   const search = useSearch({ active: open, signedIn });
   const {
@@ -402,16 +404,21 @@ export function SearchDialog({
 
         {currentResults.type === 'posts' && (
           <ol className="feed-list feed-list--compact feed-list--no-rank search-post-list">
-            {currentResults.posts.map((topic, index) => (
-              <PostRow
-                key={topic.short_id || `post:${index}`}
-                topic={topic}
-                index={index}
-                compact
-                showRank={false}
-                oneLine={compact}
-              />
-            ))}
+            {currentResults.posts.map((topic, index) => {
+              const readKey = `topic:${topic.short_id}`;
+              return (
+                <PostRow
+                  key={topic.short_id || `post:${index}`}
+                  topic={topic}
+                  index={index}
+                  compact
+                  showRank={false}
+                  oneLine={compact}
+                  isRead={readKeys.has(readKey)}
+                  onRead={() => markRead(readKey)}
+                />
+              );
+            })}
           </ol>
         )}
 

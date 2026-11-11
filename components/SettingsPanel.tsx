@@ -112,6 +112,16 @@ export function SettingsPanel({
               </div>
 
               <div className="account-panel__actions">
+                <button
+                  type="button"
+                  className="btn btn--ghost"
+                  onClick={() => void handleLogin()}
+                  disabled={loginBusy}
+                  title="重新走一次授权，补齐新增 scope（如收藏所需的 interact）"
+                >
+                  <Icon name="refresh" size={14} />
+                  {loginBusy ? '等待授权…' : '重新授权'}
+                </button>
                 <button type="button" className="btn btn--ghost" onClick={onSignOut}>
                   <Icon name="logout" size={14} />
                   退出登录
