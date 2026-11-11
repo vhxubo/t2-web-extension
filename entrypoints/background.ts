@@ -29,9 +29,12 @@ import { tokensItem } from '@/lib/storage';
  */
 const RULE_ID = 1;
 
-/** 未读数兜底轮询：`alarms` 的最小周期是 1 分钟，与接口文档建议的 60 秒一致。 */
-const UNREAD_ALARM = 't2:unread-count';
-const POLL_MINUTES = 1;
+/**
+ * 长连接保活：service worker 可能被浏览器回收，闹钟只负责把它唤醒并重建 SSE，
+ * 不再顺带拉未读数——未读数完全由 SSE 事件驱动。
+ */
+const STREAM_ALARM = 't2:notification-stream';
+const STREAM_ALARM_MINUTES = 1;
 
 /** 角标配色与界面里的未读小红点一致（styles/theme.css 的 --notice）。 */
 const BADGE_COLOR = '#c4554b';
@@ -76,8 +79,8 @@ async function applyBadge(count: number): Promise<void> {
 
 /* ------------------------------------------------------------------
    通知：后台优先持有长连接
-   - SSE 负责「有新通知」的即时提醒（事件里没有正文，收到后只拉未读数）；
-   - 每分钟的 alarms 仍然保留，用来兜底（旧浏览器 / 长连接断开 / 站内已读）；
+   - SSE 负责即时提醒：帧里带未读数就直接用，没带才补一次 unread-count；
+   - 不再定时轮询未读数；闹钟只用来唤醒 service worker 重建长连接；
    - 结果同时写进工具栏角标，并广播给打开着的弹窗与仪表盘；
    - 后台没就绪时，页面会自己连一条 SSE 兜底（见 hooks/useUnreadNotifications）。
 ------------------------------------------------------------------ */
@@ -130,14 +133,22 @@ function ensureNotificationStream(): void {
   if (stream || streamDisabled) return;
 
   stream = openNotificationStream({
-    onReady: () => {
+    onReady: (unreadCount) => {
       setStreamReady(true);
-      // 断开期间可能漏掉事件；握手成功后立刻对一次未读数。
+      // 断开期间可能漏掉事件：帧里带了未读数就直接采纳，没带才补一次请求。
+      if (unreadCount !== null) {
+        void publishUnread(unreadCount);
+        return;
+      }
       void syncUnreadBadge();
     },
-    onNotification: () => {
+    onNotification: (unreadCount) => {
       // 让打开着的通知中心按需刷新列表；事件本身不带正文。
       void broadcast({ type: NOTIFICATION_EVENT_MESSAGE });
+      if (unreadCount !== null) {
+        void publishUnread(unreadCount);
+        return;
+      }
       scheduleUnreadRefresh();
     },
     onReconnect: () => {
@@ -203,15 +214,25 @@ async function syncUnreadBadge(): Promise<void> {
 }
 
 /** 定时器可能被浏览器清理（扩展更新 / 浏览器重启），这里做幂等创建。 */
-async function ensureUnreadAlarm(alarms: typeof browser.alarms | null): Promise<void> {
+async function ensureStreamAlarm(alarms: typeof browser.alarms | null): Promise<void> {
   if (!alarms) return;
   try {
-    const existing = await alarms.get(UNREAD_ALARM);
+    const existing = await alarms.get(STREAM_ALARM);
     if (existing) return;
-    await alarms.create(UNREAD_ALARM, { periodInMinutes: POLL_MINUTES });
+    await alarms.create(STREAM_ALARM, { periodInMinutes: STREAM_ALARM_MINUTES });
   } catch (error) {
-    console.warn('[T2] 未读通知定时器创建失败，角标可能不会自动刷新', error);
+    console.warn('[T2] 长连接保活定时器创建失败，后台被回收后可能收不到实时通知', error);
   }
+}
+
+/** 闹钟只做保活：登录状态下确保长连接存在，不额外请求未读数。 */
+async function ensureStreamAlive(): Promise<void> {
+  const tokens = await tokensItem.getValue().catch(() => null);
+  if (!tokens?.accessToken) {
+    stopNotificationStream();
+    return;
+  }
+  ensureNotificationStream();
 }
 
 export default defineBackground(() => {
@@ -286,20 +307,20 @@ export default defineBackground(() => {
   });
 
   void boot();
-  void ensureUnreadAlarm(alarms);
+  void ensureStreamAlarm(alarms);
 
   browser.runtime.onInstalled.addListener(() => {
     // 扩展安装 / 更新后强刷一次，让新版本的规则条件立即生效。
     void installRule().then(() => syncUnreadBadge());
-    void ensureUnreadAlarm(alarms);
+    void ensureStreamAlarm(alarms);
   });
   browser.runtime.onStartup.addListener(() => {
     void boot();
-    void ensureUnreadAlarm(alarms);
+    void ensureStreamAlarm(alarms);
   });
 
   alarms?.onAlarm.addListener((alarm) => {
-    if (alarm.name === UNREAD_ALARM) void syncUnreadBadge();
+    if (alarm.name === STREAM_ALARM) void ensureStreamAlive();
   });
 
   // 登录、退出、令牌刷新后立即更新角标与长连接，不用等下一轮闹钟。

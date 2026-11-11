@@ -124,11 +124,18 @@ describe('openNotificationStream', () => {
 
     const ready = signal();
     const notified = signal();
+    const counts: Array<number | null> = [];
     const errors: unknown[] = [];
     const stream = openNotificationStream(
       {
-        onReady: ready.resolve,
-        onNotification: notified.resolve,
+        onReady: (unreadCount) => {
+          counts.push(unreadCount);
+          ready.resolve();
+        },
+        onNotification: (unreadCount) => {
+          counts.push(unreadCount);
+          notified.resolve();
+        },
         onError: (error) => errors.push(error),
       },
       timing,
@@ -141,11 +148,43 @@ describe('openNotificationStream', () => {
     await notified.promise;
 
     stream.close();
+    expect(counts).toEqual([null, null]);
     expect(calls).toHaveLength(1);
     expect(calls[0]?.headers.get('accept')).toBe('text/event-stream');
     expect(calls[0]?.headers.get('authorization')).toBe('Bearer old-token');
     expect(calls[0]?.url).toEndWith('/v1/me/notifications/stream');
     expect(errors).toHaveLength(0);
+  });
+
+  test('passes the unread count carried by a frame', async () => {
+    const feed = openFeed();
+    feeds.push(feed);
+    fetchQueue.push(() => new Response(feed.body, { status: 200 }));
+
+    const ready = signal();
+    const notified = signal();
+    const counts: Array<number | null> = [];
+    const stream = openNotificationStream(
+      {
+        onReady: (unreadCount) => {
+          counts.push(unreadCount);
+          ready.resolve();
+        },
+        onNotification: (unreadCount) => {
+          counts.push(unreadCount);
+          notified.resolve();
+        },
+      },
+      timing,
+    );
+
+    feed.push('data: {"type":"ready","unread_count":2}\n\n');
+    await ready.promise;
+    feed.push('data: {"type":"notification_update","count":5}\n\n');
+    await notified.promise;
+
+    stream.close();
+    expect(counts).toEqual([2, 5]);
   });
 
   test('reconnects when the server sends a reconnect frame', async () => {

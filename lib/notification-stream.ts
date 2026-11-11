@@ -15,7 +15,8 @@ import type { Envelope } from './types';
  *
  * 连接生命周期（按文档约定）：
  * - `ready`：握手成功；之后的未读变化靠 `notification_update` 推动；
- * - `notification_update`：只表示「有新通知」，没有正文，回调里自己拉未读数；
+ * - `notification_update`：只保证「有新通知」，没有正文；如果帧里带了
+ *   `unread_count`（服务端可选的扩展字段）就直接用，没有才回调去拉一次；
  * - `reconnect`：服务端主动断开（15 分钟寿命 / 令牌快过期），不是故障，立即重连；
  * - `retry: 25000` 心跳：25 秒一次，45 秒一个字节都没收到就认为连接已死；
  * - 断线重连：5s → 10s → 20s → 40s → 60s 封顶；
@@ -50,9 +51,12 @@ export class NotificationStreamError extends Error {
 
 export interface NotificationStreamHandlers {
   /** 握手成功（每次重连成功都会回调）。 */
-  onReady?: () => void;
-  /** 有新通知；事件里没有正文，自己去拉未读数 / 列表。 */
-  onNotification?: () => void;
+  onReady?: (unreadCount: number | null) => void;
+  /**
+   * 有新通知。`unreadCount` 是帧里自带的未读数（没有则为 `null`）：
+   * 有就不要再请求 `unread-count`，没有才自己去拉。
+   */
+  onNotification?: (unreadCount: number | null) => void;
   /** 服务端要求主动重连（正常节奏，不是故障）。 */
   onReconnect?: () => void;
   /** 每次建连失败 / 断流都会回调。`kind === 'auth'` 表示循环已经停下。 */
@@ -105,17 +109,36 @@ function toStreamError(error: unknown): NotificationStreamError {
   return new NotificationStreamError('通知长连接出错', 'network');
 }
 
-/** 事件帧的 `type`；不是 JSON 或没有 `type` 的帧按未知事件忽略。 */
-function readFrameType(data: string): string | null {
+interface StreamFrame {
+  /** 帧类型；不是 JSON 或没有 `type` 时按未知事件忽略。 */
+  type: string | null;
+  /** 帧里自带的未读数；契约只保证 `type`，所以没有就是 `null`。 */
+  unreadCount: number | null;
+}
+
+function readFrame(data: string): StreamFrame {
+  const unknown: StreamFrame = { type: null, unreadCount: null };
   try {
     const parsed: unknown = JSON.parse(data);
-    if (parsed && typeof parsed === 'object' && typeof (parsed as { type?: unknown }).type === 'string') {
-      return (parsed as { type: string }).type;
-    }
+    if (!parsed || typeof parsed !== 'object') return unknown;
+    const bag = parsed as { type?: unknown; unread_count?: unknown; count?: unknown };
+    const raw = bag.unread_count ?? bag.count;
+    // `Number(null)` 是 0，会把角标清零；只接受数字或数字字符串。
+    const value =
+      typeof raw === 'number'
+        ? raw
+        : typeof raw === 'string' && raw.trim() !== ''
+          ? Number(raw)
+          : Number.NaN;
+    const count = Math.floor(value);
+    return {
+      type: typeof bag.type === 'string' ? bag.type : null,
+      unreadCount: Number.isFinite(count) && count >= 0 ? count : null,
+    };
   } catch {
     // 未知帧忽略，不要因为一条脏数据断开整条连接。
+    return unknown;
   }
-  return null;
 }
 
 async function readErrorEnvelope(response: Response): Promise<Envelope<unknown> | null> {
@@ -225,12 +248,12 @@ export function openNotificationStream(
 
         armIdleTimer();
         for (const frame of parser.push(decoder.decode(value, { stream: true }))) {
-          const type = readFrameType(frame.data);
+          const { type, unreadCount } = readFrame(frame.data);
           if (type === 'ready') {
             failures = 0;
-            handlers.onReady?.();
+            handlers.onReady?.(unreadCount);
           } else if (type === 'notification_update') {
-            handlers.onNotification?.();
+            handlers.onNotification?.(unreadCount);
           } else if (type === 'reconnect') {
             return { kind: 'reconnect' };
           }

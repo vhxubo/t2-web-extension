@@ -11,15 +11,6 @@ import {
 import { getUnreadNotificationCount } from '../lib/notifications';
 import { openNotificationStream, type NotificationStream } from '../lib/notification-stream';
 
-/**
- * 后台长连接没就绪时的兜底刷新间隔。
- *
- * 正常路径是 SSE：后台收到 `notification_update` 会马上广播最新未读数。
- * 只有长连接还没握手 / 正在退避时才用轮询，所以这里比文档建议的 60 秒更短，
- * 让小红点在最坏情况下也能在几秒级跟上来；页面不可见时仍然不请求。
- */
-const POLL_MS = 15_000;
-
 /** 窗口重新可见 / 获得焦点时，两次刷新之间的最小间隔（避免 focus + visibility 连发）。 */
 const ACTIVE_REFRESH_GAP_MS = 2_000;
 
@@ -29,7 +20,7 @@ const LOCAL_STREAM_GRACE_MS = 2_000;
 const LOCAL_STREAM_GAP_MS = 10_000;
 const LOCAL_STREAM_SLOT_KEY = 't2:notification-stream:last-attempt';
 
-/** 后台每分钟都会广播一次；超过这个时间没有消息就怀疑连接已经断了。 */
+/** 后台只在事件时广播；超过这个时间没有消息就主动问一次状态。 */
 const STREAM_SILENCE_MS = 75_000;
 
 function reportUnread(count: number, at: number): void {
@@ -58,12 +49,11 @@ function reserveLocalStreamSlot(): boolean {
  * 未读通知数。
  *
  * - 登录状态由调用方传入；未登录直接归零，不发请求；
- * - 后台持有一条 SSE 长连接，收到 `notification_update` 后会把最新未读数广播过来，
- *   弹窗 Dock 与仪表盘铃铛因此可以秒级更新；
- * - 后台长连接没就绪时，页面等 2 秒再自己连一条 SSE 兜底，而不是只靠轮询；
- * - 任何兜底路径下页面都保留 15 秒刷新；页面重新可见 / 窗口重新获得焦点时立即刷新；
- * - 站内标记已读不会产生 `notification_update`，所以「切回页面」和兜底刷新
- *   是小红点跟随减少的关键；
+ * - 后台持有一条 SSE 长连接，`notification_update` 帧里带未读数就直接用，
+ *   没带才补一次 `unread-count`；弹窗 Dock 与仪表盘铃铛因此可以秒级更新；
+ * - 不再定时轮询：后台长连接没就绪时，页面等 2 秒再自己连一条 SSE 兜底；
+ * - 站内标记已读不会产生 `notification_update`，所以「切回页面 / 窗口重新聚焦」
+ *   时校准一次是小红点跟随减少的关键；
  * - 令牌缺少 `read:me` 或已过期时静默隐藏角标，不影响主列表；
  * - 用 generation + AbortController 处理 StrictMode 双挂载和重叠请求，
  *   并让后台推送优先于更早发出的轮询结果。
@@ -74,15 +64,13 @@ export function useUnreadNotifications(enabled: boolean) {
   const [error, setError] = useState<unknown>(null);
   /** 后台长连接是否已经握手成功；就绪时不再跑兜底轮询。 */
   const [streamLive, setStreamLive] = useState(false);
-  /** 页面自己的兜底长连接是否已经握手成功。 */
-  const [localLive, setLocalLive] = useState(false);
 
   const mounted = useRef(true);
   const generation = useRef(0);
   const abortRef = useRef<AbortController | null>(null);
   /** 后台推送到达的时间，用来丢弃比它更早发出的轮询结果。 */
   const pushedAt = useRef(0);
-  /** 最近一次收到后台任何消息的时间；长时间没有消息时退回兜底轮询。 */
+  /** 最近一次收到后台任何消息的时间；长时间没有消息时主动问一次状态。 */
   const lastPushAt = useRef(0);
   /** 最近一次「页面重新激活」触发的刷新时间。 */
   const activeRefreshAt = useRef(0);
@@ -93,7 +81,15 @@ export function useUnreadNotifications(enabled: boolean) {
   const closeLocalStream = useCallback(() => {
     localStreamRef.current?.close();
     localStreamRef.current = null;
-    setLocalLive(false);
+  }, []);
+
+  /** 采纳一份推送来的未读数：中止在途轮询，避免旧结果盖回来。 */
+  const acceptPush = useCallback((count: number) => {
+    lastPushAt.current = Date.now();
+    abortRef.current?.abort();
+    pushedAt.current = Date.now();
+    setCount(Math.max(0, Math.floor(count)));
+    setError(null);
   }, []);
 
   const refresh = useCallback(async () => {
@@ -164,12 +160,7 @@ export function useUnreadNotifications(enabled: boolean) {
     const listener = (message: unknown) => {
       if (!alive) return;
       if (isUnreadCountMessage(message)) {
-        lastPushAt.current = Date.now();
-        // 后台刚拉过最新值：中止可能在途的旧轮询，直接采纳推送。
-        abortRef.current?.abort();
-        pushedAt.current = Date.now();
-        setCount(Math.max(0, Math.floor(message.count)));
-        setError(null);
+        acceptPush(message.count);
         return;
       }
       if (isStreamStatusMessage(message)) {
@@ -222,7 +213,7 @@ export function useUnreadNotifications(enabled: boolean) {
   }, [enabled, refresh]);
 
   // 后台长连接没就绪时，页面自己连一条 SSE。这样即使 service worker 被回收 /
-  // 后台建连失败，弹窗和仪表盘的小红点仍然是事件驱动、秒级更新，而不是等轮询。
+  // 后台建连失败，弹窗和仪表盘的小红点仍然是事件驱动、秒级更新。
   useEffect(() => {
     if (!enabled) {
       localDisabled.current = false;
@@ -244,26 +235,27 @@ export function useUnreadNotifications(enabled: boolean) {
       // 页面不可见时不开连接：小红点看不到，等切回页面再由下面的监听补上。
       if (document.visibilityState !== 'visible') return;
       if (!reserveLocalStreamSlot()) {
-        // 全局限流：等窗口过去再试，期间继续走 15 秒兜底刷新。
+        // 全局限流：等窗口过去再试。
         retryTimer = window.setTimeout(attempt, LOCAL_STREAM_GAP_MS);
         return;
       }
 
       const stream = openNotificationStream({
-        onReady: () => {
+        onReady: (unreadCount) => {
           if (cancelled) return;
-          setLocalLive(true);
-          void refresh();
+          // 握手时帧里带未读数就用，没带才补一次请求（断开期间可能漏事件）。
+          if (unreadCount !== null) acceptPush(unreadCount);
+          else void refresh();
         },
-        onNotification: () => {
+        onNotification: (unreadCount) => {
           if (cancelled) return;
-          // 事件里没有正文：拉一次未读数，并让打开着的通知中心刷新列表。
-          void refresh();
+          // 帧里带未读数就直接用，没带才拉一次；顺带让通知中心刷新列表。
+          if (unreadCount !== null) acceptPush(unreadCount);
+          else void refresh();
           window.dispatchEvent(new Event(NOTIFICATION_LOCAL_EVENT));
         },
         onError: (streamError) => {
           if (cancelled) return;
-          setLocalLive(false);
           if (streamError.kind === 'auth') localDisabled.current = true;
         },
       });
@@ -292,10 +284,10 @@ export function useUnreadNotifications(enabled: boolean) {
       if (retryTimer !== null) window.clearTimeout(retryTimer);
       closeLocalStream();
     };
-  }, [enabled, streamLive, refresh, closeLocalStream]);
+  }, [enabled, streamLive, refresh, closeLocalStream, acceptPush]);
 
-  // 后台说「就绪」但可能已经被浏览器回收。超过 75 秒没有广播就先问一次后台，
-  // 真的断了才退回兜底刷新（并让上面的 effect 接管本地长连接）。
+  // 后台说「就绪」但可能已经被浏览器回收。超过 75 秒没有消息就先问一次后台，
+  // 真的断了才让上面的 effect 接管本地长连接。
   useEffect(() => {
     if (!enabled || !streamLive) return;
 
@@ -324,17 +316,5 @@ export function useUnreadNotifications(enabled: boolean) {
     };
   }, [enabled, streamLive]);
 
-  // 兜底刷新只在「两条长连接都没就绪」且页面可见时运行；
-  // 重新可见时的即时刷新由上面的 active effect 负责。
-  useEffect(() => {
-    if (!enabled || streamLive || localLive) return;
-
-    const timer = window.setInterval(() => {
-      if (document.visibilityState === 'visible') void refresh();
-    }, POLL_MS);
-
-    return () => window.clearInterval(timer);
-  }, [enabled, streamLive, localLive, refresh]);
-
-  return { count, loading, error, refresh, streamLive, localLive };
+  return { count, loading, error, refresh, streamLive };
 }
