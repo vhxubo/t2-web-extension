@@ -12,6 +12,8 @@ export interface BoardMeta {
   supportsSection: boolean;
   /** 该榜单对应 `GET /v1/topics?dimensions=...` 的维度。 */
   dimension?: TopicDimension;
+  /** 固定展示某个节点时，`GET /v1/topics` 的 node_id。 */
+  nodeId?: string;
   /** `/v1/topics` 必填的 limit；hot / latest 走接口默认值，用不到这个字段。 */
   pageSize: number;
 }
@@ -51,6 +53,17 @@ export const BOARDS: BoardMeta[] = [
     hint: '按发布时间',
     icon: '📑',
     supportsSection: true,
+    pageSize: 50,
+  },
+  {
+    id: 'community',
+    label: '社区讨论',
+    shortLabel: '社区讨论',
+    hint: '论坛节点，按发布时间',
+    icon: '💬',
+    supportsSection: false,
+    // 2libra 论坛 / 社区讨论（forum-function）。
+    nodeId: 'eb3e8ec7-6b0f-43bf-956f-7a18ca23396a',
     pageSize: 50,
   },
   {

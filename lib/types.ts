@@ -18,7 +18,7 @@ export interface Envelope<T> {
 /** `/v1/topics` 的维度筛选。 */
 export type TopicDimension = 'work' | 'life' | 'special';
 
-export type BoardId = 'home' | 'hot24h' | 'hot7d' | 'latest' | 'work' | 'life';
+export type BoardId = 'home' | 'hot24h' | 'hot7d' | 'latest' | 'community' | 'work' | 'life';
 
 /** 分区：全站 / 顶层节点（含子节点） / 具体子节点。 */
 export type Section =

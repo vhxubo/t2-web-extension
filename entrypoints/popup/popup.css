@@ -144,14 +144,14 @@ body {
 
 .popup .board-tabs {
   flex-wrap: nowrap;
-  gap: 4px;
+  gap: 3px;
 }
 
 .popup .board-tab {
-  padding: 6px 9px;
+  padding: 6px;
   border-radius: 999px;
   color: var(--ink-3);
-  font-size: 12.5px;
+  font-size: 12px;
   font-weight: 500;
   line-height: 1.2;
   white-space: nowrap;

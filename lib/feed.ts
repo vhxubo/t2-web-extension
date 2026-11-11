@@ -70,7 +70,7 @@ export async function loadFeed(options: LoadFeedOptions): Promise<FeedPage> {
       signal,
     });
   } else {
-    const dimension = BOARD_MAP[board].dimension;
+    const { dimension, nodeId } = BOARD_MAP[board];
     data = await apiGet<TopicPage>('/v1/topics', {
       auth: true,
       query: {
@@ -78,6 +78,7 @@ export async function loadFeed(options: LoadFeedOptions): Promise<FeedPage> {
         page,
         limit: pageSize,
         ...(dimension ? { dimensions: dimension } : {}),
+        ...(nodeId ? { node_id: nodeId } : {}),
         ...filter,
       },
       signal,
