@@ -48,22 +48,26 @@ export async function getNotifications(
 }
 
 /**
- * 单条标记已读：站点消息中心使用的 `POST /api/notifications/mark-as-read`，
- * 请求体是 `{ id: [消息 id] }`。
+ * 标记已读：`POST /v1/me/notifications/read`，返回 `{ ok: true }`。
  *
- * 开放 API 文档目前只列出「全部标记已读」（`POST /v1/me/notifications/read`），
- * 没有逐条端点；单条按钮要真正落到服务端，只能沿用站点自己的这个接口。
+ * - 不传 `ids`：全部标记已读，请求不带 body（旧用法）。
+ * - 传 `ids`：只标记指定通知，请求体是 `{ id: [...] }`（字段名是 `id`，不是
+ *   `ids`；服务端会静默丢弃未知字段，写错等于全部已读）。接口单次上限 100 条。
+ * - `ids` 为空数组时直接返回：服务端会对 `id: []` 返回 400，不能当全部已读用。
  */
-export async function markNotificationRead(id: string, signal?: AbortSignal): Promise<void> {
-  await apiPost<unknown>('/notifications/mark-as-read', {
-    body: { id: [id] },
-    signal,
-  });
-}
-
-/**
- * 全部标记已读：`POST /v1/me/notifications/read`，返回 `{ ok: true }`。
- */
-export async function markAllNotificationsRead(signal?: AbortSignal): Promise<void> {
-  await apiPost<{ ok?: boolean }>('/v1/me/notifications/read', { signal });
+export async function markNotificationsRead(
+  ids?: readonly string[],
+  signal?: AbortSignal,
+): Promise<void> {
+  if (!ids) {
+    await apiPost<{ ok?: boolean }>('/v1/me/notifications/read', { signal });
+    return;
+  }
+  // 上限 100：超过就分批，避免整批被拒后一条都没标。
+  for (let start = 0; start < ids.length; start += 100) {
+    await apiPost<{ ok?: boolean }>('/v1/me/notifications/read', {
+      body: { id: ids.slice(start, start + 100) },
+      signal,
+    });
+  }
 }

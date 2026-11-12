@@ -7,8 +7,7 @@ import {
 } from '../lib/notification-filter';
 import {
   getNotifications,
-  markAllNotificationsRead,
-  markNotificationRead,
+  markNotificationsRead,
   type AppNotification,
 } from '../lib/notifications';
 
@@ -31,11 +30,11 @@ interface UseNotificationsResult {
   error: unknown;
   /** 用户主动重试 / 刷新（显示 loading）。 */
   reload: () => Promise<void>;
-  /** 单条标记已读：调用站点接口，成功返回 true。 */
+  /** 单条标记已读：调用开放 API，成功返回 true。 */
   markRead: (id: string) => Promise<boolean>;
   /** 正在提交单条已读的消息 id。 */
   readingIds: ReadonlySet<string>;
-  /** 全部标记已读：调用 `POST /v1/me/notifications/read`。成功返回 true。 */
+  /** 全部标记已读：调用 `POST /v1/me/notifications/read`（不带 body）。成功返回 true。 */
   markAllRead: () => Promise<boolean>;
   /** 全部已读请求进行中。 */
   markingAll: boolean;
@@ -53,7 +52,7 @@ interface UseNotificationsResult {
  * - 只在面板打开时请求，避免弹窗 / 仪表盘常驻占用读配额；
  * - `notification_update` 事件里没有正文，收到后由这里重新拉列表；
  * - 站内标记已读不会产生事件，所以窗口重新可见 / 获得焦点时再校准一次；
- * - 单条「已读」调用站点接口，成功后把该条从列表的未读状态里移除；
+ * - 单条「已读」调用 `POST /v1/me/notifications/read` 并带上 `{ id: [id] }`；
  * - 「全部已读」调用 `POST /v1/me/notifications/read`，成功后列表全部置读；
  * - 分段筛选直接复用接口已有的 `type` / `unread_only` 参数，不新增接口；
  * - 消息行本身不置灰：已读只表现为按钮消失；
@@ -233,7 +232,7 @@ export function useNotifications({
       setReadingIds(new Set(readingRef.current));
       setActionError(null);
       try {
-        await markNotificationRead(id);
+        await markNotificationsRead([id]);
         setReadIds((current) => {
           const next = new Set(current);
           next.add(id);
@@ -264,7 +263,7 @@ export function useNotifications({
     setMarkingAll(true);
     setActionError(null);
     try {
-      await markAllNotificationsRead();
+      await markNotificationsRead();
       // 服务端已全部置读；本地把当前页的条目也立即置读，列表不必等下一次刷新。
       setReadIds((current) => {
         const next = new Set(current);

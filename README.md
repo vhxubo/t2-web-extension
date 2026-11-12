@@ -32,7 +32,7 @@ T2 Web Extension 让你在工具栏弹窗里快速扫一眼帖子，或者在新
 - **节点配置**：设置页里新增「节点配置」。现有视图（默认是八个内置榜单）都能分别开关「弹窗」与「仪表盘」；默认 8 个内置榜单全部进仪表盘，前 6 个进弹窗，工作 / 生活默认只在仪表盘；拖动左侧手柄或上下箭头调整顺序；「添加节点」会弹出一个选择弹窗，可按名称 / slug 筛选全站、父节点（含全部子节点）和具体子节点。弹窗硬上限 6 个 Tab，仪表盘不限；设置里会实时显示两边各放了多少个。父节点用 `parent_slug` 查询，子节点用 `node_id` 查询。
 - **8 个内置榜单**：首页（全站按价值排序）、今日热议（24h）、近期热议（7d）、新发表（最新帖子流）、最新评论（全站评论时间线）、社区讨论（论坛节点）、工作维度、生活维度。它们只是默认配置，可以隐藏、排序，也可以被自定义节点 Tab 替代。
 - **默认进入**：在独立设置页的「节点配置」卡片底部设置，选择弹窗打开时先显示哪个视图；候选是「弹窗」开关打开的视图。在弹窗里切换 Tab 只影响当次浏览，不会改写默认值，也不会影响下次打开。列表每页条数固定：内置榜单沿用各自配置（首页 / 社区讨论 50 条，工作 / 生活 20 条，最新评论 20 条，热议 / 新发表走接口默认 50 条）；自定义节点视图每页 50 条。
-- **未读消息**：登录后由后台接一条 SSE 长连接（`GET /v1/me/notifications/stream`）接收 `notification_update`，帧里带了未读数就直接用、没带才补拉一次；工具栏扩展图标、弹窗 Dock 的「数据仪表盘」和仪表盘顶栏铃铛三处共享同一份状态并即时更新。长连接正常由后台持有；后台没就绪时页面会等 2 秒再自己连一条 SSE 兜底，所以小红点是事件驱动、秒级更新，不依赖 service worker 是否存活。不再定时轮询；两条长连接都没就绪时只靠页面自己的 SSE 兜底，切回页面 / 窗口重新聚焦时校准一次。仪表盘消息中心展示最近 50 条，弹窗右上角铃铛（搜索左侧，数字角标直接显示未读数）可打开独立的消息预览，不占榜单 Tab；两处都会跟随新事件和切回页面静默刷新。两处都有「全部 / 未读 / 回复 / 提及 / 表态 / 打赏」分段筛选，切换后按 `type` / `unread_only` 重新拉取，不只是过滤已加载的一页。消息列表的未读条目右侧有「已读」按钮，调用站点消息接口；「全部已读」调用 `POST /v1/me/notifications/read` 同步到站点，并立即刷新小红点与工具栏角标。消息行本身不置灰；置灰用在榜单 / 搜索里的新闻条目——点开后整行置灰，记录保存在本地。
+- **未读消息**：登录后由后台接一条 SSE 长连接（`GET /v1/me/notifications/stream`）接收 `notification_update`，帧里带了未读数就直接用、没带才补拉一次；工具栏扩展图标、弹窗 Dock 的「数据仪表盘」和仪表盘顶栏铃铛三处共享同一份状态并即时更新。长连接正常由后台持有；后台没就绪时页面会等 2 秒再自己连一条 SSE 兜底，所以小红点是事件驱动、秒级更新，不依赖 service worker 是否存活。不再定时轮询；两条长连接都没就绪时只靠页面自己的 SSE 兜底，切回页面 / 窗口重新聚焦时校准一次。仪表盘消息中心展示最近 50 条，弹窗右上角铃铛（搜索左侧，数字角标直接显示未读数）可打开独立的消息预览，不占榜单 Tab；两处都会跟随新事件和切回页面静默刷新。两处都有「全部 / 未读 / 回复 / 提及 / 表态 / 打赏」分段筛选，切换后按 `type` / `unread_only` 重新拉取，不只是过滤已加载的一页。消息列表的未读条目右侧有「已读」按钮，调用 `POST /v1/me/notifications/read` 并带 `{ id: [id] }`；「全部已读」调用同一个端点、不带 body 同步到站点，并立即刷新小红点与工具栏角标。消息行本身不置灰；置灰用在榜单 / 搜索里的新闻条目——点开后整行置灰，记录保存在本地。
 - **登录**：OAuth 授权码 + PKCE（公开客户端，无 `client_secret`），令牌过期自动刷新（单飞），401 自动重试一次。登录成功后立即解析当前用户资料：`GET /v1/me/summary` 只用来取身份，**缺头像时**再用公开的 `GET /v1/users/:username` 补齐（不需要额外 scope），结果写入 `storage.local`，退出登录一并清除。
 - **外观**：设置页的「外观」支持 `☀️ 浅色 / 🌙 深色 / 💻 跟随系统`，选择保存在 `chrome.storage.local` 的 `t2:settings`，弹窗、仪表盘与设置页共用同一份偏好。弹窗 Header 另外提供 `☀️ / 🌙` 按钮一键切换浅色 / 深色；当前为「跟随系统」时会提示实际主题，想恢复跟随系统回到设置页即可。选「跟随系统」时会监听 `prefers-color-scheme`，系统切换后所有已打开页面实时跟着变。
 - **视觉**：所有页面共用同一套 CSS 变量主题（`--bg-base` / `--bg-card` / `--text-main` / `--primary` 等），由 `<html class="dark">` 切换深色令牌。无衬线字体、等宽数字、键盘可操作、`prefers-reduced-motion` 生效。
@@ -220,8 +220,8 @@ https://1e3dfcf6f6cd76246e686cabdf2e53df06ab002f.extensions.allizom.org/cb
 | 实时提醒 | `GET /v1/me/notifications/stream`（`text/event-stream`） |
 | 工具栏角标 / Dock / 铃铛上的未读数（仅帧里没带时补拉） | `GET /v1/me/notifications/unread-count` |
 | 消息中心列表 | `GET /v1/me/notifications?page=1&limit=50`（筛选另带 `type=` / `unread_only=true`） |
-| 单条标记已读 | `POST /api/notifications/mark-as-read`（站点接口，body `{ id: [消息 id] }`） |
-| 全部标记已读 | `POST /v1/me/notifications/read`（返回 `{ ok: true }`） |
+| 单条 / 批量标记已读 | `POST /v1/me/notifications/read`（body `{ id: [消息 id, …] }`，最多 100 条） |
+| 全部标记已读 | `POST /v1/me/notifications/read`（不带 body，返回 `{ ok: true }`） |
 
 - **正常情况下长连接由后台 service worker 独占**：弹窗和仪表盘只接收广播，避免多个页面各开一条。后台没就绪（service worker 被回收 / 建连失败）时，页面会等 2 秒后自己连一条 SSE 兜底；`localStorage` 把页面侧的建连间隔限制在 10 秒，配合页面侧退避，避免撞上「同一用户最多 10 条并发、每分钟最多建连 6 次」的限制。
 - 浏览器 `EventSource` 不能设置 `Authorization`，而端点只认请求头，所以用 `fetch()` 读流：实现见 [`lib/notification-stream.ts`](lib/notification-stream.ts)，增量帧解析见 [`lib/sse.ts`](lib/sse.ts)。
@@ -234,8 +234,8 @@ https://1e3dfcf6f6cd76246e686cabdf2e53df06ab002f.extensions.allizom.org/cb
 - 消息列表的字段名是 `list`（不是 `items`）。展示层从 `payload` 中读取回复 / 提及的 `commentText`、`postTitle`、`commentLevel`、`target`，表态的 `reactionType` / `reactions` / `relations`（按 emoji 分组显示表态 username），打赏的 `amount` / `rewardType`，以及系统消息、内容检定、徽章、升级等字段（映射见 [`lib/notification-view.ts`](lib/notification-view.ts)）。匿名回复用 `alias_name` / `alias_avatar_url`，帖子链接优先用 `path`，其次用 `postNodeSlug` + `postShortId` 拼详情页；无法识别的字段一律忽略并退回「一条新消息」。
 - **分段筛选复用现有参数**：消息中心与弹窗预览都提供「全部 / 未读 / 回复 / 提及 / 表态 / 打赏」。`全部` 不传类型，`未读` 传 `unread_only=true`，其余分别映射到站点消息中心同名的 `type`：`reply` / `mention` / `reaction` / `get_reward`。服务端一次只接受一个 `type`，而「回复提及」是独立类型（`reply_mention`），所以它仍只在「全部」里出现，不并入「回复」或「提及」。分段切换会中止上一页请求并按新参数重拉，`total` 与「还有 N 条」跟着分段变化；「未读」下点单条已读会立即把该条移出列表并把总数减一。
 - 消息内容只随列表请求临时展示，不写入 storage；`notification_update` 事件本身仍然不带正文，页面收到后再拉列表。
-- **单条「已读」会调用接口**：未读消息右侧的「已读」按钮调用站点消息中心使用的 `POST /api/notifications/mark-as-read`（body `{ id: [id] }`）。开放 API 文档只列出「全部标记已读」，没有逐条端点，所以这里沿用站点接口；成功后该条不再显示未读按钮，并刷新未读数；失败时底部显示「操作失败」。
-- **「全部已读」会写服务端**：`POST /v1/me/notifications/read` 使用 `read:me` scope，成功返回 `{ ok: true }`；前端立即把当前列表全部置读，并调用未读数刷新，把工具栏角标与界面小红点归零。
+- **单条「已读」会调用接口**：未读消息右侧的「已读」按钮调用 `POST /v1/me/notifications/read`，body `{ id: [id] }`（字段名是 `id`，不是 `ids`；服务端会静默丢弃未知字段，写错等于把全部通知标为已读）。成功后该条不再显示未读按钮，并刷新未读数；失败时底部显示「操作失败」。
+- **「全部已读」会写服务端**：`POST /v1/me/notifications/read`（不带 body）使用 `read:me` scope，成功返回 `{ ok: true }`；前端立即把当前列表全部置读，并调用未读数刷新，把工具栏角标与界面小红点归零。
 - 消息行本身**不置灰**；单条 / 全部已读的结果只表现为未读按钮消失。
 - 写请求只有消息单条 / 全部已读与帖子收藏；`apiPost` / `apiDelete` 复用同一套信封解析、401 刷新重试和 DNR 去 `Origin` 规则（见 [`lib/api.ts`](lib/api.ts)）。
 - 授权 scope 是 `read profile read:me interact`；旧令牌需要重新授权一次才会出现消息角标、才能收藏帖子（设置页账号卡片提供「重新授权」）。SSE 复用同一套 `declarativeNetRequest` 规则（移除 `Origin` 头），没有新增权限。
@@ -322,7 +322,7 @@ https://1e3dfcf6f6cd76246e686cabdf2e53df06ab002f.extensions.allizom.org/cb
 - 所有开放 API 请求统一经 [`lib/rate-limit.ts`](lib/rate-limit.ts) 排队：最多 4 个并发、相邻请求至少间隔 120ms；遇到 `429` 进入冷却（优先按 `retry_after`），冷却期内不再发请求。
 - 公开榜单与最新评论改为匿名读取：令牌桶只有 600 次/小时（≈10 次/分），匿名是 60 次/分，列表也不需要令牌个性化的字段。
 - 遇到 `429 rate_limited` 会展示 `retry_after`；`401` 先刷新令牌再重试一次；`403 insufficient_scope` 会引导重新授权。
-- 写操作：消息已读（单条 `/api/notifications/mark-as-read`、全部 `POST /v1/me/notifications/read`）与帖子收藏（`POST /v1/topics/:short_id/favorite` / `DELETE` 同一路径）；发帖 / 评论等其它写操作仍必须经应用自己的服务端，扩展不提供。
+- 写操作：消息已读（单条 / 批量带 `{ id: [...] }`、全部不带 body，都走 `POST /v1/me/notifications/read`）与帖子收藏（`POST /v1/topics/:short_id/favorite` / `DELETE` 同一路径）；发帖 / 评论等其它写操作仍必须经应用自己的服务端，扩展不提供。
 
 ## 项目结构
 
@@ -366,7 +366,7 @@ styles/           设计令牌与基础样式
 - 登录依赖开发者已经申请并通过审核的 OAuth 应用（`lib/config.ts` 里的 `OAUTH_CLIENT_ID`）；未配置时所有内容仍可匿名浏览，登录按钮禁用。
 - 消息角标依赖授权时勾选 `read:me`；应用审核未开通该 scope 时，角标与消息中心会提示重新授权。
 - 消息长连接优先由后台 service worker 维持；被浏览器回收后，下一轮 `alarms` 会唤醒它并重建连接（每分钟一次，只是保活、不拉未读数，仍在文档的建连限额内）。后台连续 75 秒没有任何广播时，页面会先问一次状态，确认断开后自己连一条 SSE 兜底。
-- 单条消息已读沿用站点接口 `/api/notifications/mark-as-read`（不属于开放 API 的稳定契约），全部已读走开放 API `POST /v1/me/notifications/read`；任一请求失败时消息中心 / 弹窗底部都会提示。其它写操作仍请到站点内处理。
+- 单条 / 批量消息已读与全部已读都走开放 API `POST /v1/me/notifications/read`：带 `{ id: [...] }` 只标记指定通知（单次最多 100 条，空数组会返回 400，扩展不会发送空数组），不带 body 才是全部已读；任一请求失败时消息中心 / 弹窗底部都会提示。其它写操作仍请到站点内处理。
 - 搜索接口单独限流（匿名 5 次/分、登录 20 次/分），扩展只展示第一页；需要查看更多结果时请到站点内搜索。
 - 节点视图依赖 `/v1/nodes`。首次打开会额外请求每个顶层节点的子节点（4 个并发），之后缓存 10 分钟；接口失败时回退旧缓存，缓存里没有的节点会标「未找到」。
 - 列表只展示标题与元信息；正文只在弹窗的二级详情页按需拉取并渲染成 React 节点，不会把 HTML 直接注入页面。「最新评论」展示的是评论文本 + 表情图片，同样不解析 HTML。
