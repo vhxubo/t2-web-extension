@@ -9,6 +9,7 @@ import {
   SIGNUP_URL,
 } from '../lib/config';
 import { describeError } from '../lib/errors';
+import { requestNotificationPermission } from '../lib/native-notifications';
 import { type Settings, type ThemePreference } from '../lib/storage';
 import type { NodesStatus } from '../hooks/useNodes';
 import type { ApiNode, Profile } from '../lib/types';
@@ -294,9 +295,13 @@ export function SettingsPanel({
               aria-checked={settings.desktopNotifications}
               aria-labelledby="desktop-notif-label"
               className={`node-config__switch${settings.desktopNotifications ? ' is-on' : ''}`}
-              onClick={() =>
-                void onUpdateSettings({ desktopNotifications: !settings.desktopNotifications })
-              }
+              onClick={() => {
+                const next = !settings.desktopNotifications;
+                // 打开时顺手要一次浏览器通知授权：只有用户手势里 requestPermission()
+                // 才会真的弹授权框，后台自己请求只会静默返回 default。
+                if (next) void requestNotificationPermission();
+                void onUpdateSettings({ desktopNotifications: next });
+              }}
             >
               <span>{settings.desktopNotifications ? '已开启' : '已关闭'}</span>
               <span className="node-config__track" aria-hidden="true">
