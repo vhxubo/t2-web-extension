@@ -26,23 +26,38 @@ import { tokensItem } from '@/lib/storage';
  * `Origin: chrome-extension://<id>` / `moz-extension://<uuid>`，于是被服务端以
  * 500「Not allowed by CORS」拒绝。
  *
- * 这里用 declarativeNetRequest 在「发往 API 域名的请求」上移除浏览器自动附加的
- * Origin 头，让请求表现得像 curl 一样的普通客户端。
+ * 这里用 declarativeNetRequest 在「扩展自己发往 API 域名的请求」上移除浏览器自动附加的
+ * Origin 头，让请求表现得像 curl 一样的普通客户端。CORS 不是鉴权，读接口本来就是公开的，
+ * 登录令牌仍按 Authorization 传递，消息已读这类写请求也由 scope + 令牌控制。
  *
- * 关键的坑：不能像最初那样用 `initiatorDomains: [browser.runtime.id]` 来限定
- * 「只改扩展自己的请求」——Chrome 的 runtime.id 是合法的 canonical domain（如
- * lbjdmldgngjjdpgadblpgneglbmgblfd）且正好等于扩展请求的发起方，规则能命中；
- * 但 Firefox 的 runtime.id 是 `t2-...@vhxubo.com`，既不是合法 canonical domain，
- * 也不等于扩展请求真正的发起方（moz-extension://<uuid>），结果规则在 Firefox 上
- * 根本不匹配，扩展发出的请求仍带着 Origin，登录回调的令牌交换就被 CORS 拦掉。
+ * 规则范围必须钉在扩展自身。不能用「2libra.com 以外的一切发起方」这种写法：那等于
+ * 替任意第三方页面绕过服务端的来源校验，把 CORS 保护整片抹掉。
  *
- * 所以改成：把规则范围钉在 `2libra.com/api`，再用 `excludedInitiatorDomains`
- * 把「站点自身页面（2libra.com）」排除掉。这样无论扩展在 Chrome 还是 Firefox 上
- * 的发起方是什么，扩展自己的请求都会被命中并移除 Origin，而站点同站请求不受影响。
- * CORS 不是鉴权，读接口本来就是公开的，登录令牌仍按 Authorization 传递，
- * 消息已读这类写请求也由 scope + 令牌控制。
+ * 关键的坑：`initiatorDomains` 要用扩展真正的 origin host，而不是 `browser.runtime.id`。
+ * Chrome 下 runtime.id 是合法 canonical domain（如 lbjdmldgngjjdpgadblpgneglbmgblfd）
+ * 且正好是请求发起方；Firefox 下 runtime.id 是 `t2-...@vhxubo.com`，既不是合法域名，
+ * 也不是发起方（发起方是 moz-extension://<uuid>），拿它当 initiatorDomains 会让整条规则
+ * 在 Firefox 上不匹配、登录回调的令牌交换被 CORS 拦掉。所以统一从
+ * `runtime.getURL('/')` 里解析 host：Chrome 得到扩展 id，Firefox 得到 moz-extension 的
+ * uuid，两边都成立。
  */
 const RULE_ID = 1;
+/** 只改接口请求；头像等媒体走 <img>，不受影响。 */
+const RULE_URL_FILTER = '||2libra.com/api/';
+
+/**
+ * 扩展自身 origin 的 host。解析不出来时返回 null（此时不写 initiatorDomains，
+ * 规则退回作用于所有发起方，并在日志里告警——总比登录直接坏掉好）。
+ */
+function extensionHost(): string | null {
+  try {
+    const host = new URL(browser.runtime.getURL('/')).hostname;
+    // initiatorDomains 只接受合法域名，塞进非法值会让整条规则被拒。
+    return /^[a-z0-9.-]+$/i.test(host) ? host : null;
+  } catch {
+    return null;
+  }
+}
 
 /**
  * 长连接保活：service worker 可能被浏览器回收，闹钟只负责把它唤醒并重建 SSE，
@@ -260,8 +275,29 @@ export default defineBackground(() => {
   const alarms =
     (browser as unknown as { alarms?: typeof browser.alarms }).alarms ?? null;
 
+  /**
+   * 安装 / 刷新跨域规则。已是最新就跳过：后台被闹钟每分钟唤醒一次，
+   * 每次都重写一遍动态规则没有意义。规则内容变了（含此前 Firefox 上不匹配的旧写法）
+   * 才重装，用户无需卸载重装扩展即可生效。
+   *
+   * updateDynamicRules 的「移除 + 添加」在同一次调用里原子完成，不存在规则短暂缺失的窗口。
+   */
   const installRule = async () => {
+    const host = extensionHost();
+    if (!host) {
+      console.warn('[T2] 无法确定扩展自身域名，跨域规则将作用于所有发起方');
+    }
+
     try {
+      const existing = await browser.declarativeNetRequest
+        .getDynamicRules()
+        .catch(() => []);
+      const current = existing.find((rule) => rule.id === RULE_ID);
+      const upToDate =
+        current?.condition?.urlFilter === RULE_URL_FILTER &&
+        current?.condition?.initiatorDomains?.[0] === host;
+      if (upToDate) return;
+
       await browser.declarativeNetRequest.updateDynamicRules({
         removeRuleIds: [RULE_ID],
         addRules: [
@@ -273,13 +309,10 @@ export default defineBackground(() => {
               requestHeaders: [{ header: 'origin', operation: 'remove' }],
             },
             condition: {
-              urlFilter: '||2libra.com/api/',
-              // 只针对 2libra.com 的接口请求；排除「站点自身页面」这个发起方，
-              // 其余发起方（扩展自身的 moz-extension / chrome-extension、第三方站点）
-              // 一律移除 Origin。见上方文件头注释：不能用 initiatorDomains 限定扩展自身，
-              // 否则 Firefox 上规则不匹配、登录回调被 CORS 拦截。
-              requestDomains: ['2libra.com'],
-              excludedInitiatorDomains: ['2libra.com'],
+              urlFilter: RULE_URL_FILTER,
+              // 只改扩展自己的请求：发起方是扩展 origin 的 host（Chrome 是扩展 id，
+              // Firefox 是 moz-extension 的 uuid）。见上方文件头注释。
+              ...(host ? { initiatorDomains: [host] } : {}),
               resourceTypes: ['xmlhttprequest', 'other'],
             },
           },
@@ -290,21 +323,11 @@ export default defineBackground(() => {
     }
   };
 
-  /**
-   * 始终重新安装规则：updateDynamicRules 的「移除 + 添加」是在同一次调用里原子完成的，
-   * 不存在规则短暂缺失的窗口，因此不必担心上面注释里担心的 CORS 间隙。
-   * 始终重装能保证：即便本地已存着旧写法（Firefox 上此前不匹配的那版）的规则，
-   * 也会被新内容覆盖，用户无需卸载重装扩展即可生效。
-   */
-  const ensureRule = async () => {
-    await installRule();
-  };
-
   // 首次抓取放在 DNR 规则就绪之后：规则没生效时请求会被 CORS 拦掉。
   const boot = async () => {
     // 系统通知点击后打开站点消息页；尽早注册，与是否登录 / 长连接无关。
     initNativeNotificationClicks();
-    await ensureRule();
+    await installRule();
     await syncUnreadBadge();
   };
 
