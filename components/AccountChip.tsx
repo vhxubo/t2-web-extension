@@ -1,6 +1,7 @@
 import { Avatar } from './Avatar';
 import { Icon } from './Icon';
 import { profileHref } from '../lib/nav';
+import { SIGNUP_URL } from '../lib/config';
 import type { Profile } from '../lib/types';
 
 interface AccountChipProps {
@@ -26,10 +27,21 @@ export function AccountChip({
 
   if (!signedIn) {
     return (
-      <button type="button" className="btn btn--ghost account__login" onClick={onLogin}>
-        <Icon name="user" size={16} />
-        <span>登录</span>
-      </button>
+      <span className="account account--signed-out">
+        <button type="button" className="btn btn--ghost account__login" onClick={onLogin}>
+          <Icon name="user" size={16} />
+          <span>登录</span>
+        </button>
+        <a
+          className="btn btn--ghost account__signup"
+          href={SIGNUP_URL}
+          target="_blank"
+          rel="noreferrer"
+          title="还没有 2Libra 账号？去注册一个"
+        >
+          注册
+        </a>
+      </span>
     );
   }
 

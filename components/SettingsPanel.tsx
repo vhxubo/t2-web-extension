@@ -6,6 +6,7 @@ import {
   OAUTH_CONFIGURED,
   PERMISSION_NOTE,
   REVOKE_HINT,
+  SIGNUP_URL,
 } from '../lib/config';
 import { describeError } from '../lib/errors';
 import { type Settings, type ThemePreference } from '../lib/storage';
@@ -156,6 +157,15 @@ export function SettingsPanel({
                 >
                   {loginBusy ? '等待授权…' : '登录 2Libra'}
                 </button>
+                <a
+                  className="btn btn--ghost"
+                  href={SIGNUP_URL}
+                  target="_blank"
+                  rel="noreferrer"
+                  title="还没有 2Libra 账号？去注册一个"
+                >
+                  注册账号
+                </a>
               </div>
             </div>
           )}

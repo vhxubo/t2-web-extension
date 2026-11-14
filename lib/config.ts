@@ -46,6 +46,12 @@ export const REQUESTED_SCOPE = 'read profile read:me interact';
 export const DASHBOARD_PAGE = '/dashboard.html';
 export const SETTINGS_PAGE = '/options.html';
 
+/**
+ * 注册入口（带邀请码），未登录时展示，方便还没有账号的用户直接去注册。
+ * 与登录共用同一站点，注册完成后再回扩展走 OAuth 授权登录。
+ */
+export const SIGNUP_URL = 'https://2libra.com/auth/signup/7OzoT5x6M';
+
 /** 作者署名：manifest、package.json 与「关于」面板共用同一份信息。 */
 export const AUTHOR = {
   name: 'vhxubo',
