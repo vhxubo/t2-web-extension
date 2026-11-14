@@ -1044,15 +1044,16 @@
   transform: none;
 }
 
+/* 回复正文是这条卡片的主角：字号最大、颜色最深，一眼看到「说了什么」。 */
 .comment-row__content {
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
   overflow-wrap: anywhere;
-  font-size: 12.5px;
-  line-height: 1.55;
-  color: var(--ink-2);
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ink);
 }
 
 .comment-row__content--deleted {
@@ -1068,20 +1069,40 @@
   vertical-align: -0.16em;
 }
 
-/* 被回复的父评论：引用条，只留一行，避免把卡片撑高。 */
+/* 被回复的父评论（原文）：明显降级——更小、更淡、带「原文」标签，
+   和上面的回复正文拉开层次，扫一眼就能分清谁在说、谁被引用。 */
 .comment-row__quote {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  min-width: 0;
+  padding: 4px 8px;
+  border-left: 2px solid var(--line-strong);
+  border-radius: 0 6px 6px 0;
+  background: var(--surface-2);
+  font-size: 10.5px;
+  line-height: 1.55;
+  color: var(--ink-3);
+}
+
+.comment-row__quote-label {
+  flex: none;
+  padding: 0 4px;
+  border-radius: 3px;
+  background: var(--paper-2);
+  color: var(--ink-3);
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  line-height: 1.5;
+}
+
+.comment-row__quote-text {
   display: -webkit-box;
   -webkit-line-clamp: 1;
   -webkit-box-orient: vertical;
   overflow: hidden;
   overflow-wrap: anywhere;
-  padding: 3px 7px;
-  border-left: 2px solid var(--line-strong);
-  border-radius: 0 6px 6px 0;
-  background: var(--surface-2);
-  font-size: 11px;
-  line-height: 1.6;
-  color: var(--ink-3);
+  min-width: 0;
 }
 
 .comment-row__quote-text::before {

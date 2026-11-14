@@ -129,6 +129,7 @@ export function CommentRow({
 
           {quote && (
             <span className="comment-row__quote">
+              <span className="comment-row__quote-label">原文</span>
               <span className="comment-row__quote-text">
                 <CommentText text={quote} emojis={emojis} />
               </span>
