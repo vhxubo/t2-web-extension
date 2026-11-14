@@ -37,6 +37,11 @@ export interface Settings {
   viewsVersion: number;
   /** 外观偏好，保存在 local:t2:settings，所有页面共用。 */
   theme: ThemePreference;
+  /**
+   * 是否用系统级桌面通知提示新消息（manifest 需 `notifications` 权限）。
+   * 默认开启；关闭后只保留工具栏角标与弹窗 / 仪表盘消息中心。
+   */
+  desktopNotifications: boolean;
 }
 
 export function isThemePreference(value: unknown): value is ThemePreference {
@@ -90,6 +95,7 @@ export const DEFAULT_SETTINGS: Settings = {
   views: createDefaultViews(),
   viewsVersion: VIEWS_VERSION,
   theme: 'system',
+  desktopNotifications: true,
 };
 
 const PREFIX = 't2';
@@ -233,6 +239,8 @@ export function normalizeSettings(stored: StoredSettings | null | undefined): Se
     views,
     viewsVersion: VIEWS_VERSION,
     theme: isThemePreference(stored?.theme) ? stored.theme : DEFAULT_SETTINGS.theme,
+    // 旧配置没有这个字段：显式 false 才关，否则（缺省 / 其它值）都按默认开启。
+    desktopNotifications: stored?.desktopNotifications === false ? false : true,
   };
 }
 

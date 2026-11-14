@@ -11,6 +11,10 @@ import {
 } from '@/lib/messages';
 import { getUnreadNotificationCount } from '@/lib/notifications';
 import {
+  initNativeNotificationClicks,
+  scheduleNewMessageNotification,
+} from '@/lib/native-notifications';
+import {
   openNotificationStream,
   type NotificationStream,
   type NotificationStreamError,
@@ -148,6 +152,8 @@ function ensureNotificationStream(): void {
     onNotification: (unreadCount) => {
       // 让打开着的消息中心按需刷新列表；事件本身不带正文。
       void broadcast({ type: NOTIFICATION_EVENT_MESSAGE });
+      // SSE 监听到的每一条新消息都弹系统通知（受设置开关控制，合并窗口内只弹一条）。
+      scheduleNewMessageNotification(unreadCount ?? lastUnread ?? 0);
       if (unreadCount !== null) {
         void publishUnread(unreadCount);
         return;
@@ -284,6 +290,8 @@ export default defineBackground(() => {
 
   // 首次抓取放在 DNR 规则就绪之后：规则没生效时请求会被 CORS 拦掉。
   const boot = async () => {
+    // 系统通知点击后打开站点消息页；尽早注册，与是否登录 / 长连接无关。
+    initNativeNotificationClicks();
     await ensureRule();
     await syncUnreadBadge();
   };

@@ -85,7 +85,13 @@ export default defineConfig({
       name: 'T2 Web Extension',
       description:
         '在弹窗与新标签页里浏览帖子：弹窗最多 6 个可配置节点 Tab，仪表盘卡片不限数量；支持显隐、拖动排序，读取全站、父节点或具体节点。',
-      permissions: ['storage', 'identity', 'alarms', 'declarativeNetRequestWithHostAccess'],
+      permissions: [
+        'storage',
+        'identity',
+        'alarms',
+        'notifications',
+        'declarativeNetRequestWithHostAccess',
+      ],
       minimum_chrome_version: '101',
       // 只用于 API 请求；头像等媒体走 <img>，文档链接走标签页，都不需要 host 权限。
       host_permissions: ['https://2libra.com/*'],

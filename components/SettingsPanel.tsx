@@ -246,6 +246,60 @@ export function SettingsPanel({
           </p>
         </div>
       </section>
+
+      {/* ---------------- 通知 ---------------- */}
+      <section
+        className="settings-card settings-card--notifications"
+        aria-labelledby="settings-notifications"
+      >
+        <header className="settings-card__head">
+          <span className="settings-card__icon" aria-hidden="true">
+            <Icon name="bell" size={17} />
+          </span>
+          <div className="settings-card__heading">
+            <h2 className="settings-card__title" id="settings-notifications">
+              通知
+            </h2>
+            <p className="settings-card__desc">
+              收到新消息时，除工具栏角标外，再弹一条系统桌面通知。
+            </p>
+          </div>
+        </header>
+
+        <div className="settings-card__body">
+          <div className="appearance-panel">
+            <div className="appearance-panel__copy">
+              <span className="appearance-panel__label" id="desktop-notif-label">
+                桌面通知
+              </span>
+              <p className="appearance-panel__hint">
+                关闭后只在扩展图标上显示未读角标，不再弹系统通知。
+              </p>
+            </div>
+
+            <button
+              type="button"
+              role="switch"
+              aria-checked={settings.desktopNotifications}
+              aria-labelledby="desktop-notif-label"
+              className={`node-config__switch${settings.desktopNotifications ? ' is-on' : ''}`}
+              onClick={() =>
+                void onUpdateSettings({ desktopNotifications: !settings.desktopNotifications })
+              }
+            >
+              <span>{settings.desktopNotifications ? '已开启' : '已关闭'}</span>
+              <span className="node-config__track" aria-hidden="true">
+                <span className="node-config__thumb" />
+              </span>
+            </button>
+          </div>
+
+          <p className="settings-inline-note">
+            点击系统通知会跳到对应内容：回复 / 提及直达评论，表态打开原文，没有链接则进入消息界面；
+            通知正文取自最新的未读消息。
+          </p>
+        </div>
+      </section>
     </div>
   );
 }
