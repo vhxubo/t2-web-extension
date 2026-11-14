@@ -2,7 +2,7 @@
   "name": "t2-web-extension",
   "description": "浏览帖子榜单的浏览器扩展（弹窗 + 新标签页）",
   "private": true,
-  "version": "0.5.0",
+  "version": "0.6.0",
   "author": "vhxubo <vhxubo@gmail.com>",
   "type": "module",
   "scripts": {
