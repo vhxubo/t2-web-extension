@@ -88,14 +88,15 @@ bun run test       # SSE 帧解析与长连接重连的单元测试（Bun）
 
 | 浏览器 | 构建命令 | 产物目录 | 打包命令 | 安装方式 |
 | --- | --- | --- | --- | --- |
-| Chrome / Chromium 系（Edge、Brave、360、QQ） | `bun run build:chrome` | `.output/chrome-mv3` | `bun run zip:chrome` | `chrome://extensions` → 开发者模式 → 加载已解压的扩展程序；Edge 用 `edge://extensions` 加载同一个包 |
-| Firefox | `bun run build:firefox` | `.output/firefox-mv2` | `bun run zip:firefox` | `about:debugging#/runtime/this-firefox` → 临时载入附加组件；正式安装需签名 |
+| Chrome / Chromium 系（Edge、Brave、360、QQ） | `bun run build:chrome` | `.output/chrome-mv3` | `bun run zip:chrome` | `chrome://extensions` → 开发者模式 → 加载已解压的扩展程序；Edge 用 `edge://extensions` 加载同一个包（暂未上架商店，见下方说明） |
+| Firefox | `bun run build:firefox` | `.output/firefox-mv2` | `bun run zip:firefox` | 从 [Firefox Add-ons](https://addons.mozilla.org/zh-CN/firefox/addon/t2-web-extension/)（AMO，已签名）正式安装；或 `about:debugging#/runtime/this-firefox` → 临时载入附加组件 |
 
-> **当前发布状态：只有 Chrome 实测过。** Firefox 目标只验证到「能构建、manifest 能生成」，
-> 还没在真实 Firefox 里加载过，弹窗、新标签页、登录回调和角标都未验证。
-> 另外 Firefox 的 manifest 目前是 MV2，并且沿用了 Chromium 专属的
-> `minimum_chrome_version` 与 `declarativeNetRequestWithHostAccess` 权限；正式提交 AMO 前
-> 需要按 Firefox 的权限模型单独适配，不要直接把 `.output/firefox-mv2` 当作可发布产物。
+> **发布状态：** 目前只有 Firefox 已在 [AMO](https://addons.mozilla.org/zh-CN/firefox/addon/t2-web-extension/) 上架（官方签名），可直接商店安装。
+> **Chrome / Edge 暂未上架任何商店。** 要用登录功能，推荐用**携带内置 ID 的版本**——
+> 即 `bun run zip:chrome` 打出的包，或直接加载 `.output/chrome-mv3`（manifest 里钉死了 ID `lbjdmldgngjjdpgadblpgneglbmgblfd`，
+> 回调地址 `https://lbjdmldgngjjdpgadblpgneglbmgblfd.chromiumapp.org/cb` 与站点登记的一致，登录才能成功）。
+> 不要拿 keyless 的商店包（`zip:store`）去登录：它的 ID 由商店分配，回调对不上会登录失败。
+> Firefox 的 manifest 是 MV2，沿用了部分 Chromium 专属权限，真实 Firefox 里的弹窗、新标签页、登录回调与角标仍需更多实测。
 
 一次构建 / 打包全部目标（Firefox 部分同上，未实测）：
 
