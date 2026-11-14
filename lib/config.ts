@@ -5,6 +5,14 @@ export const AUTHORIZE_URL = `${APP_ORIGIN}/oauth/authorize`;
 export const TOKEN_URL = `${APP_ORIGIN}/api/oauth/token`;
 
 /**
+ * 站点注册页的邀请码。2Libra 注册需要邀请，扩展把这条带入注册链接，
+ * 没账号的用户先在这里建号，再回扩展里走 OAuth 授权登录。
+ * 改邀请码只需动这里，UI 与 `startSignup()` 都从 `SIGNUP_URL` 取地址。
+ */
+export const SIGNUP_INVITE_CODE = '7OzoT5x6M';
+export const SIGNUP_URL = `${APP_ORIGIN}/auth/signup/${SIGNUP_INVITE_CODE}`;
+
+/**
  * OAuth 公开客户端的 client_id。
  *
  * 由应用开发者在打包前直接填写，扩展不向用户提供任何授权配置入口。

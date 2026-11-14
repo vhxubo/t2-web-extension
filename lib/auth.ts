@@ -5,6 +5,7 @@ import {
   FIREFOX_REDIRECT_URI,
   OAUTH_CLIENT_ID,
   REQUESTED_SCOPE,
+  SIGNUP_URL,
   TOKEN_URL,
 } from './config';
 import {
@@ -284,4 +285,13 @@ export async function logout(): Promise<void> {
   await pendingAuthItem.setValue(null);
   // 顺带清掉缓存的用户资料，避免换账号后还显示上一个人的头像。
   await profileCacheItem.setValue(null);
+}
+
+/**
+ * 打开站点注册页（带邀请码）。注册是普通网页流程，不是 OAuth，所以用新标签页打开，
+ * 不走 `launchWebAuthFlow`；用户建好号后仍需回到扩展内点「登录 2Libra」走授权。
+ * 新标签页打不开（极少数环境）时静默失败，不影响扩展其它功能。
+ */
+export async function startSignup(): Promise<void> {
+  await browser.tabs.create({ url: SIGNUP_URL }).catch(() => undefined);
 }

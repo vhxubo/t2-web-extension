@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { startLogin } from '../lib/auth';
+import { startLogin, startSignup } from '../lib/auth';
 import {
   DISCLAIMER,
   LIABILITY_NOTE,
   OAUTH_CONFIGURED,
   PERMISSION_NOTE,
   REVOKE_HINT,
+  SIGNUP_URL,
 } from '../lib/config';
 import { describeError } from '../lib/errors';
 import { type Settings, type ThemePreference } from '../lib/storage';
@@ -155,6 +156,16 @@ export function SettingsPanel({
                   disabled={loginBusy}
                 >
                   {loginBusy ? '等待授权…' : '登录 2Libra'}
+                </button>
+                <button
+                  type="button"
+                  className="btn btn--ghost"
+                  onClick={() => void startSignup()}
+                  disabled={loginBusy}
+                  title={`在新标签页打开注册页（${SIGNUP_URL}）`}
+                >
+                  <Icon name="external" size={14} />
+                  注册账号
                 </button>
               </div>
             </div>
