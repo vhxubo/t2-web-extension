@@ -42,6 +42,11 @@ export interface Settings {
    * 默认开启；关闭后只保留工具栏角标与弹窗 / 仪表盘消息中心。
    */
   desktopNotifications: boolean;
+  /**
+   * 是否在 2libra.com 的帖子评论框上方显示评论徽章助手（content script）。
+   * 默认开启；关闭后不注入状态栏，也不请求徽章与潘多拉接口。
+   */
+  badgeSwitcher: boolean;
 }
 
 export function isThemePreference(value: unknown): value is ThemePreference {
@@ -96,6 +101,7 @@ export const DEFAULT_SETTINGS: Settings = {
   viewsVersion: VIEWS_VERSION,
   theme: 'system',
   desktopNotifications: true,
+  badgeSwitcher: true,
 };
 
 const PREFIX = 't2';
@@ -241,6 +247,8 @@ export function normalizeSettings(stored: StoredSettings | null | undefined): Se
     theme: isThemePreference(stored?.theme) ? stored.theme : DEFAULT_SETTINGS.theme,
     // 旧配置没有这个字段：显式 false 才关，否则（缺省 / 其它值）都按默认开启。
     desktopNotifications: stored?.desktopNotifications === false ? false : true,
+    // 评论徽章助手同样是「默认开启」，只有用户显式关过才保持关闭。
+    badgeSwitcher: stored?.badgeSwitcher === false ? false : true,
   };
 }
 

@@ -200,6 +200,59 @@ export function SettingsPanel({
         onToast={onToast}
       />
 
+      {/* ---------------- 评论徽章助手 ---------------- */}
+      <section
+        className="settings-card settings-card--badges"
+        aria-labelledby="settings-badges"
+      >
+        <header className="settings-card__head">
+          <span className="settings-card__icon" aria-hidden="true">
+            <Icon name="coin" size={17} />
+          </span>
+          <div className="settings-card__heading">
+            <h2 className="settings-card__title" id="settings-badges">
+              评论徽章助手
+            </h2>
+            <p className="settings-card__desc">
+              在 2libra.com 帖子页的评论框上方显示字数、预计发评金币与更划算的徽章，可一键切换；佩戴徽章不消耗金币。
+            </p>
+          </div>
+        </header>
+
+        <div className="settings-card__body">
+          <div className="appearance-panel">
+            <div className="appearance-panel__copy">
+              <span className="appearance-panel__label" id="badge-switcher-label">
+                徽章助手
+              </span>
+              <p className="appearance-panel__hint">
+                关闭后不再注入状态栏，也不会请求徽章与潘多拉接口。默认开启。
+              </p>
+            </div>
+
+            <button
+              type="button"
+              role="switch"
+              aria-checked={settings.badgeSwitcher}
+              aria-labelledby="badge-switcher-label"
+              className={`node-config__switch${settings.badgeSwitcher ? ' is-on' : ''}`}
+              onClick={() =>
+                void onUpdateSettings({ badgeSwitcher: !settings.badgeSwitcher })
+              }
+            >
+              <span>{settings.badgeSwitcher ? '已开启' : '已关闭'}</span>
+              <span className="node-config__track" aria-hidden="true">
+                <span className="node-config__thumb" />
+              </span>
+            </button>
+          </div>
+
+          <p className="settings-inline-note">
+            助手使用扩展内登录的账号调用公开 API；未登录时不显示状态栏。只读取徽章、佩戴状态与今日潘多拉事件，不保存任何站点数据。
+          </p>
+        </div>
+      </section>
+
       {/* ---------------- 外观 ---------------- */}
       <section
         className="settings-card settings-card--appearance"

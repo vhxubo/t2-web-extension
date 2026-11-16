@@ -22,6 +22,7 @@ export type IconName =
   | 'moon'
   | 'monitor'
   | 'palette'
+  | 'coin'
   | 'folder'
   | 'bookmark'
   | 'plus'
@@ -161,6 +162,13 @@ const PATHS: Record<IconName, ReactNode> = {
       <circle cx="10" cy="7.8" r="1" fill="currentColor" stroke="none" />
       <circle cx="14.2" cy="7.4" r="1" fill="currentColor" stroke="none" />
       <circle cx="17" cy="10.5" r="1" fill="currentColor" stroke="none" />
+    </>
+  ),
+  coin: (
+    <>
+      <circle cx="12" cy="12" r="8" />
+      <path d="M14.4 9.3c-.6-.5-1.4-.8-2.4-.8-1.5 0-2.6.7-2.6 1.7s.9 1.5 2.6 1.8c1.7.3 2.6.8 2.6 1.8 0 1-1.1 1.7-2.6 1.7-1 0-1.8-.3-2.4-.8" />
+      <path d="M12 6.9v10.2" />
     </>
   ),
   folder: (
