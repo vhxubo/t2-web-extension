@@ -22,10 +22,10 @@ T2 Web Extension 让你在工具栏弹窗里快速扫一眼帖子，或者在新
 ## 安装
 
 - **Firefox**：已在 [Firefox Add-ons（AMO）](https://addons.mozilla.org/zh-CN/firefox/addon/t2-web-extension/) 正式上架，可直接安装。
-- **Chrome / Edge 等 Chromium 系**：暂未上架商店。可下载已签名的内置 ID 版本并加载已解压的扩展程序：
-  - Chrome 打开 `chrome://extensions` → 开启「开发者模式」→「加载已解压的扩展程序」→ 选择扩展目录；
-  - Edge 打开 `edge://extensions` 加载同一个包。
-- **从源码构建**：见仓库 `wxt.config.ts` 与构建脚本（开发者向，需自行配置 OAuth 应用）。
+- **Edge**：已在 [Microsoft Edge Add-ons](https://microsoftedge.microsoft.com/addons/detail/t2-web-extension/hfmicgegebccpcahiipnmaokhibhiknj) 正式上架，可直接安装。
+- **Chrome 等其它 Chromium 系**：暂未上架商店。可下载已签名的内置 ID 版本并加载已解压的扩展程序：
+  - Chrome 打开 `chrome://extensions` → 开启「开发者模式」→「加载已解压的扩展程序」→ 选择扩展目录。
+- **从源码构建**：见仓库 `wxt.config.ts` 与构建脚本（开发者向）。需自行将 `clientId` 改为你在站点申请的 OAuth 应用客户端 ID，并完成对应的 OAuth 应用配置（回调地址、权限等），否则登录功能不可用。
 
 ## 功能
 
