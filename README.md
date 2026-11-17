@@ -27,6 +27,22 @@ T2 Web Extension 让你在工具栏弹窗里快速扫一眼帖子，或者在新
   - Chrome 打开 `chrome://extensions` → 开启「开发者模式」→「加载已解压的扩展程序」→ 选择扩展目录。
 - **从源码构建**：见仓库 `wxt.config.ts` 与构建脚本（开发者向）。需自行将 `clientId` 改为你在站点申请的 OAuth 应用客户端 ID，并完成对应的 OAuth 应用配置（回调地址、权限等），否则登录功能不可用。
 
+### 打上架包（开发者）
+
+```bash
+bun run release
+```
+
+一条命令构建全部上架产物，**`releases/` 里的文件就是最终要上传的东西**（每次运行前自动清空）：
+
+| 文件 | 上传目标 |
+| --- | --- |
+| `t2-chrome-store-<version>.zip` | Chrome Web Store / Microsoft Edge Add-ons（keyless，不带 `manifest.key`） |
+| `t2-firefox-<version>.zip` | Firefox Add-ons（AMO） |
+| `t2-sources-<version>.zip` | AMO 要求的源码包 |
+
+中间构建产物留在被 gitignore 的 `.output/`，不用管。注意商店包的扩展 ID 由商店生成，不等于本地钉死的 ID，需按商店给出的 ID 在站点另登记一条 OAuth 回调地址（见 `wxt.config.ts` 顶部说明）。
+
 ## 功能
 
 - **弹窗**：未登录时显示标题与快捷图标（消息 / 搜索 / 刷新 / 深浅色 / 账号）；登录后标题位置换成一级 Tab `帖子 | 我的`。`帖子` 下是可配置视图（首页 / 今日热议 / 近期热议 / 新发表 / 最新评论 / 社区讨论，最多 6 个）；`我的` 固定 5 个系统视图（关注流 / 收藏 / 书签 / 我的帖子 / 我的合集）。点帖子在新标签页打开原帖。

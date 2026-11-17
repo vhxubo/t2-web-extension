@@ -15,6 +15,7 @@
     "zip": "wxt zip -b chrome && wxt zip -b firefox",
     "build:store": "T2_STORE_BUILD=1 wxt build -b chrome",
     "zip:store": "T2_STORE_BUILD=1 wxt zip -b chrome",
+    "release": "bun scripts/release.ts",
     "compile": "tsc --noEmit",
     "test": "bun test",
     "postinstall": "wxt prepare"

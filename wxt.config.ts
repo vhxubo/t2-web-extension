@@ -25,11 +25,11 @@ const USE_PINNED_KEY = true;
 /**
  * 商店上架包（Chrome Web Store / Edge Add-ons）必须**不带** `key`：
  * Edge 的校验直接报 `The manifest shouldn't contain the key field.`，
- * Chrome 商店也由自己管理条目的公钥。用 `bun run zip:store` 触发，
- * 走 keyless 分支并单独输出到 `.output/store/`，不覆盖本地开发用的包。
+ * Chrome 商店也由自己管理条目的公钥。由 `bun run release` 统一触发，
+ * 走 keyless 分支并把最终 zip 集中到 `releases/`，不覆盖本地开发用的包。
  *
  * 代价：商店条目的 ID 由商店生成，不等于 `PINNED_EXTENSION_ID`，
- * 回调地址要按商店给出的 ID 再登记一条，详见 README「商店上架包」。
+ * 回调地址要按商店给出的 ID 再登记一条，详见 README「发布（上架包）」。
  */
 const STORE_BUILD = process.env.T2_STORE_BUILD === '1';
 
