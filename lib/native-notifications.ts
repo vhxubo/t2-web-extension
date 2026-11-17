@@ -13,7 +13,8 @@
  * 推送本身不带正文，所以展示真实内容时要额外拉一次最新的未读消息
  * （见 lib/notifications.ts 的 getNotifications）。SSE 的 notification_update
  * 经常成串到达，这里用一个短 debounce 把它们合并成一条通知，避免刷屏；
- * 合并后仍会展示最新一条的正文，并提示还剩几条未读。
+ * 合并后仍会展示最新一条的正文与详情（评论原文、系统提示等），
+ * 并把帖子标题 / 剩余未读数放到第三行，不再只显示标题。
  */
 import { browser } from '#imports';
 import { notificationHref, type AppNotification } from './notification-view';
@@ -122,14 +123,14 @@ async function showNewMessageNotification(total: number): Promise<void> {
     // 拉不到正文就回落到「N 条新消息」；不要因为一条失败就不弹通知。
   }
 
-  const { title, message } = buildNotificationContent(latest, total);
+  const { title, message, contextMessage } = buildNotificationContent(latest, total);
   // 点击落到这条消息自己的地址：回复 / 提及 → 评论地址，表态 → 原文，
   // 没有可定位内容 → 通知界面（notificationHref 已按这个优先级回落）。
   const target = latest ? notificationHref(latest) : LINKS.notifications;
 
-  if (await showWebextNotification(title, message, target, total)) return;
+  if (await showWebextNotification(title, message, contextMessage, target)) return;
   // browser.notifications 不可用或创建失败：退回标准 Web Notification。
-  showBrowserNotification(title, message, target);
+  showBrowserNotification(title, message, contextMessage, target);
 }
 
 /**
@@ -140,8 +141,8 @@ async function showNewMessageNotification(total: number): Promise<void> {
 async function showWebextNotification(
   title: string,
   message: string,
+  contextMessage: string | undefined,
   target: string,
-  total: number,
 ): Promise<boolean> {
   const api = getNotificationsApi();
   if (!api) return false;
@@ -153,11 +154,11 @@ async function showWebextNotification(
     title,
     message,
   };
-  if (total > 1) options.contextMessage = `还有 ${total - 1} 条未读`;
+  if (contextMessage) options.contextMessage = contextMessage;
 
   if (await tryCreateNotification(api, id, options)) return true;
   // 图标路径 / 打包问题会让 create 失败，去掉图标再试一次。
-  return tryCreateNotification(api, id, { type: 'basic', title, message });
+  return tryCreateNotification(api, id, { type: 'basic', title, message, contextMessage });
 }
 
 /**
@@ -185,7 +186,12 @@ const liveNotifications = new Set<Notification>();
  * 标准 Web Notification API（兜底路径）：与 browser.notifications 一样落到系统通知中心。
  * 只在已授权时弹出——后台没有用户手势，requestPermission() 在这里只会静默返回 default。
  */
-function showBrowserNotification(title: string, message: string, target: string): void {
+function showBrowserNotification(
+  title: string,
+  message: string,
+  contextMessage: string | undefined,
+  target: string,
+): void {
   const NotificationCtor = (
     globalThis as unknown as { Notification?: typeof Notification }
   ).Notification;
@@ -194,7 +200,8 @@ function showBrowserNotification(title: string, message: string, target: string)
 
   try {
     const notification = new NotificationCtor(title, {
-      body: message,
+      // Web Notification 只有一行正文：把第三行小字换行接上，详情不丢。
+      body: contextMessage ? `${message}\n${contextMessage}` : message,
       icon: browser.runtime.getURL('icon/96.png' as never),
     });
     liveNotifications.add(notification);
