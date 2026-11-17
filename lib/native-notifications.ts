@@ -15,13 +15,24 @@
  * 经常成串到达，这里用一个短 debounce 把它们合并成一条通知，避免刷屏；
  * 合并后仍会展示最新一条的正文与详情（评论原文、系统提示等），
  * 并把帖子标题 / 剩余未读数放到第三行，不再只显示标题。
+ *
+ * 两个浏览器差异要在这里抹平：
+ * - Firefox 只支持 `type` / `title` / `message` / `iconUrl`，`contextMessage`
+ *   会被静默丢弃，所以 Firefox 上把补充信息并进正文（见 inlineNotificationContext）；
+ * - 同一条消息可能被多条 `notification_update` 命中，按消息 id 去重，
+ *   否则用户读过之后还会再收到一遍同一条「已读通知」。
  */
 import { browser } from '#imports';
 import { notificationHref, type AppNotification } from './notification-view';
 import { getNotifications } from './notifications';
 import { LINKS } from './config';
 import { readSettings } from './storage';
-import { buildNotificationContent } from './notification-content';
+import {
+  buildNotificationContent,
+  inlineNotificationContext,
+  shouldNotifyLatest,
+  type NotificationContent,
+} from './notification-content';
 
 const NOTIFICATION_ID_PREFIX = 't2:msg:';
 /** 成串的 notification_update 合并窗口：窗口内只弹一条系统通知。 */
@@ -92,6 +103,13 @@ function handleNotificationClick(notificationId: string): void {
 
 let coalesceTimer: ReturnType<typeof setTimeout> | null = null;
 let coalescedTotal = 0;
+/** 上一条已经弹过系统通知的消息 id：同一条消息不重复弹。 */
+let lastNotifiedId: string | null = null;
+/**
+ * 串行弹通知：两次合并窗口挨得很近时，并发拉取会同时通过上面的去重判断，
+ * 结果同一条消息弹两次。排队后第一条弹完并记下 id，第二条自然被跳过。
+ */
+let notifyQueue: Promise<void> = Promise.resolve();
 
 /**
  * 收到 SSE 的 notification_update 时调用：合并成一条系统通知后弹出。
@@ -107,7 +125,9 @@ export function scheduleNewMessageNotification(total: number): void {
     coalesceTimer = null;
     const total = coalescedTotal;
     coalescedTotal = 0;
-    void showNewMessageNotification(total);
+    notifyQueue = notifyQueue
+      .then(() => showNewMessageNotification(total))
+      .catch(() => undefined);
   }, COALESCE_MS);
 }
 
@@ -116,21 +136,29 @@ async function showNewMessageNotification(total: number): Promise<void> {
   if (!settings?.desktopNotifications) return;
 
   let latest: AppNotification | null = null;
+  /** 正文到底拉没拉到（空列表和请求失败要区别对待）。 */
+  let fetched = false;
   try {
     const page = await getNotifications({ unreadOnly: true, limit: 1 });
     latest = page.list?.[0] ?? null;
+    fetched = true;
   } catch {
     // 拉不到正文就回落到「N 条新消息」；不要因为一条失败就不弹通知。
   }
 
-  const { title, message, contextMessage } = buildNotificationContent(latest, total);
+  // 没有未读、已经读掉、或者就是刚才弹过的那一条：都不再打扰用户。
+  if (!shouldNotifyLatest(latest, lastNotifiedId, fetched)) return;
+
+  const content = buildNotificationContent(latest, total);
   // 点击落到这条消息自己的地址：回复 / 提及 → 评论地址，表态 → 原文，
   // 没有可定位内容 → 通知界面（notificationHref 已按这个优先级回落）。
   const target = latest ? notificationHref(latest) : LINKS.notifications;
 
-  if (await showWebextNotification(title, message, contextMessage, target)) return;
+  let shown = await showWebextNotification(content, target);
   // browser.notifications 不可用或创建失败：退回标准 Web Notification。
-  showBrowserNotification(title, message, contextMessage, target);
+  if (!shown) shown = showBrowserNotification(content, target);
+  // 只有真的弹出来了才记下来，弹失败时下一条消息还能正常提醒。
+  if (shown && latest) lastNotifiedId = latest.id;
 }
 
 /**
@@ -139,26 +167,32 @@ async function showNewMessageNotification(total: number): Promise<void> {
  * 返回是否创建成功，失败时由调用方决定要不要走 Web Notification 兜底。
  */
 async function showWebextNotification(
-  title: string,
-  message: string,
-  contextMessage: string | undefined,
+  content: NotificationContent,
   target: string,
 ): Promise<boolean> {
   const api = getNotificationsApi();
   if (!api) return false;
 
+  // Firefox 会把 contextMessage 静默丢掉，只有并进正文才能看到帖子标题 / 详情。
+  const shown = import.meta.env.FIREFOX ? inlineNotificationContext(content) : content;
+
   const id = buildNotificationId(target);
   const options: NotificationOptions = {
     type: 'basic',
     iconUrl: browser.runtime.getURL('icon/96.png' as never),
-    title,
-    message,
+    title: shown.title,
+    message: shown.message,
   };
-  if (contextMessage) options.contextMessage = contextMessage;
+  if (shown.contextMessage) options.contextMessage = shown.contextMessage;
 
   if (await tryCreateNotification(api, id, options)) return true;
-  // 图标路径 / 打包问题会让 create 失败，去掉图标再试一次。
-  return tryCreateNotification(api, id, { type: 'basic', title, message, contextMessage });
+  // 图标路径 / 打包问题会让 create 失败，去掉图标再试一次（第三行小字照旧）。
+  return tryCreateNotification(api, id, {
+    type: 'basic',
+    title: shown.title,
+    message: shown.message,
+    ...(shown.contextMessage ? { contextMessage: shown.contextMessage } : {}),
+  });
 }
 
 /**
@@ -185,23 +219,20 @@ const liveNotifications = new Set<Notification>();
 /**
  * 标准 Web Notification API（兜底路径）：与 browser.notifications 一样落到系统通知中心。
  * 只在已授权时弹出——后台没有用户手势，requestPermission() 在这里只会静默返回 default。
+ * 返回是否真的弹出来了，调用方据此决定要不要记为「已通知」，失败时不吞掉下一条。
  */
-function showBrowserNotification(
-  title: string,
-  message: string,
-  contextMessage: string | undefined,
-  target: string,
-): void {
+function showBrowserNotification(content: NotificationContent, target: string): boolean {
   const NotificationCtor = (
     globalThis as unknown as { Notification?: typeof Notification }
   ).Notification;
-  if (!NotificationCtor) return;
-  if (NotificationCtor.permission !== 'granted') return;
+  if (!NotificationCtor) return false;
+  if (NotificationCtor.permission !== 'granted') return false;
 
+  // Web Notification 只有一个 body：把第三行小字换行接上，详情不丢。
+  const { title, message } = inlineNotificationContext(content);
   try {
     const notification = new NotificationCtor(title, {
-      // Web Notification 只有一行正文：把第三行小字换行接上，详情不丢。
-      body: contextMessage ? `${message}\n${contextMessage}` : message,
+      body: message,
       icon: browser.runtime.getURL('icon/96.png' as never),
     });
     liveNotifications.add(notification);
@@ -221,8 +252,10 @@ function showBrowserNotification(
       release();
     };
     notification.onclose = release;
+    return true;
   } catch (error) {
     console.debug('[T2] 浏览器通知创建失败', error);
+    return false;
   }
 }
 

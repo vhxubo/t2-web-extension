@@ -2,6 +2,13 @@
 
 本文件记录 T2 Web Extension 的版本变更。格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号遵循[语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [0.7.2] - 2026-11-17
+
+### 修复
+
+- **Firefox 桌面通知展示详情**：Firefox 的 `browser.notifications` 只支持 `title` / `message` / `iconUrl`，`contextMessage` 会被静默丢弃；现在把帖子标题、失败原因、剩余未读数换行并入正文，详情不再丢失。
+- **重复通知同一条消息**：按消息 id 去重并串行弹出，已读消息与「拉到了但没有未读」的空结果不再重复提醒，避免用户读掉之后又收到一条同样的「已读通知」。
+
 ## [0.7.1] - 2026-11-17
 
 ### 修复
@@ -77,3 +84,4 @@
 [0.6.1]: https://github.com/vhxubo/t2-web-extension/releases/tag/v0.6.1
 [0.7.0]: https://github.com/vhxubo/t2-web-extension/releases/tag/v0.7.0
 [0.7.1]: https://github.com/vhxubo/t2-web-extension/releases/tag/v0.7.1
+[0.7.2]: https://github.com/vhxubo/t2-web-extension/releases/tag/v0.7.2

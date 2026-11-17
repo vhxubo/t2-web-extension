@@ -41,3 +41,41 @@ export function buildNotificationContent(
 
   return context ? { title, message, contextMessage: context } : { title, message };
 }
+
+/**
+ * 把第三行的补充信息并进正文。
+ *
+ * Firefox 的 `browser.notifications` 只支持 `type` / `title` / `message` / `iconUrl`，
+ * `contextMessage` 会被静默丢弃；只传三行会让帖子标题、失败原因、剩余未读数在
+ * Firefox 上直接看不到，所以这种环境下换成「正文 + 换行 + 补充信息」。
+ * 标准 Web Notification 也只有单独的 body，同样走这里拼。
+ */
+export function inlineNotificationContext(content: NotificationContent): NotificationContent {
+  if (!content.contextMessage) return content;
+  return {
+    title: content.title,
+    message: `${content.message}\n${content.contextMessage}`,
+  };
+}
+
+/**
+ * 是否该为拉到的这条最新未读弹系统通知。
+ *
+ * - `fetched === false`：正文没拉到（网络 / 接口失败），仍弹一条「N 条新消息」，
+ *   不要因为一次请求失败就静默；
+ * - 拉到了但列表为空：消息一进来就被读掉了，此时再弹「你有 N 条新消息」只是噪音；
+ * - 服务端没按 `unread_only` 过滤时，兜底跳过已读消息；
+ * - 同一条消息只弹一次：一次新消息可能触发多条 `notification_update`，
+ *   每次都挑到同一条未读时不该重复弹——用户点开第一条后它已经是已读状态，
+ *   再弹一次就成了「重复通知一条已读通知」。
+ */
+export function shouldNotifyLatest(
+  latest: AppNotification | null,
+  notifiedId: string | null,
+  fetched: boolean,
+): boolean {
+  if (!fetched) return true;
+  if (!latest) return false;
+  if (latest.is_read) return false;
+  return latest.id !== notifiedId;
+}

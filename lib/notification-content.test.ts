@@ -1,5 +1,9 @@
 import { describe, expect, test } from 'bun:test';
-import { buildNotificationContent } from './notification-content';
+import {
+  buildNotificationContent,
+  inlineNotificationContext,
+  shouldNotifyLatest,
+} from './notification-content';
 import type { AppNotification } from './notification-view';
 
 function makeNotification(overrides: Partial<AppNotification> = {}): AppNotification {
@@ -76,5 +80,45 @@ describe('buildNotificationContent', () => {
     const { message, contextMessage } = buildNotificationContent(item, 1);
     expect(message).toBe('升到了 5 级');
     expect(contextMessage).toBeUndefined();
+  });
+});
+
+describe('inlineNotificationContext', () => {
+  test('把补充信息换行接进正文，Firefox 丢 contextMessage 时详情不丢', () => {
+    const content = buildNotificationContent(makeNotification(), 3);
+    const merged = inlineNotificationContext(content);
+    expect(merged.title).toBe(content.title);
+    expect(merged.message).toBe('写得很清楚\n关于 T2 的讨论 · 还有 2 条未读');
+    expect(merged.contextMessage).toBeUndefined();
+  });
+
+  test('没有补充信息时原样返回', () => {
+    const content = buildNotificationContent(null, 1);
+    expect(inlineNotificationContext(content)).toEqual(content);
+  });
+});
+
+describe('shouldNotifyLatest', () => {
+  test('正文没拉到（请求失败）时仍然提醒', () => {
+    expect(shouldNotifyLatest(null, null, false)).toBe(true);
+  });
+
+  test('拉到了但没有未读：不再弹空通知', () => {
+    expect(shouldNotifyLatest(null, null, true)).toBe(false);
+  });
+
+  test('最新一条已经是已读：跳过', () => {
+    const item = makeNotification({ is_read: true });
+    expect(shouldNotifyLatest(item, null, true)).toBe(false);
+  });
+
+  test('同一条消息刚弹过：跳过', () => {
+    const item = makeNotification();
+    expect(shouldNotifyLatest(item, item.id, true)).toBe(false);
+  });
+
+  test('换了另一条未读消息：继续提醒', () => {
+    const item = makeNotification();
+    expect(shouldNotifyLatest(item, 'another-id', true)).toBe(true);
   });
 });
