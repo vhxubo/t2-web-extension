@@ -65,8 +65,6 @@ export interface NodesCache {
   nodes: ApiNode[];
   /** 节点树结构版本；旧缓存没有子节点，需要重新拉取。 */
   version?: number;
-  /** 是否有父节点的子节点没拉成功；这样的缓存不当作新鲜数据。 */
-  partial?: boolean;
 }
 
 /** 表情短码 → 图片地址；最新评论正文要用它把 `:code:` 渲染成图片。 */

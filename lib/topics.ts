@@ -6,7 +6,11 @@
  */
 import { apiDelete, apiGet, apiPost } from './api';
 import { APP_ORIGIN } from './config';
+import type { RewardPool } from './reward-pool';
 import type { Topic, TopicNodeRef } from './types';
+
+export { rewardPoolView } from './reward-pool';
+export type { RewardPool, RewardPoolView } from './reward-pool';
 
 export interface TopicPostscript {
   id?: string;
@@ -28,6 +32,8 @@ export interface TopicDetail extends Topic {
   favorited?: boolean;
   postscripts?: TopicPostscript[] | null;
   extra?: Record<string, unknown> | null;
+  /** 金币池状态；文档写在 `extra.reward_pool`，线上实际在顶层。 */
+  reward_pool?: RewardPool | null;
   node: TopicDetailNode;
 }
 

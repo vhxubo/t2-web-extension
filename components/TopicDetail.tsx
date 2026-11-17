@@ -7,6 +7,7 @@ import { profileHref } from '../lib/nav';
 import {
   isNormalTopicType,
   loadTopicDetail,
+  rewardPoolView,
   setTopicFavorite,
   topicNodeHref,
   topicTypeLabel,
@@ -145,6 +146,12 @@ export function TopicDetail({
     [detail?.postscripts],
   );
 
+  // 金币池：线上在顶层 `reward_pool`，文档写在 `extra.reward_pool`，两处都认。
+  const rewardPool = useMemo(
+    () => rewardPoolView(detail?.reward_pool ?? detail?.extra?.reward_pool),
+    [detail?.reward_pool, detail?.extra],
+  );
+
   return (
     <section className="topic-detail" aria-label="帖子详情">
       <header className="topic-detail__head">
@@ -257,6 +264,15 @@ export function TopicDetail({
       ) : (
         <>
           <TopicMarkdown content={detail?.content} emojis={emojis} />
+          {rewardPool && (
+            <div
+              className={`topic-detail__reward-pool${rewardPool.done ? ' is-done' : ''}`}
+              role="note"
+            >
+              <Icon name="coin" size={12} />
+              <span className="topic-detail__reward-pool-text">{rewardPool.label}</span>
+            </div>
+          )}
           {postscripts.map((item, index) => (
             <div className="topic-detail__postscript" key={item.id ?? `postscript-${index}`}>
               <span className="topic-detail__postscript-label">

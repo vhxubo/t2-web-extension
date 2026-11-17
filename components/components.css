@@ -701,6 +701,35 @@
   margin: 2px 0;
 }
 
+.topic-detail__reward-pool {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 2px;
+  padding: 6px 9px;
+  border-radius: 8px;
+  background: var(--gold-wash);
+  color: var(--gold);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.topic-detail__reward-pool svg {
+  flex: none;
+}
+
+.topic-detail__reward-pool-text {
+  min-width: 0;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.topic-detail__reward-pool.is-done {
+  background: var(--paper-2);
+  color: var(--ink-3);
+  font-weight: 500;
+}
+
 .topic-detail__postscript {
   margin-top: 2px;
   padding: 8px 9px;

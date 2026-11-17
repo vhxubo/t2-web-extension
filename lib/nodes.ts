@@ -3,18 +3,18 @@ import { nodesCacheItem } from './storage';
 import type { ApiNode } from './types';
 
 const NODES_TTL = 10 * 60 * 1000;
-const NODES_CACHE_VERSION = 2;
+const NODES_CACHE_VERSION = 3;
 
 /** 进程内缓存：StrictMode 双挂载、重复 `useNodes` 不必重读 storage。 */
 let memo: { at: number; nodes: ApiNode[] } | null = null;
-/** 单飞：同一个页面里的并发调用共享同一次「顶层 + 子节点」请求。 */
+/** 单飞：同一个页面里的并发调用共享同一次节点树请求。 */
 let inflight: Promise<ApiNode[]> | null = null;
 
 /**
  * 节点列表变化极少，缓存 10 分钟；请求失败时退回旧缓存。
  *
- * `/v1/nodes` 只返回顶层节点，子节点要再按 `?parent=<slug>` 拉一次。
- * 这里把所有顶层节点的子节点一并拉齐，`parent_slug` 过滤与「添加节点」面板
+ * `/v1/nodes` 不传 `parent` 时直接返回完整节点树（每个顶层节点带 `children`），
+ * 不再按 `?parent=<slug>` 逐个补拉子节点。`parent_slug` 过滤与「添加节点」面板
  * 都依赖这棵完整的两层树。
  */
 export function loadNodes(force = false): Promise<ApiNode[]> {
@@ -32,7 +32,6 @@ async function doLoadNodes(force: boolean): Promise<ApiNode[]> {
   const fresh =
     cache &&
     cache.version === NODES_CACHE_VERSION &&
-    !cache.partial &&
     Date.now() - cache.fetchedAt < NODES_TTL;
   if (!force && fresh && cache.nodes.length > 0) {
     memo = { at: Date.now(), nodes: cache.nodes };
@@ -41,36 +40,14 @@ async function doLoadNodes(force: boolean): Promise<ApiNode[]> {
 
   try {
     const raw = await apiGet<ApiNode[]>('/v1/nodes', { auth: false });
-    const roots = Array.isArray(raw) ? raw.map(normalizeNode) : [];
-
-    // 顶级节点通常不多，但仍按 4 个并发读取子节点；全局队列会再统一限速。
-    const children = await mapWithConcurrency(roots, 4, (node) =>
-      apiGet<ApiNode[]>('/v1/nodes', { auth: false, query: { parent: node.slug } }),
-    );
-
-    let partial = false;
-    const nodes = roots.map((node, index) => {
-      const result = children[index];
-      if (!result || result.status !== 'fulfilled') {
-        partial = true;
-        return node;
-      }
-      const fetched = Array.isArray(result.value) ? result.value.map(normalizeNode) : [];
-      // 接口未来若直接在顶层返回 children，与单独请求的结果合并去重。
-      const bySlug = new Map<string, ApiNode>();
-      for (const child of node.children ?? []) bySlug.set(child.slug, child);
-      for (const child of fetched) bySlug.set(child.slug, child);
-      return { ...node, children: [...bySlug.values()].sort(compareNodes) };
-    });
+    const nodes = Array.isArray(raw) ? raw.map(normalizeNode) : [];
 
     await nodesCacheItem.setValue({
       fetchedAt: Date.now(),
       nodes,
       version: NODES_CACHE_VERSION,
-      partial,
     });
-    // 部分子节点没拉到时下次还要重试，先不放进内存缓存。
-    if (!partial) memo = { at: Date.now(), nodes };
+    memo = { at: Date.now(), nodes };
     return nodes;
   } catch (error) {
     if (cache?.nodes.length) {
@@ -79,33 +56,6 @@ async function doLoadNodes(force: boolean): Promise<ApiNode[]> {
     }
     throw error;
   }
-}
-
-/** 带并发上限的 allSettled，节点数量多时也不会瞬间打满接口配额。 */
-async function mapWithConcurrency<T, R>(
-  items: T[],
-  limit: number,
-  task: (item: T, index: number) => Promise<R>,
-): Promise<Array<PromiseSettledResult<R>>> {
-  const results = new Array<PromiseSettledResult<R>>(items.length);
-  let cursor = 0;
-
-  const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
-    while (cursor < items.length) {
-      const index = cursor;
-      cursor += 1;
-      const item = items[index];
-      if (item === undefined) continue;
-      try {
-        results[index] = { status: 'fulfilled', value: await task(item, index) };
-      } catch (reason) {
-        results[index] = { status: 'rejected', reason };
-      }
-    }
-  });
-
-  await Promise.all(workers);
-  return results;
 }
 
 function normalizeNode(node: ApiNode): ApiNode {
