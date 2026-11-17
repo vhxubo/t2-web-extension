@@ -7,6 +7,13 @@ T2 Web Extension 让你在工具栏弹窗里快速扫一眼帖子，或者在新
 
 基于 [开放 API v1](https://r2.2libra.com/openapi/v1/index.md)，以只读浏览为主；写操作仅限消息已读（单条 / 全部）、帖子收藏与徽章佩戴 / 摘下。
 
+## 预览
+
+| ![首页](./docs/imgs/首页.png) | ![关注流](./docs/imgs/关注流.png) | ![正文预览](./docs/imgs/正文预览.png) |
+| :---: | :---: | :---: |
+| ![最新评论](./docs/imgs/最新评论.png) | ![消息](./docs/imgs/消息.png) | ![消息弹窗](./docs/imgs/消息弹窗.png) |
+| ![节点配置](./docs/imgs/节点配置.png) | ![设置](./docs/imgs/设置.png) | ![评论徽章](./docs/imgs/评论徽章.png) |
+
 ## 合规
 
 本扩展严格遵守站点 [第三方应用接入说明](https://r2.2libra.com/openapi/v1/terms.md)：
