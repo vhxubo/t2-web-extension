@@ -33,62 +33,75 @@ export const FOLD_ATTR = 'data-t2-comment-fold';
 /** 被隐藏的评论行标记。 */
 export const HIDDEN_ATTR = 'data-t2-comment-folded';
 const STYLE_ID = 't2-comment-fold-styles';
-const SVG_NS = 'http://www.w3.org/2000/svg';
 
 const FOLD_CSS = `
   [${HIDDEN_ATTR}] { display: none !important; }
+
+  /*
+   * 连续评论展开 / 收起：两侧 1px 分割线夹一枚居中胶囊。
+   * 颜色全部取自 daisyUI 主题变量，主题与深浅色自动跟随：
+   * - 展开态用主色（primary）的 10% / 20% 浅底，突出可点击；
+   * - 收起态退为 base-content 60% 的次要灰，不再和正文抢注意力。
+   * 同时兼容 daisyUI 4+ 的 --color-* 与旧版的 --p / --bc HSL 三元组。
+   */
   .t2-comment-fold {
-    /*
-     * 与站点保持一致：边框用 border-base-content/10 同款颜色（oklab 10%），
-     * 圆角取站点的 --radius-box；文字 / 线条都从主题变量派生，深浅色自动跟随。
-     */
-    --t2-fold-ink: var(--color-base-content, currentColor);
-    --t2-fold-border: color-mix(in oklab, var(--t2-fold-ink) 10%, transparent);
-    --t2-fold-border-hover: color-mix(in oklab, var(--t2-fold-ink) 20%, transparent);
-    --t2-fold-bg: color-mix(in srgb, var(--t2-fold-ink) 5%, transparent);
-    --t2-fold-bg-hover: color-mix(in srgb, var(--t2-fold-ink) 8%, transparent);
-    --t2-fold-muted: color-mix(in oklab, var(--t2-fold-ink) 62%, transparent);
-    margin-top: 8px;
-  }
-  .t2-comment-fold__btn {
+    --t2-fold-primary: var(--color-primary, hsl(var(--p, 259.9 94.2% 51.2%)));
+    --t2-fold-ink: var(--color-base-content, hsl(var(--bc, 215 28% 17%)));
+    --t2-fold-line: color-mix(in oklab, var(--t2-fold-ink) 15%, transparent);
+    --t2-fold-muted: color-mix(in oklab, var(--t2-fold-ink) 60%, transparent);
+    --t2-fold-wash: color-mix(in oklab, var(--t2-fold-primary) 10%, transparent);
+    --t2-fold-wash-hover: color-mix(in oklab, var(--t2-fold-primary) 20%, transparent);
+
     display: flex;
     align-items: center;
-    gap: 8px;
-    width: 100%;
-    padding: 6px 10px;
-    border: var(--border, 1px) solid var(--t2-fold-border);
-    border-radius: var(--radius-box, 0.5rem);
-    background: var(--t2-fold-bg);
-    color: var(--t2-fold-ink);
+    gap: 10px;
+    margin: 12px 0;
+  }
+  .t2-comment-fold::before,
+  .t2-comment-fold::after {
+    content: "";
+    flex: 1 1 0;
+    height: 1px;
+    background: var(--t2-fold-line);
+  }
+  .t2-comment-fold__btn {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    max-width: 100%;
+    padding: 5px 14px;
+    border: 0;
+    border-radius: 9999px;
+    background: var(--t2-fold-wash);
+    color: var(--t2-fold-primary);
     font: inherit;
     font-size: 12px;
     font-weight: 500;
     line-height: 1.5;
-    text-align: left;
+    text-align: center;
     cursor: pointer;
-    transition: background 0.15s, border-color 0.15s;
+    appearance: none;
+    transition: all 0.2s ease;
   }
-  .t2-comment-fold__btn:hover,
+  .t2-comment-fold__btn:hover {
+    background: var(--t2-fold-wash-hover);
+    transform: translateY(-1px);
+  }
   .t2-comment-fold__btn:focus-visible {
-    background: var(--t2-fold-bg-hover);
-    border-color: var(--t2-fold-border-hover);
+    outline: 2px solid var(--t2-fold-primary);
+    outline-offset: 2px;
   }
-  .t2-comment-fold__icon {
-    display: grid;
-    place-items: center;
-    flex: none;
+  .t2-comment-fold__btn[aria-expanded="true"] {
+    background: transparent;
     color: var(--t2-fold-muted);
-    transform: rotate(90deg);
-    transition: transform 0.18s, color 0.15s;
   }
-  .t2-comment-fold__btn:hover .t2-comment-fold__icon,
-  .t2-comment-fold__btn:focus-visible .t2-comment-fold__icon {
-    color: var(--color-primary, var(--t2-fold-ink));
+  .t2-comment-fold__btn[aria-expanded="true"]:hover {
+    background: transparent;
+    color: var(--t2-fold-primary);
+    transform: none;
   }
-  .t2-comment-fold__btn[aria-expanded="true"] .t2-comment-fold__icon {
-    transform: rotate(-90deg);
-  }
-  .t2-comment-fold__text {
+  .t2-comment-fold__label {
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -96,25 +109,21 @@ const FOLD_CSS = `
   }
   .t2-comment-fold__author,
   .t2-comment-fold__count {
-    color: var(--t2-fold-ink);
-    font-weight: 700;
-  }
-  .t2-comment-fold__action {
-    flex: none;
-    margin-left: auto;
-    padding: 1px 9px;
-    border: var(--border, 1px) solid var(--t2-fold-border);
-    border-radius: 999px;
-    background: var(--color-base-100, transparent);
-    color: inherit;
-    font-size: 11px;
     font-weight: 600;
-    white-space: nowrap;
   }
-  .t2-comment-fold__btn[aria-expanded="true"] .t2-comment-fold__action {
-    border-color: var(--t2-fold-border);
-    background: transparent;
-    color: var(--t2-fold-muted);
+  .t2-comment-fold__count {
+    font-variant-numeric: tabular-nums;
+  }
+  .t2-comment-fold__glyph {
+    font-size: 10px;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .t2-comment-fold__btn {
+      transition: none;
+    }
+    .t2-comment-fold__btn:hover {
+      transform: none;
+    }
   }
 `;
 
@@ -180,20 +189,13 @@ export function clearCommentFolds(root: ParentNode): void {
   }
 }
 
-function createChevron(doc: Document): SVGSVGElement {
-  const svg = doc.createElementNS(SVG_NS, 'svg');
-  svg.setAttribute('viewBox', '0 0 24 24');
-  svg.setAttribute('width', '11');
-  svg.setAttribute('height', '11');
-  svg.setAttribute('fill', 'none');
-  svg.setAttribute('stroke', 'currentColor');
-  svg.setAttribute('stroke-width', '2');
-  svg.setAttribute('stroke-linecap', 'round');
-  svg.setAttribute('stroke-linejoin', 'round');
-  const path = doc.createElementNS(SVG_NS, 'path');
-  path.setAttribute('d', 'm9 6 6 6-6 6');
-  svg.appendChild(path);
-  return svg;
+/** 胶囊里的方向箭头：纯装饰，交给 CSS 着色，读屏器跳过。 */
+function createGlyph(doc: Document, open: boolean): HTMLSpanElement {
+  const glyph = doc.createElement('span');
+  glyph.className = 't2-comment-fold__glyph';
+  glyph.setAttribute('aria-hidden', 'true');
+  glyph.textContent = open ? '▴' : '▾';
+  return glyph;
 }
 
 function buildToggle(
@@ -208,49 +210,40 @@ function buildToggle(
   wrap.className = 't2-comment-fold';
   wrap.setAttribute(FOLD_ATTR, 'true');
 
+  const authorName = authorNameOf(first);
+  const hidden = count - 1;
   const button = doc.createElement('button');
   button.type = 'button';
   button.className = 't2-comment-fold__btn';
   button.setAttribute('aria-expanded', String(open));
   button.title = open
-    ? `收起 @${authorNameOf(first)} 的连续评论`
-    : `展开 @${authorNameOf(first)} 的 ${count - 1} 条连续评论`;
+    ? `收起 @${authorName} 的连续评论`
+    : `展开 @${authorName} 的 ${hidden} 条连续评论`;
 
-  const icon = doc.createElement('span');
-  icon.className = 't2-comment-fold__icon';
-  icon.setAttribute('aria-hidden', 'true');
-  icon.appendChild(createChevron(doc));
-
-  const text = doc.createElement('span');
-  text.className = 't2-comment-fold__text';
-  const author = doc.createElement('span');
-  author.className = 't2-comment-fold__author';
-  author.textContent = `@${authorNameOf(first)}`;
-  const countEl = doc.createElement('span');
-  countEl.className = 't2-comment-fold__count';
-  countEl.textContent = `${open ? count : count - 1} 条`;
+  const label = doc.createElement('span');
+  label.className = 't2-comment-fold__label';
 
   if (open) {
-    text.append(
+    label.append(doc.createTextNode('已展开连续评论 · 收起 '), createGlyph(doc, true));
+  } else {
+    const author = doc.createElement('span');
+    author.className = 't2-comment-fold__author';
+    author.textContent = `@${authorName}`;
+    const countEl = doc.createElement('span');
+    countEl.className = 't2-comment-fold__count';
+    countEl.textContent = String(hidden);
+
+    label.append(
+      createGlyph(doc, false),
+      doc.createTextNode(' 展开 '),
       author,
       doc.createTextNode(' 的 '),
       countEl,
-      doc.createTextNode('连续评论已展开'),
-    );
-  } else {
-    text.append(
-      author,
-      doc.createTextNode(' 还有 '),
-      countEl,
-      doc.createTextNode('连续评论'),
+      doc.createTextNode(' 条连续评论'),
     );
   }
 
-  const action = doc.createElement('span');
-  action.className = 't2-comment-fold__action';
-  action.textContent = open ? '收起' : `展开 ${count - 1} 条`;
-
-  button.append(icon, text, action);
+  button.append(label);
   button.addEventListener('click', (event) => {
     // 站点行内可能有跳转 / 弹层监听，按钮只负责折叠，不冒泡。
     event.preventDefault();

@@ -83,8 +83,11 @@ describe('applyCommentFolds', () => {
     expect(toggle).toBeDefined();
     expect(toggle?.getAttribute('aria-expanded')).toBe('false');
     expect(toggle?.textContent).toContain('@alice');
-    expect(toggle?.textContent).toContain('还有 2 条连续评论');
-    expect(toggle?.textContent).toContain('展开 2 条');
+    expect(toggle?.textContent).toContain('展开 @alice 的 2 条连续评论');
+    expect(toggle?.getAttribute('title')).toBe('展开 @alice 的 2 条连续评论');
+    expect(toggle?.querySelector('.t2-comment-fold__glyph')?.getAttribute('aria-hidden')).toBe(
+      'true',
+    );
     expect(toggle?.closest('li')).toBe(doc.querySelector('ul > li'));
 
     const view = doc.defaultView;
@@ -106,7 +109,7 @@ describe('applyCommentFolds', () => {
     expect(hiddenRows(doc)).toHaveLength(0);
     const toggle = buttons(doc)[0];
     expect(toggle?.getAttribute('aria-expanded')).toBe('true');
-    expect(toggle?.textContent).toContain('3 条连续评论已展开');
+    expect(toggle?.textContent).toBe('已展开连续评论 · 收起 ▴');
     expect(toggle?.textContent).toContain('收起');
   });
 
@@ -132,7 +135,7 @@ describe('applyCommentFolds', () => {
 
     expect(folded).toBe(1);
     expect(hiddenRows(doc)).toHaveLength(1);
-    expect(buttons(doc)[0]?.textContent).toContain('展开 1 条');
+    expect(buttons(doc)[0]?.textContent).toContain('展开 @alice 的 1 条连续评论');
   });
 
   test('only folds adjacent comments of the same author', () => {
@@ -151,7 +154,7 @@ describe('applyCommentFolds', () => {
     expect(folded).toBe(1);
     expect(hiddenRows(doc)).toHaveLength(2);
     expect(hiddenBodies(doc)).toEqual(['content a3', 'content a4']);
-    expect(buttons(doc)[0]?.textContent).toContain('展开 2 条');
+    expect(buttons(doc)[0]?.textContent).toContain('展开 @alice 的 2 条连续评论');
   });
 
   test('breaks runs on non-comment rows', () => {
