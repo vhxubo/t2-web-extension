@@ -2,7 +2,7 @@
 
 本文件记录 T2 Web Extension 的版本变更。格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号遵循[语义化版本](https://semver.org/lang/zh-CN/)。
 
-## [未发布]
+## [0.8.0] - 2026-11-18
 
 ### 新增
 
@@ -92,3 +92,4 @@
 [0.7.0]: https://github.com/vhxubo/t2-web-extension/releases/tag/v0.7.0
 [0.7.1]: https://github.com/vhxubo/t2-web-extension/releases/tag/v0.7.1
 [0.7.2]: https://github.com/vhxubo/t2-web-extension/releases/tag/v0.7.2
+[0.8.0]: https://github.com/vhxubo/t2-web-extension/releases/tag/v0.8.0
