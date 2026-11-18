@@ -39,29 +39,29 @@ const FOLD_CSS = `
   [${HIDDEN_ATTR}] { display: none !important; }
   .t2-comment-fold {
     /*
-     * 全部从站点主题变量派生：文字用 base-content，线条 / 底色用它的透明度，
-     * 深色主题自动跟随；主色只在悬停箭头时点一下。
+     * 与站点保持一致：边框用 border-base-content/10 同款颜色（oklab 10%），
+     * 圆角取站点的 --radius-box；文字 / 线条都从主题变量派生，深浅色自动跟随。
      */
     --t2-fold-ink: var(--color-base-content, currentColor);
-    --t2-fold-line: color-mix(in srgb, var(--t2-fold-ink) 16%, transparent);
-    --t2-fold-line-strong: color-mix(in srgb, var(--t2-fold-ink) 30%, transparent);
+    --t2-fold-border: color-mix(in oklab, var(--t2-fold-ink) 10%, transparent);
+    --t2-fold-border-hover: color-mix(in oklab, var(--t2-fold-ink) 20%, transparent);
     --t2-fold-bg: color-mix(in srgb, var(--t2-fold-ink) 5%, transparent);
-    --t2-fold-bg-hover: color-mix(in srgb, var(--t2-fold-ink) 9%, transparent);
-    --t2-fold-muted: color-mix(in srgb, var(--t2-fold-ink) 62%, transparent);
-    margin-top: 9px;
+    --t2-fold-bg-hover: color-mix(in srgb, var(--t2-fold-ink) 8%, transparent);
+    --t2-fold-muted: color-mix(in oklab, var(--t2-fold-ink) 62%, transparent);
+    margin-top: 8px;
   }
   .t2-comment-fold__btn {
     display: flex;
     align-items: center;
     gap: 8px;
     width: 100%;
-    padding: 7px 10px;
-    border: 1px solid var(--t2-fold-line);
-    border-radius: 9px;
+    padding: 6px 10px;
+    border: var(--border, 1px) solid var(--t2-fold-border);
+    border-radius: var(--radius-box, 0.5rem);
     background: var(--t2-fold-bg);
     color: var(--t2-fold-ink);
     font: inherit;
-    font-size: 12.5px;
+    font-size: 12px;
     font-weight: 500;
     line-height: 1.5;
     text-align: left;
@@ -71,7 +71,7 @@ const FOLD_CSS = `
   .t2-comment-fold__btn:hover,
   .t2-comment-fold__btn:focus-visible {
     background: var(--t2-fold-bg-hover);
-    border-color: var(--t2-fold-line-strong);
+    border-color: var(--t2-fold-border-hover);
   }
   .t2-comment-fold__icon {
     display: grid;
@@ -102,17 +102,17 @@ const FOLD_CSS = `
   .t2-comment-fold__action {
     flex: none;
     margin-left: auto;
-    padding: 2px 10px;
-    border: 1px solid var(--t2-fold-line-strong);
+    padding: 1px 9px;
+    border: var(--border, 1px) solid var(--t2-fold-border);
     border-radius: 999px;
     background: var(--color-base-100, transparent);
     color: inherit;
-    font-size: 11.5px;
+    font-size: 11px;
     font-weight: 600;
     white-space: nowrap;
   }
   .t2-comment-fold__btn[aria-expanded="true"] .t2-comment-fold__action {
-    border-color: var(--t2-fold-line);
+    border-color: var(--t2-fold-border);
     background: transparent;
     color: var(--t2-fold-muted);
   }
