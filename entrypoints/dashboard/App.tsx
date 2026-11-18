@@ -13,6 +13,7 @@ import { useSettings } from '@/hooks/useSettings';
 import { useTheme } from '@/hooks/useTheme';
 import { useUnreadNotifications } from '@/hooks/useUnreadNotifications';
 import { ATTRIBUTION, LINKS } from '@/lib/config';
+import { COMMENT_RUN_DEFAULT_LENGTH } from '@/lib/comment-runs';
 import { openSettings } from '@/lib/nav';
 import { DEFAULT_SETTINGS, storageAvailable } from '@/lib/storage';
 import { POPUP_TAB_LIMIT } from '@/lib/viewIds';
@@ -260,6 +261,11 @@ export default function Dashboard() {
                 nodesStatus={nodeState.status}
                 enabled={ready}
                 index={index}
+                collapseRepeatedComments={settings?.collapseRepeatedComments ?? false}
+                collapseRepeatedCommentsThreshold={
+                  settings?.collapseRepeatedCommentsThreshold ??
+                  COMMENT_RUN_DEFAULT_LENGTH
+                }
                 onLogin={goSettings}
                 onReloadNodes={reloadNodes}
               />

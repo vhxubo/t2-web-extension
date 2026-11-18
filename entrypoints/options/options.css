@@ -1160,6 +1160,17 @@ html.dark .settings-page .node-config__thumb {
   line-height: 1.5;
 }
 
+/* 最新评论：折叠阈值下拉，固定窄宽度，与开关列右侧对齐。 */
+.settings-page .settings-card--comments .settings-comments__select {
+  flex: 0 0 auto;
+  width: 96px;
+  min-width: 96px;
+  margin-left: auto;
+  border-color: var(--stg-border-strong);
+  background-color: var(--stg-card);
+  color: var(--stg-text);
+}
+
 .theme-segmented {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

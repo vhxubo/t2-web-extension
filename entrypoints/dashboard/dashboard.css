@@ -725,6 +725,11 @@ textarea {
   line-height: 1.4;
 }
 
+/* 连续评论折叠按钮：跟着卡片里更紧的行距一起收一档。 */
+.board-card .comment-run {
+  padding: 1px 8px 6px;
+}
+
 /* ---------- 卡片底部 ---------- */
 
 .board-card__foot {

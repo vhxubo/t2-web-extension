@@ -1299,6 +1299,128 @@
   transform: none;
 }
 
+/* ---------- 连续评论折叠 ---------- */
+
+/*
+ * 同一作者连续发布达到阈值时，首条照常展示，其余收在按钮后面。
+ * 入口用中性底色 + 描边保证可见，主色只留给悬停时的箭头，避免抢正文的注意力。
+ */
+.comment-run {
+  padding: 1px 8px 8px 6px;
+}
+
+.comment-run__toggle {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  padding: 7px 9px;
+  border: 1px solid var(--line-strong);
+  border-radius: 9px;
+  background: var(--surface-2);
+  color: var(--ink-2);
+  font-size: 11.5px;
+  line-height: 1.5;
+  text-align: left;
+  cursor: pointer;
+  appearance: none;
+  transition:
+    background 0.16s var(--ease),
+    border-color 0.16s var(--ease),
+    color 0.16s var(--ease);
+}
+
+.comment-run__toggle:hover,
+.comment-run__toggle:focus-visible {
+  border-color: var(--ink-3);
+  background: var(--paper-2);
+  color: var(--ink);
+}
+
+/* chevron 默认朝右：收起时转成朝下，展开后转成朝上。 */
+.comment-run__icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  color: var(--ink-3);
+  transform: rotate(90deg);
+  transition: transform 0.18s var(--ease), color 0.16s var(--ease);
+}
+
+.comment-run__toggle:hover .comment-run__icon,
+.comment-run__toggle:focus-visible .comment-run__icon {
+  color: var(--leaf-3);
+}
+
+.comment-run__toggle.is-open .comment-run__icon {
+  transform: rotate(-90deg);
+}
+
+.comment-run__text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.comment-run__author {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.comment-run__count {
+  color: var(--ink);
+  font-weight: 700;
+}
+
+/* 展开 / 收起是描边胶囊：清楚但不喧宾夺主。 */
+.comment-run__action {
+  flex: none;
+  margin-left: auto;
+  padding: 2px 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 10.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  transition:
+    background 0.16s var(--ease),
+    border-color 0.16s var(--ease),
+    color 0.16s var(--ease);
+}
+
+.comment-run__toggle:hover .comment-run__action,
+.comment-run__toggle:focus-visible .comment-run__action {
+  border-color: var(--ink-3);
+}
+
+.comment-run__toggle.is-open .comment-run__action {
+  border-color: var(--line);
+  background: transparent;
+  color: var(--ink-3);
+}
+
+.comment-run--compact {
+  padding: 1px 8px 7px;
+}
+
+.comment-run--dense {
+  padding: 1px 6px 6px;
+}
+
+.comment-run--dense .comment-run__toggle {
+  gap: 6px;
+  padding: 6px 8px;
+  font-size: 11px;
+}
+
+.comment-run--dense .comment-run__action {
+  padding: 1px 8px;
+  font-size: 10px;
+}
+
 /* 最新评论骨架：头像 + 三行文字。 */
 .feed-skeleton--comment .comment-skeleton {
   display: grid;

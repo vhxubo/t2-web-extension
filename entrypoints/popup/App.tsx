@@ -19,6 +19,7 @@ import { useSettings } from '@/hooks/useSettings';
 import { useTheme } from '@/hooks/useTheme';
 import { useUnreadNotifications } from '@/hooks/useUnreadNotifications';
 import { ATTRIBUTION } from '@/lib/config';
+import { COMMENT_RUN_DEFAULT_LENGTH } from '@/lib/comment-runs';
 import { describeError } from '@/lib/errors';
 import { topicHref } from '@/lib/feed';
 import { openDashboard, openSettings } from '@/lib/nav';
@@ -641,6 +642,14 @@ export default function Popup() {
                 sectionName={activeView?.label}
                 onRetry={handleRetry}
                 onLogin={goSettings}
+                collapseRuns={
+                  activeView?.board === 'comments' &&
+                  (settings?.collapseRepeatedComments ?? false)
+                }
+                collapseRunThreshold={
+                  settings?.collapseRepeatedCommentsThreshold ??
+                  COMMENT_RUN_DEFAULT_LENGTH
+                }
                 expandable={feedVariant === 'topic' && !followsView}
                 onExpand={openDetail}
               />

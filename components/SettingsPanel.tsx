@@ -9,6 +9,11 @@ import {
   SIGNUP_URL,
 } from '../lib/config';
 import { describeError } from '../lib/errors';
+import {
+  COMMENT_RUN_DEFAULT_LENGTH,
+  COMMENT_RUN_MAX_LENGTH,
+  COMMENT_RUN_MIN_LENGTH,
+} from '../lib/comment-runs';
 import { requestNotificationPermission } from '../lib/native-notifications';
 import { type Settings, type ThemePreference } from '../lib/storage';
 import type { NodesStatus } from '../hooks/useNodes';
@@ -27,6 +32,12 @@ const THEME_OPTIONS: ReadonlyArray<{
   { value: 'dark', icon: 'moon', label: '深色', hint: '始终使用深色界面' },
   { value: 'system', icon: 'monitor', label: '跟随系统', hint: '跟随操作系统的深浅色外观' },
 ];
+
+/** 连续评论折叠阈值可选值：2–10 条。 */
+const COLLAPSE_THRESHOLD_OPTIONS = Array.from(
+  { length: COMMENT_RUN_MAX_LENGTH - COMMENT_RUN_MIN_LENGTH + 1 },
+  (_, index) => COMMENT_RUN_MIN_LENGTH + index,
+);
 
 interface SettingsPanelProps {
   settings: Settings;
@@ -199,6 +210,150 @@ export function SettingsPanel({
         onUpdateSettings={onUpdateSettings}
         onToast={onToast}
       />
+
+      {/* ---------------- 最新评论 ---------------- */}
+      <section
+        className="settings-card settings-card--comments"
+        aria-labelledby="settings-comments"
+      >
+        <header className="settings-card__head">
+          <span className="settings-card__icon" aria-hidden="true">
+            <Icon name="hash" size={17} />
+          </span>
+          <div className="settings-card__heading">
+            <h2 className="settings-card__title" id="settings-comments">
+              最新评论
+            </h2>
+            <p className="settings-card__desc">调整「最新评论」时间线的展示方式。</p>
+          </div>
+        </header>
+
+        <div className="settings-card__body">
+          <div className="appearance-panel">
+            <div className="appearance-panel__copy">
+              <span className="appearance-panel__label" id="collapse-comments-label">
+                折叠连续评论
+              </span>
+              <p className="appearance-panel__hint">
+                同一用户连续发布达到设定条数时，只展示第一条，其余收在展开按钮后面。默认关闭。
+              </p>
+            </div>
+
+            <button
+              type="button"
+              role="switch"
+              aria-checked={settings.collapseRepeatedComments}
+              aria-labelledby="collapse-comments-label"
+              className={`node-config__switch${
+                settings.collapseRepeatedComments ? ' is-on' : ''
+              }`}
+              onClick={() =>
+                void onUpdateSettings({
+                  collapseRepeatedComments: !settings.collapseRepeatedComments,
+                })
+              }
+            >
+              <span>{settings.collapseRepeatedComments ? '已开启' : '已关闭'}</span>
+              <span className="node-config__track" aria-hidden="true">
+                <span className="node-config__thumb" />
+              </span>
+            </button>
+          </div>
+
+          <div className="appearance-panel">
+            <div className="appearance-panel__copy">
+              <label
+                className="appearance-panel__label"
+                htmlFor="collapse-comments-threshold"
+              >
+                折叠阈值
+              </label>
+              <p className="appearance-panel__hint">
+                同一用户连续发布达到这个条数时折叠，只展示第一条。默认{' '}
+                {COMMENT_RUN_DEFAULT_LENGTH} 条。
+              </p>
+            </div>
+
+            <select
+              id="collapse-comments-threshold"
+              className="select select--sm settings-comments__select"
+              value={settings.collapseRepeatedCommentsThreshold}
+              onChange={(event) =>
+                void onUpdateSettings({
+                  collapseRepeatedCommentsThreshold: Number(event.target.value),
+                })
+              }
+            >
+              {COLLAPSE_THRESHOLD_OPTIONS.map((value) => (
+                <option key={value} value={value}>
+                  {value} 条
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <p className="settings-inline-note">
+            在站点的「最新评论」页、弹窗与仪表盘的最新评论视图同时生效；展开 / 收起状态只在当前页面有效。
+          </p>
+        </div>
+      </section>
+
+      {/* ---------------- 站点菜单 ---------------- */}
+      <section
+        className="settings-card settings-card--menu"
+        aria-labelledby="settings-site-menu"
+      >
+        <header className="settings-card__head">
+          <span className="settings-card__icon" aria-hidden="true">
+            <Icon name="folder" size={17} />
+          </span>
+          <div className="settings-card__heading">
+            <h2 className="settings-card__title" id="settings-site-menu">
+              站点菜单
+            </h2>
+            <p className="settings-card__desc">
+              在站点的「自定义菜单」弹窗里按节点级联选择，一键填入菜单名称和链接。
+            </p>
+          </div>
+        </header>
+
+        <div className="settings-card__body">
+          <div className="appearance-panel">
+            <div className="appearance-panel__copy">
+              <span className="appearance-panel__label" id="node-picker-label">
+                节点选择器
+              </span>
+              <p className="appearance-panel__hint">
+                按「分区 → 父节点 → 子节点」展开，也可直接搜索节点名称或 slug。默认开启。
+              </p>
+            </div>
+
+            <button
+              type="button"
+              role="switch"
+              aria-checked={settings.customMenuNodePicker}
+              aria-labelledby="node-picker-label"
+              className={`node-config__switch${
+                settings.customMenuNodePicker ? ' is-on' : ''
+              }`}
+              onClick={() =>
+                void onUpdateSettings({
+                  customMenuNodePicker: !settings.customMenuNodePicker,
+                })
+              }
+            >
+              <span>{settings.customMenuNodePicker ? '已开启' : '已关闭'}</span>
+              <span className="node-config__track" aria-hidden="true">
+                <span className="node-config__thumb" />
+              </span>
+            </button>
+          </div>
+
+          <p className="settings-inline-note">
+            选择父节点填入 `/node/&lt;slug&gt;`，子节点填入 `/node/&lt;父&gt;/&lt;子&gt;`；只读取公开节点树，不写入站点数据。
+          </p>
+        </div>
+      </section>
 
       {/* ---------------- 评论徽章助手 ---------------- */}
       <section

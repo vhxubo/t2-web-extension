@@ -14,6 +14,10 @@ interface ViewCardProps {
   nodesStatus: NodesStatus;
   enabled: boolean;
   index: number;
+  /** 设置里的「折叠连续评论」：只在最新评论卡片里生效。 */
+  collapseRepeatedComments: boolean;
+  /** 设置里的折叠阈值（连续多少条）。 */
+  collapseRepeatedCommentsThreshold: number;
   onLogin: () => void;
   onReloadNodes: () => void;
 }
@@ -25,6 +29,8 @@ export function ViewCard({
   nodesStatus,
   enabled,
   index,
+  collapseRepeatedComments,
+  collapseRepeatedCommentsThreshold,
   onLogin,
   onReloadNodes,
 }: ViewCardProps) {
@@ -112,6 +118,8 @@ export function ViewCard({
           skeletonRows={10}
           sectionFiltered={view.section.kind !== 'all'}
           sectionName={view.label}
+          collapseRuns={isComments && collapseRepeatedComments}
+          collapseRunThreshold={collapseRepeatedCommentsThreshold}
           onRetry={handleRetry}
           onLogin={onLogin}
         />

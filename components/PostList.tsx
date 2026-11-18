@@ -1,10 +1,13 @@
+import { useMemo, useState } from 'react';
 import type { FeedItem } from '../lib/feed';
 import type { FeedStatus } from '../hooks/useFeed';
+import { COMMENT_RUN_DEFAULT_LENGTH, groupConsecutiveComments } from '../lib/comment-runs';
 import type { EmojiMap } from '../lib/emojis';
 import { describeError } from '../lib/errors';
 import type { Topic } from '../lib/types';
 import { CollectionRow } from './CollectionRow';
 import { CommentRow } from './CommentRow';
+import { CommentRun } from './CommentRun';
 import { Icon } from './Icon';
 import { PostRow } from './PostRow';
 import { useReadItemsContext } from './ReadItems';
@@ -41,6 +44,13 @@ interface PostListProps {
   /** 是否允许从行尾进入帖子详情（弹窗用）。 */
   expandable?: boolean;
   onExpand?: (topic: Topic) => void;
+  /**
+   * 「最新评论」：同一用户连续发布达到折叠阈值时只展示第一条，其余可展开。
+   * 由设置里的「折叠连续评论」控制，默认关闭。
+   */
+  collapseRuns?: boolean;
+  /** 折叠阈值；不传时按默认 3 条处理。 */
+  collapseRunThreshold?: number;
 }
 
 export function FeedSkeleton({
@@ -143,8 +153,68 @@ export function PostList({
   onResetSection,
   expandable = false,
   onExpand,
+  collapseRuns = false,
+  collapseRunThreshold = COMMENT_RUN_DEFAULT_LENGTH,
 }: PostListProps) {
   const { readKeys, markRead } = useReadItemsContext();
+  const collapse = collapseRuns && variant === 'comment';
+  const [expandedRuns, setExpandedRuns] = useState<ReadonlySet<string>>(() => new Set());
+  const blocks = useMemo(
+    () =>
+      collapse ? groupConsecutiveComments(items, collapseRunThreshold) : null,
+    [collapse, collapseRunThreshold, items],
+  );
+
+  const toggleRun = (key: string) => {
+    setExpandedRuns((current) => {
+      const next = new Set(current);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
+
+  const renderItem = (item: FeedItem, index: number) =>
+    item.kind === 'collection' ? (
+      <CollectionRow
+        key={item.key}
+        collection={item.collection}
+        owner={collectionOwner}
+        compact={compact}
+      />
+    ) : item.kind === 'comment' ? (
+      <CommentRow
+        key={item.key}
+        comment={item.comment}
+        compact={compact}
+        dense={titleOnly || oneLine}
+        emojis={emojis}
+        isRead={readKeys.has(item.key)}
+        onRead={() => markRead(item.key)}
+      />
+    ) : item.kind === 'topic' ? (
+      <PostRow
+        key={item.key}
+        topic={item.topic}
+        index={index}
+        compact={compact}
+        showRank={showRank}
+        titleOnly={titleOnly}
+        oneLine={oneLine}
+        isRead={readKeys.has(item.key)}
+        onRead={() => markRead(item.key)}
+        expandable={expandable}
+        emojis={emojis}
+        onExpand={
+          expandable
+            ? () => {
+                markRead(item.key);
+                onExpand?.(item.topic);
+              }
+            : undefined
+        }
+      />
+    ) : null;
 
   if (status === 'loading' || status === 'idle') {
     return (
@@ -234,48 +304,25 @@ export function PostList({
         variant === 'comment' ? ' feed-list--comments' : ''
       }${variant === 'collection' ? ' feed-list--collections' : ''}`}
     >
-      {items.map((item, index) =>
-        item.kind === 'collection' ? (
-          <CollectionRow
-            key={item.key}
-            collection={item.collection}
-            owner={collectionOwner}
-            compact={compact}
-          />
-        ) : item.kind === 'comment' ? (
-          <CommentRow
-            key={item.key}
-            comment={item.comment}
-            compact={compact}
-            dense={titleOnly || oneLine}
-            emojis={emojis}
-            isRead={readKeys.has(item.key)}
-            onRead={() => markRead(item.key)}
-          />
-        ) : item.kind === 'topic' ? (
-          <PostRow
-            key={item.key}
-            topic={item.topic}
-            index={index}
-            compact={compact}
-            showRank={showRank}
-            titleOnly={titleOnly}
-            oneLine={oneLine}
-            isRead={readKeys.has(item.key)}
-            onRead={() => markRead(item.key)}
-            expandable={expandable}
-            emojis={emojis}
-            onExpand={
-              expandable
-                ? () => {
-                    markRead(item.key);
-                    onExpand?.(item.topic);
-                  }
-                : undefined
-            }
-          />
-        ) : null,
-      )}
+      {blocks
+        ? blocks.map((block, index) =>
+            block.kind === 'run' ? (
+              <CommentRun
+                key={`run:${block.key}`}
+                run={block}
+                open={expandedRuns.has(block.key)}
+                compact={compact}
+                dense={titleOnly || oneLine}
+                emojis={emojis}
+                readKeys={readKeys}
+                onRead={markRead}
+                onToggle={() => toggleRun(block.key)}
+              />
+            ) : (
+              renderItem(block.item, index)
+            ),
+          )
+        : items.map((item, index) => renderItem(item, index))}
     </ol>
   );
 }

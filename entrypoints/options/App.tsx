@@ -21,6 +21,7 @@ interface NavItem {
 const NAV_ITEMS: readonly NavItem[] = [
   { href: '#settings-account', label: '账号', icon: 'user' },
   { href: '#settings-nodes', label: '节点配置', icon: 'settings' },
+  { href: '#settings-comments', label: '最新评论', icon: 'hash' },
   { href: '#settings-appearance', label: '外观', icon: 'palette' },
 ];
 

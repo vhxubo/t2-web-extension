@@ -1,6 +1,10 @@
 import { browser, storage } from '#imports';
 import { isBoardId } from './boards';
 import {
+  COMMENT_RUN_DEFAULT_LENGTH,
+  normalizeCommentRunThreshold,
+} from './comment-runs';
+import {
   DEFAULT_DEFAULT_VIEW,
   VIEWS_VERSION,
   boardViewId,
@@ -47,6 +51,22 @@ export interface Settings {
    * 默认开启；关闭后不注入状态栏，也不请求徽章与潘多拉接口。
    */
   badgeSwitcher: boolean;
+  /**
+   * 是否折叠「最新评论」里同一用户连续发布的评论。
+   * 默认关闭；开启后同一作者连续达到 `collapseRepeatedCommentsThreshold` 条时
+   * 只展示第一条，其余收在展开按钮后面。
+   */
+  collapseRepeatedComments: boolean;
+  /**
+   * 连续评论折叠阈值：同一作者连续发布达到这么多条时折叠。
+   * 默认 3，可配置 2–10；设为 2 时两条连续评论也会折叠。
+   */
+  collapseRepeatedCommentsThreshold: number;
+  /**
+   * 是否在站点的「自定义菜单」弹窗里插入节点级联选择器（content script）。
+   * 默认开启；关闭后不注入选择器，菜单名称与链接仍可手动填写。
+   */
+  customMenuNodePicker: boolean;
 }
 
 export function isThemePreference(value: unknown): value is ThemePreference {
@@ -100,6 +120,9 @@ export const DEFAULT_SETTINGS: Settings = {
   theme: 'system',
   desktopNotifications: true,
   badgeSwitcher: true,
+  collapseRepeatedComments: false,
+  collapseRepeatedCommentsThreshold: COMMENT_RUN_DEFAULT_LENGTH,
+  customMenuNodePicker: true,
 };
 
 const PREFIX = 't2';
@@ -247,6 +270,14 @@ export function normalizeSettings(stored: StoredSettings | null | undefined): Se
     desktopNotifications: stored?.desktopNotifications === false ? false : true,
     // 评论徽章助手同样是「默认开启」，只有用户显式关过才保持关闭。
     badgeSwitcher: stored?.badgeSwitcher === false ? false : true,
+    // 连续评论折叠默认关闭：旧配置没有这个字段，只有显式开启过才生效。
+    collapseRepeatedComments: stored?.collapseRepeatedComments === true,
+    // 阈值缺省 / 非法时回落到 3，并夹在设置页提供的可选范围内。
+    collapseRepeatedCommentsThreshold: normalizeCommentRunThreshold(
+      stored?.collapseRepeatedCommentsThreshold,
+    ),
+    // 菜单节点选择器默认开启：只有用户显式关过才不注入。
+    customMenuNodePicker: stored?.customMenuNodePicker === false ? false : true,
   };
 }
 
